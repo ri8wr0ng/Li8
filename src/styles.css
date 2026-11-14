@@ -1,0 +1,144 @@
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+@import '@fontsource-variable/fraunces';
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Inkmark brand tokens. See docs/BRAND.md.
+ * Paper (light) and Ink (dark), one accent: Hanko red.
+ */
+:root {
+  --paper: #f7f4ee;
+  --ink: #1c1a17;
+  --hanko: #e5412d;
+  --hanko-foreground: #ffffff;
+  --marker: #ffe066;
+  --marker-active: #ff9f1c;
+  --marker-foreground: #1c1a17;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #fffdf9;
+  --card-foreground: var(--ink);
+  --popover: #fffdf9;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: #efeae0;
+  --secondary-foreground: var(--ink);
+  --muted: #efeae0;
+  --muted-foreground: #6e675c;
+  --accent: #ebe5d9;
+  --accent-foreground: var(--ink);
+  --destructive: #c8321f;
+  --destructive-foreground: #ffffff;
+  --border: #e3ddd1;
+  --input: #dcd5c7;
+  --ring: color-mix(in oklab, var(--hanko) 55%, transparent);
+  --radius: 0.75rem;
+}
+
+.dark {
+  --paper: #131210;
+  --ink: #eee9e0;
+  --hanko: #ff5a43;
+  --marker: rgb(255 214 10 / 0.34);
+  --marker-active: #ffb020;
+  --marker-foreground: inherit;
+
+  --card: #1b1a17;
+  --popover: #1e1c19;
+  --secondary: #262420;
+  --muted: #262420;
+  --muted-foreground: #9d968a;
+  --accent: #2b2925;
+  --destructive: #e5533f;
+  --border: #2c2a26;
+  --input: #36332e;
+}
+
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --font-display: 'Fraunces Variable', ui-serif, Georgia, serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-hanko: var(--hanko);
+  --color-hanko-foreground: var(--hanko-foreground);
+  --color-marker: var(--marker);
+  --color-marker-active: var(--marker-active);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--hanko) 22%, transparent);
+  }
+  /* Inputs below 16px make iOS zoom the page on focus. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: max(16px, 1em);
+    }
+  }
+}
+
+@layer components {
+  /* Search hits, in lists and inside notes. */
+  mark,
+  .mark {
+    background: var(--marker);
+    color: var(--marker-foreground);
+    border-radius: 0.2em;
+    padding: 0 0.08em;
+    margin: 0 -0.08em;
+  }
+  mark[data-active='true'] {
+    background: var(--marker-active);
+    color: #1c1a17;
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}

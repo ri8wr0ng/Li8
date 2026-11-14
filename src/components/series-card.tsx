@@ -1,0 +1,112 @@
+import { Link } from "@tanstack/react-router";
+import { useMutation } from "convex/react";
+import { ExternalLink, Minus, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { Highlight } from "#/lib/highlight";
+import { KIND_LABEL, STATUS_LABEL, formatChapter, readUrl } from "#/lib/series";
+import { relativeTime } from "#/lib/time";
+import { api } from "../../convex/_generated/api";
+import type { Doc } from "../../convex/_generated/dataModel";
+
+export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; terms?: string[] }) {
+  const bump = useMutation(api.series.bump).withOptimisticUpdate((store, { id, delta }) => {
+    const list = store.getQuery(api.series.list, {});
+    if (list)
+      store.setQuery(
+        api.series.list,
+        {},
+        list.map((s) => (s._id === id ? { ...s, chapter: Math.max(0, s.chapter + delta) } : s)),
+      );
+  });
+  const setChapter = useMutation(api.series.setChapter);
+  const next = series.chapter + 1;
+  const nextUrl = readUrl(series.readUrlTemplate, next);
+  const progress = series.totalChapters ? Math.min(1, series.chapter / series.totalChapters) : null;
+
+  function readNext() {
+    if (!nextUrl) return;
+    window.open(nextUrl, "_blank", "noopener,noreferrer");
+    const previous = series.chapter;
+    void setChapter({ id: series._id, chapter: next }).then(() =>
+      toast(`Reading Ch. ${formatChapter(next)}`, {
+        action: { label: "Undo", onClick: () => void setChapter({ id: series._id, chapter: previous }) },
+      }),
+    );
+  }
+
+  return (
+    <article className="group relative flex flex-col rounded-2xl border bg-card p-4 transition-shadow hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:p-5">
+      <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
+        {KIND_LABEL[series.kind]}
+        <span className="size-1 rounded-full bg-border" />
+        {STATUS_LABEL[series.status]}
+      </div>
+
+      <Link
+        to="/library/$seriesId"
+        params={{ seriesId: series._id }}
+        className="mt-1 font-display text-lg leading-snug font-semibold tracking-tight after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
+      >
+        <Highlight text={series.title} terms={terms} />
+      </Link>
+      {series.altNames.length > 0 && (
+        <p className="truncate text-sm text-muted-foreground">
+          <Highlight text={series.altNames.join(" · ")} terms={terms} />
+        </p>
+      )}
+
+      <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+        <div>
+          <div className="text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">Chapter</div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono text-4xl leading-none font-semibold tabular-nums">
+              {formatChapter(series.chapter)}
+            </span>
+            {series.totalChapters && (
+              <span className="font-mono text-sm text-muted-foreground tabular-nums">
+                / {formatChapter(series.totalChapters)}
+              </span>
+            )}
+          </div>
+          <div className="mt-1.5 text-xs text-muted-foreground">{relativeTime(series.lastReadAt)}</div>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            aria-label={`One chapter back on ${series.title}`}
+            disabled={series.chapter <= 0}
+            onClick={() => void bump({ id: series._id, delta: -1 })}
+            className="grid size-10 place-items-center rounded-full border bg-background text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-40"
+          >
+            <Minus className="size-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={`One chapter forward on ${series.title}`}
+            onClick={() => void bump({ id: series._id, delta: 1 })}
+            className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90"
+          >
+            <Plus className="size-5" />
+          </button>
+        </div>
+      </div>
+
+      {nextUrl && (
+        <button
+          type="button"
+          onClick={readNext}
+          className="relative z-10 mt-4 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
+        >
+          Read Ch. {formatChapter(next)} <ExternalLink className="size-3.5" />
+        </button>
+      )}
+
+      {progress !== null && (
+        <div className="absolute inset-x-5 bottom-0 h-0.5 overflow-hidden rounded-full bg-border">
+          <div className="h-full bg-hanko" style={{ width: `${progress * 100}%` }} />
+        </div>
+      )}
+    </article>
+  );
+}
