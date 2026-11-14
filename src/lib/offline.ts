@@ -54,7 +54,7 @@ export const loadCache: () => Promise<void> = (() => {
           tx("readonly", (s) => s.getAllKeys()),
           tx("readonly", (s) => s.getAll()),
         ]);
-        keys.forEach((k, i) => memory.set(String(k), values[i]));
+        keys.forEach((k, i) => typeof k === "string" && memory.set(k, values[i]));
       } catch (err) {
         // No IndexedDB (private mode, old browser): run without a cache.
         console.warn("Offline cache unavailable", err);

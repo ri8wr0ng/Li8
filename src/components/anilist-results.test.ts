@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { handleListKey } from "./anilist-results";
 
 describe("AniList keyboard selection", () => {
