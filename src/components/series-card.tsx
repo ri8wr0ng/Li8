@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Highlight } from "#/lib/highlight";
 import { KIND_LABEL, STATUS_LABEL, formatChapter, readUrl } from "#/lib/series";
 import { useReadOnly } from "#/lib/offline";
-import { useSwipeRight } from "#/lib/swipe";
+import { useSwipeRight, vibrate } from "#/lib/swipe";
 import { relativeTime } from "#/lib/time";
 import { api } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
@@ -139,7 +139,10 @@ export function SeriesCard({
               type="button"
               aria-label={`One chapter forward on ${series.title}`}
               disabled={readOnly}
-              onClick={() => void bump({ id: series._id, delta: 1 })}
+              onClick={() => {
+                vibrate(8); // same tick as the swipe commit (Android; no-op on iOS)
+                void bump({ id: series._id, delta: 1 });
+              }}
               className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90 disabled:opacity-40"
             >
               <Plus className="size-5" />

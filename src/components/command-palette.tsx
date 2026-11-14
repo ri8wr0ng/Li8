@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { toast } from "sonner";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "#/components/ui/dialog";
+import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
 import { Highlight, snippet } from "#/lib/highlight";
 import { useSearch } from "#/lib/search";
@@ -78,20 +79,27 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
  * results fill the space above it. The tab bar stays visible (tapping it closes).
  */
 function SearchSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { sheetRef, handleProps } = useSheetDrag({ onDismiss: () => onOpenChange(false) });
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[25] bg-black/25 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:duration-200" />
         <DialogPrimitive.Content
+          ref={(el) => void (sheetRef.current = el)}
           aria-describedby={undefined}
           className={cn(
             "fixed inset-x-3 max-h-[min(75dvh,calc(100dvh-env(safe-area-inset-top,0px)-10rem))] bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] z-[35] flex origin-bottom flex-col overflow-hidden rounded-3xl border bg-background/90 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] backdrop-blur-2xl outline-none",
             "data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-[0.97] data-[state=open]:slide-in-from-bottom-6 data-[state=open]:duration-300 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-[0.97] data-[state=closed]:slide-out-to-bottom-6 data-[state=closed]:duration-150 data-[state=closed]:ease-out",
             "motion-reduce:data-[state=open]:zoom-in-100 motion-reduce:data-[state=open]:slide-in-from-bottom-0 motion-reduce:data-[state=closed]:zoom-out-100 motion-reduce:data-[state=closed]:slide-out-to-bottom-0",
+            "data-dragged:animate-none",
           )}
         >
           <DialogPrimitive.Title className="sr-only">Search or run a command</DialogPrimitive.Title>
+          {/* Drag handle: pull down to dismiss. */}
+          <div {...handleProps} className="relative h-5 shrink-0">
+            <span aria-hidden className="pointer-events-none absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foreground/25 lg:hidden" />
+          </div>
           {open && <Palette close={() => onOpenChange(false)} variant="sheet" />}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

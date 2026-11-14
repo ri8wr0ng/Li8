@@ -129,6 +129,24 @@
     -webkit-user-select: none;
     user-select: none;
   }
+  /*
+   * Every button answers on press, not release. Uses the individual `scale`
+   * property, so it composes with any translate/transform a button already has;
+   * components that set their own active:scale-* override it (utilities win over base).
+   */
+  :where(button, [role='button']):not(:disabled):active {
+    scale: 0.97;
+  }
+  :where(button, [role='button']) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, scale;
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :where(button, [role='button']):active {
+      scale: none;
+    }
+  }
   fieldset {
     min-width: 0;
   }
@@ -329,4 +347,11 @@
     -webkit-backdrop-filter: none;
     border-color: var(--foreground);
   }
+}
+
+/* Theme switch: a short crossfade instead of an abrupt full-screen brightness jump (see theme.ts). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: ease;
 }

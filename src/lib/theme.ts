@@ -55,7 +55,11 @@ function set(theme: Theme) {
   } catch {
     // Private mode: the choice lasts for this session.
   }
-  apply();
+  // Crossfade the swap (styles.css sets 240ms) so the whole screen doesn't flash
+  // from light to dark. Skipped without View Transitions or with reduced motion.
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduce && typeof document.startViewTransition === "function") document.startViewTransition(apply);
+  else apply();
   listeners.forEach((l) => l());
 }
 

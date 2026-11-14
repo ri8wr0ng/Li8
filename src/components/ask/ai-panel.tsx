@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
+import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -136,6 +137,9 @@ export function AiPanel({ notes, series }: { notes: Doc<"notes">[] | undefined; 
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
 
+  // Phones: drag the sheet's header down to dismiss it.
+  const { sheetRef, handleProps } = useSheetDrag({ onDismiss: () => setOpen(false) });
+
   // On phones the sheet sinks back into the nav it rose from before unmounting.
   // On desktop the column closes at once (the grid drops its track immediately).
   const [mounted, setMounted] = useState(open);
@@ -151,13 +155,18 @@ export function AiPanel({ notes, series }: { notes: Doc<"notes">[] | undefined; 
       setMounted(false);
       return;
     }
+    // Dismissed by dragging: it has already left the screen, so skip the exit animation.
+    if (sheetRef.current && "dragged" in sheetRef.current.dataset) {
+      setMounted(false);
+      return;
+    }
     setClosing(true);
     const t = setTimeout(() => {
       setMounted(false);
       setClosing(false);
     }, 180);
     return () => clearTimeout(t);
-  }, [open, mounted]);
+  }, [open, mounted, sheetRef]);
 
   if (!mounted) return null;
   const current = threads?.find((t) => t.id === threadId);
@@ -174,6 +183,7 @@ export function AiPanel({ notes, series }: { notes: Doc<"notes">[] | undefined; 
         )}
       />
     <aside
+      ref={(el) => void (sheetRef.current = el)}
       data-ai-panel
       data-state={closing ? "closed" : "open"}
       aria-label="Ask Inkmark"
@@ -187,7 +197,9 @@ export function AiPanel({ notes, series }: { notes: Doc<"notes">[] | undefined; 
         "lg:sticky lg:inset-auto lg:top-0 lg:z-auto lg:h-dvh lg:rounded-none lg:border-0 lg:border-l lg:bg-background lg:shadow-none lg:backdrop-blur-none lg:data-[state=open]:zoom-in-100 lg:data-[state=open]:slide-in-from-bottom-0",
       )}
     >
-      <header className="flex h-14 shrink-0 items-center gap-1 border-b pr-2 pl-4">
+      <header {...handleProps} className="relative flex h-14 shrink-0 items-center gap-1 border-b pr-2 pl-4">
+        {/* Grabber: says "this sheet can be dragged down". */}
+        <span aria-hidden className="pointer-events-none absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foreground/25 lg:hidden" />
         <Sparkles className="size-4 shrink-0 text-muted-foreground" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{current?.title ?? "Ask Inkmark"}</h2>
 
