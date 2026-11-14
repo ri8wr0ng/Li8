@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { ArrowLeft, ChevronDown, ChevronUp, FileQuestion, MoreHorizontal, Pin, PinOff, Search, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -25,6 +25,7 @@ import {
 } from '#/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip'
 import { findAll } from '#/lib/highlight'
+import { useCachedQuery, useOnline, useReadOnly } from '#/lib/offline'
 import { relativeTime } from '#/lib/time'
 import { cn } from '#/lib/utils'
 import { api } from '../../../convex/_generated/api'
@@ -39,7 +40,13 @@ export const Route = createFileRoute('/_app/notes/$noteId')({
 
 function NotePage() {
   const { noteId } = Route.useParams()
-  const note = useQuery(api.notes.get, { id: noteId as Id<'notes'> })
+  const { isAuthenticated } = useConvexAuth()
+  const online = useOnline()
+  const live = useQuery(api.notes.get, isAuthenticated ? { id: noteId as Id<'notes'> } : 'skip')
+  // Until the live copy arrives (or with no connection), show the saved one.
+  const list = useCachedQuery(api.notes.list, 'notes')
+  const cached = list?.find((n) => n._id === noteId)
+  const note = live !== undefined ? live : (cached ?? (list && !online ? null : undefined))
   if (note === undefined) return null
   if (note === null) return <NotFound />
   return <Editor key={note._id} note={note} />
@@ -126,6 +133,7 @@ function Editor({ note }: { note: Doc<'notes'> }) {
   const setPinned = useMutation(api.notes.update)
   const remove = useMutation(api.notes.remove)
   const save = useAutosave(note._id)
+  const readOnly = useReadOnly()
 
   const [title, setTitle] = useState(note.title)
   const [body, setBody] = useState(note.body)
@@ -216,6 +224,7 @@ function Editor({ note }: { note: Doc<'notes'> }) {
                 className={cn('rounded-xl', note.pinned && 'text-hanko')}
                 aria-label={note.pinned ? 'Unpin' : 'Pin'}
                 aria-pressed={note.pinned}
+                disabled={readOnly}
                 onClick={() => void setPinned({ id: note._id, pinned: !note.pinned })}
               >
                 {note.pinned ? <PinOff /> : <Pin />}
@@ -225,7 +234,7 @@ function Editor({ note }: { note: Doc<'notes'> }) {
           </Tooltip>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl" aria-label="More">
+              <Button variant="ghost" size="icon" className="rounded-xl" aria-label="More" disabled={readOnly}>
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
@@ -278,6 +287,7 @@ function Editor({ note }: { note: Doc<'notes'> }) {
         )}
       </div>
 
+      <fieldset disabled={readOnly} className="contents">
       <input
         ref={titleRef}
         value={title}
@@ -322,6 +332,7 @@ function Editor({ note }: { note: Doc<'notes'> }) {
         activeIndex={activeIndex}
         scrollKey={scrollKey}
       />
+      </fieldset>
 
       <p className="mt-10 text-xs text-muted-foreground">
         {words} {words === 1 ? 'word' : 'words'} · Edited {relativeTime(note.updatedAt)}

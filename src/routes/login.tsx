@@ -2,9 +2,10 @@ import { useOauth, useSignInWithGoogle } from '@convex-dev/auth/methods/google/r
 import { Navigate, createFileRoute } from '@tanstack/react-router'
 import { useConvexAuth } from 'convex/react'
 import { Loader2, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Splash, Wordmark } from '#/components/brand'
 import { Button } from '#/components/ui/button'
+import { clearCache } from '#/lib/offline'
 import { api } from '../../convex/_generated/api'
 
 export const Route = createFileRoute('/login')({ component: LoginPage })
@@ -40,6 +41,11 @@ function SignedOut() {
   const [startError, setStartError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const error = startError ?? flowErrorMessage(flowError)
+
+  // Signed out (or the session was revoked elsewhere): drop the offline copy.
+  useEffect(() => {
+    void clearCache()
+  }, [])
 
   async function start() {
     setStartError(null)

@@ -29,6 +29,8 @@ export default defineSchema({
     genres: v.array(v.string()),
     // e.g. "https://example.com/read/btth/chapter-{n}"
     readUrlTemplate: v.optional(v.string()),
+    // AniList media id, when the series was filled in from AniList. No cover art is stored.
+    anilistId: v.optional(v.number()),
     lastReadAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user_updated", ["userId", "updatedAt"]),

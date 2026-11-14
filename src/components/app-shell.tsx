@@ -1,11 +1,12 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
-import { FileText, Library, LogOut, Monitor, Moon, PenLine, Search, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
-import type { ReactNode } from "react";
+import { useMutation } from "convex/react";
+import { Download, FileText, Library, LogOut, Monitor, Moon, PenLine, Search, Sun, WifiOff } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Wordmark } from "#/components/brand";
 import { useCommandPalette } from "#/components/command-palette";
+import { InstallBanner, IosInstallHelp } from "#/components/install-prompt";
 import { Button } from "#/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +18,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
+import { useInstall } from "#/lib/install";
+import { clearCache, useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
+import { useTheme } from "#/lib/theme";
 import { cn } from "#/lib/utils";
 import { api } from "../../convex/_generated/api";
 
@@ -24,8 +28,8 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { openPalette } = useCommandPalette();
-  const notes = useQuery(api.notes.list);
-  const series = useQuery(api.series.list);
+  const notes = useCachedQuery(api.notes.list, "notes");
+  const series = useCachedQuery(api.series.list, "series");
   const reading = series?.filter((s) => s.status === "reading").length;
   const newNote = useNewNote();
 
@@ -33,9 +37,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r px-4 py-6 lg:flex">
-        <Link to="/" className="px-2">
-          <Wordmark />
-        </Link>
+        <div className="flex items-center justify-between gap-2 px-2">
+          <Link to="/">
+            <Wordmark />
+          </Link>
+          <OfflinePill />
+        </div>
 
         <button
           type="button"
@@ -58,26 +65,32 @@ export function AppShell({ children }: { children: ReactNode }) {
           <PenLine /> New note
         </Button>
 
-        <div className="mt-auto">
+        <div className="mt-auto grid gap-3">
+          <InstallBanner />
           <UserMenu align="start" />
         </div>
       </aside>
 
       {/* Mobile top bar */}
       <header className="pt-safe sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md lg:hidden">
-        <div className="flex h-14 items-center justify-between px-4">
+        <div className="flex h-14 items-center justify-between pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
           <Link to="/">
             <Wordmark />
           </Link>
-          <UserMenu align="end" compact />
+          <div className="flex items-center gap-2">
+            <OfflinePill />
+            <UserMenu align="end" compact />
+          </div>
         </div>
       </header>
 
-      <main className="min-w-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
+      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">{children}</main>
+
+      <InstallBanner className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 mx-auto max-w-md lg:hidden" />
 
       {/* Mobile tab bar */}
       <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur-md lg:hidden">
-        <div className="mx-auto grid h-16 max-w-md grid-cols-3 items-center">
+        <div className="mx-auto grid h-16 max-w-md grid-cols-3 items-center pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
           <TabLink to="/" icon={<FileText />} label="Notes" />
           <button
             type="button"
@@ -97,7 +110,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function useNewNote() {
   const createNote = useMutation(api.notes.create);
   const navigate = useNavigate();
+  const readOnly = useReadOnly();
   return async () => {
+    if (readOnly) {
+      toast("You're offline. New notes need a connection.");
+      return;
+    }
     const id = await createNote({});
     await navigate({ to: "/notes/$noteId", params: { noteId: id } });
   };
@@ -146,10 +164,33 @@ function TabLink({ to, icon, label }: { to: "/" | "/library"; icon: ReactNode; l
   );
 }
 
+/** Shown only without a connection. Says whether you're looking at the saved copy or edits will sync later. */
+function OfflinePill() {
+  const online = useOnline();
+  const readOnly = useReadOnly();
+  if (online) return null;
+  return (
+    <span
+      role="status"
+      title={
+        readOnly
+          ? "You're offline. This is the copy saved on this device; changes are paused until you reconnect."
+          : "You're offline. Changes will sync when you reconnect."
+      }
+      className="flex h-7 items-center gap-1.5 rounded-full border bg-card px-2.5 text-xs font-medium text-muted-foreground animate-in fade-in"
+    >
+      <WifiOff className="size-3.5" />
+      {readOnly ? "Offline · read-only" : "Offline"}
+    </span>
+  );
+}
+
 function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolean }) {
-  const me = useQuery(api.users.me);
+  const me = useCachedQuery(api.users.me, "me");
   const { signOut } = useAuthActions();
   const { theme, setTheme } = useTheme();
+  const install = useInstall();
+  const [iosHelp, setIosHelp] = useState(false);
   const name = me?.name ?? me?.email ?? "You";
   const initials = name
     .split(/\s+/)
@@ -191,10 +232,18 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => void signOut()}>
+        {install.kind !== "none" && (
+          <DropdownMenuItem
+            onSelect={() => (install.kind === "ios" ? setIosHelp(true) : void install.install())}
+          >
+            <Download /> Install app
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={() => void signOut().then(clearCache)}>
           <LogOut /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <IosInstallHelp open={iosHelp} onOpenChange={setIosHelp} />
     </DropdownMenu>
   );
 }

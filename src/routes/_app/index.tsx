@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useConvexAuth } from 'convex/react'
 import { NotebookPen, PenLine, Pin, SearchX } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNewNote } from '#/components/app-shell'
@@ -7,6 +7,7 @@ import { EmptyState, PageHeader, SearchField, SectionLabel } from '#/components/
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Highlight, snippet } from '#/lib/highlight'
+import { useCachedQuery } from '#/lib/offline'
 import { useSearch } from '#/lib/search'
 import { relativeTime } from '#/lib/time'
 import { api } from '../../../convex/_generated/api'
@@ -19,7 +20,7 @@ export const Route = createFileRoute('/_app/')({
 })
 
 function NotesPage() {
-  const notes = useQuery(api.notes.list)
+  const notes = useCachedQuery(api.notes.list, 'notes')
   const { search } = useSearch(notes, undefined)
   const [query, setQuery] = useState('')
   const newNote = useNewNote()
@@ -98,12 +99,14 @@ function NotesPage() {
 function useHomeScreenShortcut(newNote: () => Promise<void>) {
   const { new: wantsNew } = Route.useSearch()
   const navigate = useNavigate()
+  const { isAuthenticated } = useConvexAuth()
   const done = useRef(false)
   useEffect(() => {
-    if (wantsNew !== 'note' || done.current) return
+    // Wait for the live session: the list may be showing the saved copy.
+    if (wantsNew !== 'note' || done.current || !isAuthenticated) return
     done.current = true
     void navigate({ to: '/', search: {}, replace: true }).then(newNote)
-  }, [wantsNew, navigate, newNote])
+  }, [wantsNew, navigate, newNote, isAuthenticated])
 }
 
 function NoteList({ items, query }: { items: { note: Doc<'notes'>; terms: string[] }[]; query?: string }) {
