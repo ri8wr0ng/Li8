@@ -162,7 +162,9 @@ export const bump = mutation({
   args: { id: v.id("series"), delta: v.number() },
   handler: async (ctx, { id, delta }) => {
     const series = await ownSeries(ctx, id);
+    if (!Number.isFinite(delta)) throw new Error("Chapter change must be finite");
     const chapter = Math.max(0, series.chapter + delta);
+    assertChapter(chapter);
     if (chapter !== series.chapter) await recordChapter(ctx, series, chapter);
     return chapter;
   },
