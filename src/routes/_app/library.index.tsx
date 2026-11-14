@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
 import { BookOpen, Plus, SearchX } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AddSeriesDialog } from '#/components/add-series-dialog'
@@ -7,6 +6,7 @@ import { EmptyState, PageHeader, SearchField, SectionLabel } from '#/components/
 import { SeriesCard } from '#/components/series-card'
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
+import { useCachedQuery } from '#/lib/offline'
 import { useSearch } from '#/lib/search'
 import { STATUS_LABEL, STATUS_ORDER } from '#/lib/series'
 import { cn } from '#/lib/utils'
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/_app/library/')({
 })
 
 function LibraryPage() {
-  const series = useQuery(api.series.list)
+  const series = useCachedQuery(api.series.list, 'series')
   const { search } = useSearch(undefined, series)
   const { status = 'reading' } = Route.useSearch()
   const navigate = Route.useNavigate()

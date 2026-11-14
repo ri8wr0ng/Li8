@@ -1,8 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { BookMarked, BookOpen, FilePlus2, FileText, Library, Moon, Plus, Sparkles } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useCachedQuery, useReadOnly } from "#/lib/offline";
+import { useTheme } from "#/lib/theme";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "#/components/ui/dialog";
@@ -63,8 +64,8 @@ function findSeries(name: string, series: Doc<"series">[], searchSeries: (q: str
 function Palette({ close }: { close: () => void }) {
   const navigate = useNavigate();
   const { resolvedTheme, setTheme } = useTheme();
-  const notes = useQuery(api.notes.list);
-  const series = useQuery(api.series.list);
+  const notes = useCachedQuery(api.notes.list, "notes");
+  const series = useCachedQuery(api.series.list, "series");
   const createNote = useMutation(api.notes.create);
   const createSeries = useMutation(api.series.create);
   const setChapter = useMutation(api.series.setChapter);
@@ -84,15 +85,20 @@ function Palette({ close }: { close: () => void }) {
     return { ...parsed, target };
   }, [q, series, search]);
 
+  const readOnly = useReadOnly();
   const run = useCallback(
     (fn: () => Promise<unknown>) => {
       close();
+      if (readOnly) {
+        toast("You're offline. Showing your saved copy, so changes are paused.");
+        return;
+      }
       fn().catch((err: unknown) => {
         console.error(err);
         toast.error("That didn't work. Please try again.");
       });
     },
-    [close],
+    [close, readOnly],
   );
 
   const newNote = (title?: string) =>

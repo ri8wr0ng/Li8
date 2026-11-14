@@ -85,6 +85,10 @@ export const create = mutation({
     altNames: v.optional(v.array(v.string())),
     kind: v.optional(vSeriesKind),
     status: v.optional(vSeriesStatus),
+    description: v.optional(v.string()),
+    genres: v.optional(v.array(v.string())),
+    totalChapters: v.optional(v.number()),
+    anilistId: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
@@ -100,8 +104,10 @@ export const create = mutation({
       kind: args.kind ?? "manhua",
       status: args.status ?? "reading",
       chapter,
-      description: "",
-      genres: [],
+      description: args.description?.trim() ?? "",
+      genres: cleanList(args.genres ?? []),
+      ...(args.totalChapters && args.totalChapters > 0 ? { totalChapters: args.totalChapters } : {}),
+      ...(args.anilistId !== undefined ? { anilistId: args.anilistId } : {}),
       lastReadAt: now,
       updatedAt: now,
     });
@@ -123,8 +129,9 @@ export const update = mutation({
     description: v.optional(v.string()),
     genres: v.optional(v.array(v.string())),
     readUrlTemplate: v.optional(v.union(v.string(), v.null())),
+    anilistId: v.optional(v.union(v.number(), v.null())),
   },
-  handler: async (ctx, { id, altNames, genres, totalChapters, readUrlTemplate, title, ...rest }) => {
+  handler: async (ctx, { id, altNames, genres, totalChapters, readUrlTemplate, anilistId, title, ...rest }) => {
     await ownSeries(ctx, id);
     if (title !== undefined && !title.trim()) throw new Error("Title is required");
     await ctx.db.patch("series", id, {
@@ -136,6 +143,7 @@ export const update = mutation({
       ...(readUrlTemplate !== undefined
         ? { readUrlTemplate: readUrlTemplate?.trim() || undefined }
         : {}),
+      ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
       updatedAt: Date.now(),
     });
   },

@@ -103,6 +103,35 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
+  /*
+   * No pull-to-refresh or page rubber-band: it's an app with a fixed header and
+   * tab bar, and Convex data is live, so there's nothing to refresh. Inner
+   * scrollers (dialogs, menus, result lists) use overscroll-behavior: contain.
+   */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+  /* Controls fire on tap without the double-tap-zoom wait, and long-press doesn't select their labels. */
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='option'],
+  [role='menuitem'],
+  a {
+    touch-action: manipulation;
+  }
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='option'],
+  [role='menuitem'] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  fieldset {
+    min-width: 0;
+  }
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'ss01', 'cv11';

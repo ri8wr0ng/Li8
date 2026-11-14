@@ -1,8 +1,9 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { ArrowLeft, BookX, ExternalLink, Minus, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { AniListControls } from '#/components/anilist-link'
 import { ChipInput } from '#/components/chip-input'
 import { EmptyState } from '#/components/page'
 import {
@@ -20,6 +21,7 @@ import { Button } from '#/components/ui/button'
 import { Label } from '#/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { KIND_LABEL, KIND_ORDER, STATUS_LABEL, STATUS_ORDER, formatChapter, readUrl } from '#/lib/series'
+import { useCachedQuery, useOnline, useReadOnly } from '#/lib/offline'
 import { fullDate, relativeTime } from '#/lib/time'
 import { cn } from '#/lib/utils'
 import { api } from '../../../convex/_generated/api'
@@ -33,7 +35,13 @@ export const Route = createFileRoute('/_app/library/$seriesId')({
 
 function SeriesPage() {
   const { seriesId } = Route.useParams()
-  const series = useQuery(api.series.get, { id: seriesId as Id<'series'> })
+  const { isAuthenticated } = useConvexAuth()
+  const online = useOnline()
+  const live = useQuery(api.series.get, isAuthenticated ? { id: seriesId as Id<'series'> } : 'skip')
+  // Until the live copy arrives (or with no connection), show the saved one.
+  const list = useCachedQuery(api.series.list, 'series')
+  const cached = list?.find((s) => s._id === seriesId)
+  const series = live !== undefined ? live : (cached ?? (list && !online ? null : undefined))
   if (series === undefined) return null
   if (series === null) return <Missing />
   return <SeriesDetail key={series._id} series={series} />
@@ -60,8 +68,9 @@ function SeriesDetail({ series }: { series: Doc<'series'> }) {
   const remove = useMutation(api.series.remove)
   const history = useQuery(api.series.history, { seriesId: series._id })
   const navigate = useNavigate()
+  const readOnly = useReadOnly()
 
-  const save = (patch: Omit<Parameters<typeof update>[0], 'id'>) =>
+  const save =(patch: Omit<Parameters<typeof update>[0], 'id'>) =>
     update({ id: series._id, ...patch }).catch((err: unknown) => {
       console.error(err)
       toast.error("Couldn't save. Please try again.")
@@ -79,6 +88,8 @@ function SeriesDetail({ series }: { series: Doc<'series'> }) {
         </Button>
       </div>
 
+      {/* Offline, the whole page becomes a read-only view of the saved copy. */}
+      <fieldset disabled={readOnly} className="contents">
       <BlurField
         value={series.title}
         onCommit={(title) => (title.trim() ? void save({ title }) : false)}
@@ -166,6 +177,7 @@ function SeriesDetail({ series }: { series: Doc<'series'> }) {
 
       {/* Details */}
       <section className="mt-8 grid gap-6">
+        <AniListControls series={series} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Type">
             <Select value={series.kind} onValueChange={(kind) => void save({ kind: kind as SeriesKind })}>
@@ -290,6 +302,7 @@ function SeriesDetail({ series }: { series: Doc<'series'> }) {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+      </fieldset>
     </div>
   )
 }

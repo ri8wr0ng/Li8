@@ -4,7 +4,10 @@ import { ExternalLink, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Highlight } from "#/lib/highlight";
 import { KIND_LABEL, STATUS_LABEL, formatChapter, readUrl } from "#/lib/series";
+import { useReadOnly } from "#/lib/offline";
+import { useSwipeRight } from "#/lib/swipe";
 import { relativeTime } from "#/lib/time";
+import { cn } from "#/lib/utils";
 import { api } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
 
@@ -22,6 +25,11 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
   const next = series.chapter + 1;
   const nextUrl = readUrl(series.readUrlTemplate, next);
   const progress = series.totalChapters ? Math.min(1, series.chapter / series.totalChapters) : null;
+  const readOnly = useReadOnly();
+  const swipe = useSwipeRight({
+    enabled: !readOnly,
+    onCommit: () => void bump({ id: series._id, delta: 1 }),
+  });
 
   function readNext() {
     if (!nextUrl) return;
@@ -35,7 +43,26 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
   }
 
   return (
-    <article className="group relative flex flex-col rounded-2xl border bg-card p-4 transition-shadow hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:p-5">
+    <div className="relative">
+      {/* Revealed behind the card as you swipe right. */}
+      <div
+        ref={(el) => void (swipe.reveal.current = el)}
+        aria-hidden
+        style={{ opacity: 0 }}
+        className="group/reveal absolute inset-0 flex items-center gap-2 rounded-2xl bg-hanko pl-5 text-hanko-foreground"
+      >
+        <span className="grid size-10 place-items-center rounded-full bg-white/15 transition-transform duration-150 group-data-[armed=true]/reveal:scale-110">
+          <Plus className="size-5" />
+        </span>
+        <span className="font-mono text-sm font-semibold tabular-nums">Ch. {formatChapter(next)}</span>
+      </div>
+    <article
+      ref={(el) => void (swipe.surface.current = el)}
+      {...swipe.handlers}
+      className={cn(
+        "group relative flex touch-pan-y flex-col rounded-2xl border bg-card p-4 select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:p-5",
+      )}
+    >
       <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
         {KIND_LABEL[series.kind]}
         <span className="size-1 rounded-full bg-border" />
@@ -75,7 +102,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
           <button
             type="button"
             aria-label={`One chapter back on ${series.title}`}
-            disabled={series.chapter <= 0}
+            disabled={series.chapter <= 0 || readOnly}
             onClick={() => void bump({ id: series._id, delta: -1 })}
             className="grid size-10 place-items-center rounded-full border bg-background text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-40"
           >
@@ -84,8 +111,9 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
           <button
             type="button"
             aria-label={`One chapter forward on ${series.title}`}
+            disabled={readOnly}
             onClick={() => void bump({ id: series._id, delta: 1 })}
-            className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90"
+            className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90 disabled:opacity-40"
           >
             <Plus className="size-5" />
           </button>
@@ -96,6 +124,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
         <button
           type="button"
           onClick={readNext}
+          disabled={readOnly}
           className="relative z-10 mt-4 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
         >
           Read Ch. {formatChapter(next)} <ExternalLink className="size-3.5" />
@@ -108,5 +137,6 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
         </div>
       )}
     </article>
+    </div>
   );
 }

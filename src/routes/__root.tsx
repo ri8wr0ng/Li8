@@ -1,7 +1,8 @@
-import { ClientOnly, HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import { ClientOnly, HeadContent, Outlet, ScriptOnce, Scripts, createRootRoute } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { Splash } from '#/components/brand'
 import { Providers } from '#/components/providers'
+import { THEME_INIT_SCRIPT } from '#/lib/theme'
 
 import appCss from '../styles.css?url'
 
@@ -9,11 +10,13 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content' },
       { title: 'Inkmark' },
       { name: 'description', content: 'Notes, and where you left off.' },
-      // Kept in sync with the active theme by <ThemeColorSync />.
+      // Set before first paint by THEME_INIT_SCRIPT, then kept in sync by useTheme().
       { name: 'theme-color', content: '#F7F4EE' },
+      { name: 'color-scheme', content: 'light dark' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
       { name: 'apple-mobile-web-app-title', content: 'Inkmark' },
@@ -46,6 +49,8 @@ function RootDocument({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Server-only (prerendered into the shell), so React never renders a <script> on the client. */}
+        <ScriptOnce>{THEME_INIT_SCRIPT}</ScriptOnce>
       </head>
       <body>
         {children}
