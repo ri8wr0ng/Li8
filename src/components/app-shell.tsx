@@ -1,23 +1,27 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   Download,
   FileText,
   Library,
   LogOut,
+  MessageCircle,
   Monitor,
   Moon,
   PenLine,
   Search,
+  Sparkles,
   Sun,
   WifiOff,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { AiPanel, AiPanelProvider, useAiPanel } from "#/components/ask/ai-panel";
 import { Wordmark } from "#/components/brand";
 import { useCommandPalette } from "#/components/command-palette";
 import { InstallBanner, IosInstallHelp } from "#/components/install-prompt";
+import { MobileNav } from "#/components/mobile-nav";
 import { Button } from "#/components/ui/button";
 import {
   DropdownMenu,
@@ -38,14 +42,31 @@ import { api } from "../../convex/_generated/api";
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <AiPanelProvider>
+      <Shell>{children}</Shell>
+    </AiPanelProvider>
+  );
+}
+
+function Shell({ children }: { children: ReactNode }) {
   const { openPalette } = useCommandPalette();
+  const panel = useAiPanel();
   const notes = useCachedQuery(api.notes.list, "notes");
   const series = useCachedQuery(api.series.list, "series");
+  const chatStatus = useQuery(api.chat.status, {});
   const reading = series?.filter((s) => s.status === "reading").length;
   const newNote = useNewNote();
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
+    <div
+      className={cn(
+        "min-h-dvh lg:grid",
+        panel.open
+          ? "lg:grid-cols-[16rem_minmax(0,1fr)_24rem] xl:grid-cols-[16rem_minmax(0,1fr)_28rem]"
+          : "lg:grid-cols-[16rem_1fr]",
+      )}
+    >
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r px-4 py-6 lg:flex">
         <div className="flex items-center justify-between gap-2 px-2">
@@ -67,6 +88,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </kbd>
         </button>
 
+        {panel.available && (
+          <button
+            type="button"
+            onClick={panel.toggle}
+            aria-pressed={panel.open}
+            className="-mt-4 flex h-10 items-center gap-2.5 rounded-xl border bg-card px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:border-input hover:text-foreground aria-pressed:border-input aria-pressed:text-foreground"
+          >
+            <Sparkles className="size-4" />
+            Ask AI
+            <kbd className="ml-auto rounded border bg-background px-1.5 font-mono text-[0.7rem]">
+              {isMac ? "⌘" : "Ctrl"} J
+            </kbd>
+          </button>
+        )}
+
         <nav className="flex flex-col gap-0.5">
           <SideLink to="/" icon={<FileText />} label="Notes" count={notes?.length} />
           <SideLink
@@ -76,6 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             count={reading}
             countLabel="reading"
           />
+          {chatStatus?.enabled && <SideLink to="/ask" icon={<MessageCircle />} label="Ask" />}
         </nav>
 
         <Button variant="hanko" className="h-10 rounded-xl" onClick={newNote}>
@@ -96,32 +133,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-2">
             <OfflinePill />
+            {/* Ask AI lives in the bottom nav on phones, next to search. */}
             <UserMenu align="end" compact />
           </div>
         </div>
       </header>
 
-      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
+      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
         {children}
       </main>
 
-      <InstallBanner className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 mx-auto max-w-md lg:hidden" />
+      <AiPanel notes={notes} series={series} />
 
-      {/* Mobile tab bar */}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-background/90 backdrop-blur-md lg:hidden">
-        <div className="mx-auto grid h-16 max-w-md grid-cols-3 items-center pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
-          <TabLink to="/" icon={<FileText />} label="Notes" />
-          <button
-            type="button"
-            onClick={openPalette}
-            aria-label="Search"
-            className="mx-auto grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
-          >
-            <Search className="size-5" />
-          </button>
-          <TabLink to="/library" icon={<Library />} label="Library" />
-        </div>
-      </nav>
+      <InstallBanner className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-30 mx-auto max-w-md lg:hidden" />
+
+      <MobileNav showAsk={chatStatus?.enabled === true} onSearch={openPalette} />
     </div>
   );
 }
@@ -147,7 +173,7 @@ function SideLink({
   count,
   countLabel,
 }: {
-  to: "/" | "/library";
+  to: "/" | "/library" | "/ask";
   icon: ReactNode;
   label: string;
   count?: number;
@@ -166,19 +192,6 @@ function SideLink({
           {count}
         </span>
       )}
-    </Link>
-  );
-}
-
-function TabLink({ to, icon, label }: { to: "/" | "/library"; icon: ReactNode; label: string }) {
-  return (
-    <Link
-      to={to}
-      activeOptions={{ exact: to === "/", includeSearch: false }}
-      className="flex flex-col items-center gap-0.5 text-[0.7rem] font-medium text-muted-foreground data-[status=active]:text-foreground [&>svg]:size-5"
-    >
-      {icon}
-      {label}
     </Link>
   );
 }

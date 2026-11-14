@@ -1,7 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { deleteEmbedding, scheduleSeriesEmbedding } from "./embeddings";
 import { cleanList, requireUserId } from "./lib";
 import { vSeriesKind, vSeriesStatus } from "./validators";
 
@@ -47,7 +48,7 @@ export const history = query({
   },
 });
 
-function assertChapter(chapter: number) {
+export function assertChapter(chapter: number) {
   if (!Number.isFinite(chapter) || chapter < 0) throw new Error("Chapter must be 0 or more");
 }
 
@@ -58,7 +59,8 @@ async function ownSeries(ctx: MutationCtx, id: Id<"series">) {
   return series;
 }
 
-async function recordChapter(ctx: MutationCtx, series: Doc<"series">, chapter: number) {
+/** Set the chapter and log it. Shared with the AI assistant's tools. */
+export async function recordChapter(ctx: MutationCtx, series: Doc<"series">, chapter: number) {
   const now = Date.now();
   const last = await ctx.db
     .query("chapterHistory")
@@ -78,20 +80,33 @@ async function recordChapter(ctx: MutationCtx, series: Doc<"series">, chapter: n
   await ctx.db.patch("series", series._id, { chapter, lastReadAt: now, updatedAt: now });
 }
 
+const vCreateArgs = v.object({
+  title: v.string(),
+  chapter: v.optional(v.number()),
+  altNames: v.optional(v.array(v.string())),
+  kind: v.optional(vSeriesKind),
+  status: v.optional(vSeriesStatus),
+  description: v.optional(v.string()),
+  genres: v.optional(v.array(v.string())),
+  totalChapters: v.optional(v.number()),
+  anilistId: v.optional(v.number()),
+});
+
 export const create = mutation({
-  args: {
-    title: v.string(),
-    chapter: v.optional(v.number()),
-    altNames: v.optional(v.array(v.string())),
-    kind: v.optional(vSeriesKind),
-    status: v.optional(vSeriesStatus),
-    description: v.optional(v.string()),
-    genres: v.optional(v.array(v.string())),
-    totalChapters: v.optional(v.number()),
-    anilistId: v.optional(v.number()),
-  },
+  args: vCreateArgs.fields,
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
+    return await insertSeries(ctx, userId, args);
+  },
+});
+
+/** Shared with the AI assistant's addSeries tool. */
+export async function insertSeries(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: Infer<typeof vCreateArgs>,
+) {
+  {
     const title = args.title.trim();
     if (!title) throw new Error("Title is required");
     const chapter = args.chapter ?? 0;
@@ -116,9 +131,10 @@ export const create = mutation({
     if (chapter > 0) {
       await ctx.db.insert("chapterHistory", { userId, seriesId: id, chapter, at: now });
     }
+    await scheduleSeriesEmbedding(ctx, id);
     return id;
-  },
-});
+  }
+}
 
 export const update = mutation({
   args: {
@@ -151,6 +167,7 @@ export const update = mutation({
       ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
       updatedAt: Date.now(),
     });
+    await scheduleSeriesEmbedding(ctx, id);
   },
 });
 
@@ -184,6 +201,7 @@ export const remove = mutation({
       .withIndex("by_series_at", (q) => q.eq("seriesId", id))) {
       await ctx.db.delete("chapterHistory", entry._id);
     }
+    await deleteEmbedding(ctx, { seriesId: id });
     await ctx.db.delete("series", id);
   },
 });

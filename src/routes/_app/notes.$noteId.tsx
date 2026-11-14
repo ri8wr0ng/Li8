@@ -160,8 +160,11 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   /* oxlint-disable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (save.isDirty()) return;
+    // Typing in the AI panel shouldn't block edits the assistant makes to this note.
+    const active = document.activeElement;
     const editing =
-      document.activeElement === titleRef.current || document.activeElement?.tagName === "TEXTAREA";
+      active === titleRef.current ||
+      (active?.tagName === "TEXTAREA" && !active.closest("[data-ai-panel]"));
     if (editing) return;
     setTitle(note.title);
     setBody(note.body);

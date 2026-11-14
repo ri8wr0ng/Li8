@@ -41,6 +41,31 @@ npx convex dev          # log in, create the project, keep it running
 pnpm dev                # http://localhost:3000 (keep `npx convex dev` running too)
 ```
 
+## AI features
+
+Optional, and off until a key is set.
+
+- **Ask**: a chat assistant that works from your own notes and Library. It searches by meaning, so "what did I write about that ending" finds the note without the exact words. It can move a chapter forward ("read btth up to 352"), add a series, and create or append to notes, then answers with links to the notes and series it used.
+- **Ask AI panel** (⌘J / Ctrl+J, or the sparkle button on phones): the same assistant beside any page. On a note or series it knows what you have open, so "summarize this", "suggest tags", "tidy this into a list" or "mark this completed" act on that page, and the page updates as it does. Remove the page chip to ask without it.
+- **Search by meaning** in ⌘K: alongside the typo-tolerant title matches, notes and series that mean the same thing as what you typed.
+- **AI usage** (Ask → Usage, or the panel's menu): cost and tokens per day for the last 7, 30 or 90 days, split by Ask replies, indexing and searches, plus how many chat messages and searches you have left right now. Costs come from OpenRouter; embedding costs it doesn't report are estimated from list prices.
+- **Kept current**: a note is re-indexed after you stop typing, a series right after it changes, and anything you already had is indexed in batches the first time the palette loads with AI on. Deleting a note or series removes its index entry.
+
+### AI setup
+
+Get a key from [OpenRouter](https://openrouter.ai/keys) and store it on your Convex deployment:
+
+```bash
+npx convex env set OPENROUTER_API_KEY <key>
+```
+
+One key covers both models: `anthropic/claude-haiku-5.5` for chat and `openai/text-embedding-3-small` for embeddings (1536 dimensions). Until it is set, the AI parts of the app stay hidden. For now AI is also limited to the accounts listed in `AI_ALLOWED_EMAILS` in `convex/aiModels.ts`; everyone else never sees it.
+
+### AI limits and privacy
+
+- Per user, chat allows a burst of 15 messages and refills one a minute; meaning search allows a burst of 30 and refills about three a minute. Past that, Ask says how long to wait.
+- With AI on, the text of your notes and Library entries is sent through OpenRouter to those model providers, to build embeddings and to answer Ask. Remove the key with `npx convex env remove OPENROUTER_API_KEY` to turn AI off.
+
 ## Continuous integration
 
 Pull requests run `pnpm format:check` (Vite+ / oxfmt) and `pnpm lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `pnpm format` to apply formatting or `pnpm lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.

@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
-import { useMutation } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import {
   BookMarked,
   BookOpen,
@@ -19,11 +19,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
+import { Dialog as DialogPrimitive } from "radix-ui";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "#/components/ui/dialog";
+import { useSheetDrag } from "#/lib/use-sheet-drag";
+import { cn } from "#/lib/utils";
 import { Highlight, snippet } from "#/lib/highlight";
 import { useSearch } from "#/lib/search";
 import { acronym, formatChapter, parseChapterCommand } from "#/lib/series";
@@ -34,13 +38,21 @@ type PaletteContext = { openPalette: () => void };
 const Ctx = createContext<PaletteContext>({ openPalette: () => {} });
 export const useCommandPalette = () => useContext(Ctx);
 
+/** "sheet" on phones: a panel above the tab bar with the search box at the bottom, by the thumb. */
+type Variant = "dialog" | "sheet";
+const isDesktop = () =>
+  typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [variant, setVariant] = useState<Variant>("dialog");
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        // A keyboard shortcut means a keyboard: always the classic dialog.
+        setVariant("dialog");
         setOpen((o) => !o);
       }
     }
@@ -48,27 +60,92 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const value = useMemo(() => ({ openPalette: () => setOpen(true) }), []);
+  const value = useMemo(
+    () => ({
+      openPalette: () => {
+        setVariant(isDesktop() ? "dialog" : "sheet");
+        setOpen(true);
+      },
+    }),
+    [],
+  );
   return (
     <Ctx.Provider value={value}>
       {children}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          showCloseButton={false}
-          className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl"
-        >
-          <DialogTitle className="sr-only">Search or run a command</DialogTitle>
-          <DialogDescription className="sr-only">
-            Search notes and series, or type a series name and a chapter number to update it.
-          </DialogDescription>
-          {open && <Palette close={() => setOpen(false)} />}
-        </DialogContent>
-      </Dialog>
+      {variant === "sheet" ? (
+        <SearchSheet open={open} onOpenChange={setOpen} />
+      ) : (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent
+            showCloseButton={false}
+            className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl"
+          >
+            <DialogTitle className="sr-only">Search or run a command</DialogTitle>
+            <DialogDescription className="sr-only">
+              Search notes and series, or type a series name and a chapter number to update it.
+            </DialogDescription>
+            {open && <Palette close={() => setOpen(false)} />}
+          </DialogContent>
+        </Dialog>
+      )}
     </Ctx.Provider>
   );
 }
 
+/**
+ * Phone search: the same palette as a sheet that rises from the tab bar, like
+ * the Ask AI sheet. The input sits at the bottom where the thumb already is;
+ * results fill the space above it. The tab bar stays visible (tapping it closes).
+ */
+function SearchSheet({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { sheetRef, handleProps } = useSheetDrag({ onDismiss: () => onOpenChange(false) });
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[25] bg-black/25 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:duration-200" />
+        <DialogPrimitive.Content
+          ref={(el) => void (sheetRef.current = el)}
+          aria-describedby={undefined}
+          className={cn(
+            "fixed inset-x-3 max-h-[min(75dvh,calc(100dvh-env(safe-area-inset-top,0px)-10rem))] bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] z-[35] flex origin-bottom flex-col overflow-hidden rounded-3xl border bg-background/90 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] backdrop-blur-2xl outline-none",
+            "data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-[0.97] data-[state=open]:slide-in-from-bottom-6 data-[state=open]:duration-300 data-[state=open]:ease-[cubic-bezier(0.32,0.72,0,1)]",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-[0.97] data-[state=closed]:slide-out-to-bottom-6 data-[state=closed]:duration-150 data-[state=closed]:ease-out",
+            "motion-reduce:data-[state=open]:zoom-in-100 motion-reduce:data-[state=open]:slide-in-from-bottom-0 motion-reduce:data-[state=closed]:zoom-out-100 motion-reduce:data-[state=closed]:slide-out-to-bottom-0",
+            "data-dragged:animate-none",
+          )}
+        >
+          <DialogPrimitive.Title className="sr-only">Search or run a command</DialogPrimitive.Title>
+          {/* Drag handle: pull down to dismiss. */}
+          <div {...handleProps} className="relative h-5 shrink-0">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foreground/25 lg:hidden"
+            />
+          </div>
+          {open && <Palette close={() => onOpenChange(false)} variant="sheet" />}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+
+type MeaningResult = { kind: "note" | "series"; id: string; score: number };
+type MeaningState = { status: "idle" | "loading" | "done" | "error"; results: MeaningResult[] };
+type MeaningItem = { kind: "note"; doc: Doc<"notes"> } | { kind: "series"; doc: Doc<"series"> };
+
+const MEANING_MIN_CHARS = 3;
+const MEANING_DEBOUNCE_MS = 400;
+const REINDEX_KEY = "inkmark:reindexed:v1";
+/** Users already reindexed this browser session (localStorage covers later sessions). */
+const reindexed = new Set<string>();
 
 function findSeries(
   name: string,
@@ -82,7 +159,7 @@ function findSeries(
   return exact ?? searchSeries(name)[0] ?? null;
 }
 
-function Palette({ close }: { close: () => void }) {
+function Palette({ close, variant = "dialog" }: { close: () => void; variant?: Variant }) {
   const navigate = useNavigate();
   const { resolvedTheme, setTheme } = useTheme();
   const notes = useCachedQuery(api.notes.list, "notes");
@@ -97,6 +174,84 @@ function Palette({ close }: { close: () => void }) {
   const q = query.trim();
   const hits = useMemo(() => search(q).slice(0, 8), [search, q]);
 
+  const { isAuthenticated } = useConvexAuth();
+  const readOnly = useReadOnly();
+  const aiStatus = useQuery(api.chat.status, isAuthenticated ? {} : "skip");
+  const aiEnabled = aiStatus?.enabled === true;
+  const searchByMeaning = useAction(api.embeddings.search);
+  const reindexMine = useMutation(api.embeddings.reindexMine);
+
+  // Backfill embeddings for existing notes/series once per browser per user.
+  const userId = notes?.[0]?.userId ?? series?.[0]?.userId;
+  useEffect(() => {
+    if (!aiEnabled || !userId || readOnly) return;
+    const key = `${REINDEX_KEY}:${userId}`;
+    if (reindexed.has(userId)) return;
+    try {
+      if (localStorage.getItem(key)) {
+        reindexed.add(userId);
+        return;
+      }
+    } catch {}
+    reindexed.add(userId);
+    reindexMine({})
+      .then(() => {
+        try {
+          localStorage.setItem(key, "1");
+        } catch {}
+      })
+      .catch(() => {});
+  }, [aiEnabled, userId, readOnly, reindexMine]);
+
+  const [meaning, setMeaning] = useState<MeaningState>({ status: "idle", results: [] });
+  const meaningSeq = useRef(0);
+  useEffect(() => {
+    if (!aiEnabled || q.length < MEANING_MIN_CHARS) {
+      meaningSeq.current++;
+      // Clearing results as the query drops below the minimum; this effect owns the debounced request.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setMeaning({ status: "idle", results: [] });
+      return undefined;
+    }
+    const seq = ++meaningSeq.current;
+    const timer = setTimeout(() => {
+      setMeaning((m) => ({ ...m, status: "loading" }));
+      searchByMeaning({ query: q })
+        .then((results) => {
+          if (meaningSeq.current === seq) setMeaning({ status: "done", results });
+        })
+        .catch(() => {
+          if (meaningSeq.current === seq) setMeaning({ status: "error", results: [] });
+        });
+    }, MEANING_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [q, aiEnabled, searchByMeaning]);
+
+  // Map embedding ids back to the docs already loaded for keyword search,
+  // dropping ids we don't know and anything already in the keyword results.
+  const meaningItems = useMemo<MeaningItem[]>(() => {
+    if (meaning.results.length === 0) return [];
+    const noteById = new Map<string, Doc<"notes">>((notes ?? []).map((n) => [n._id, n]));
+    const seriesById = new Map<string, Doc<"series">>((series ?? []).map((s) => [s._id, s]));
+    const shown = new Set(hits.map((h) => `${h.type}:${h.doc._id}`));
+    const out: MeaningItem[] = [];
+    const seen = new Set<string>();
+    for (const r of meaning.results) {
+      const key = `${r.kind}:${r.id}`;
+      if (shown.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      if (r.kind === "note") {
+        const doc = noteById.get(r.id);
+        if (doc) out.push({ kind: "note", doc });
+      } else {
+        const doc = seriesById.get(r.id);
+        if (doc) out.push({ kind: "series", doc });
+      }
+      if (out.length >= 6) break;
+    }
+    return out;
+  }, [meaning.results, notes, series, hits]);
+
   const command = useMemo(() => {
     const parsed = parseChapterCommand(q);
     if (!parsed || !series) return null;
@@ -106,7 +261,6 @@ function Palette({ close }: { close: () => void }) {
     return { ...parsed, target };
   }, [q, series, search]);
 
-  const readOnly = useReadOnly();
   const run = useCallback(
     (fn: () => Promise<unknown>) => {
       close();
@@ -154,19 +308,39 @@ function Palette({ close }: { close: () => void }) {
     });
 
   return (
-    <Command shouldFilter={false} loop className="flex flex-col">
-      <div className="flex items-center gap-3 border-b px-4">
+    // In the sheet the input renders last visually (flex-col-reverse) but stays first in the DOM, so focus order is unchanged.
+    <Command
+      shouldFilter={false}
+      loop
+      className={cn("flex", variant === "sheet" ? "min-h-0 flex-1 flex-col-reverse" : "flex-col")}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-3 px-4",
+          variant === "sheet"
+            ? "m-2 mt-0 shrink-0 rounded-2xl border bg-card shadow-sm"
+            : "border-b",
+        )}
+      >
         <Sparkles className="size-4 shrink-0 text-hanko" />
         <Command.Input
           autoFocus
           value={query}
           onValueChange={setQuery}
           placeholder="Search, or type “btth 349”…"
+          enterKeyHint="search"
           className="h-14 w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
       </div>
 
-      <Command.List className="max-h-[min(60dvh,28rem)] overflow-y-auto overscroll-contain p-2">
+      <Command.List
+        className={cn(
+          "overflow-y-auto overscroll-contain p-2",
+          variant === "sheet"
+            ? "min-h-0 flex-1 [&>[cmdk-list-sizer]]:flex [&>[cmdk-list-sizer]]:min-h-full [&>[cmdk-list-sizer]]:flex-col [&>[cmdk-list-sizer]]:justify-end"
+            : "max-h-[min(60dvh,28rem)]",
+        )}
+      >
         <Command.Empty className="px-3 py-8 text-center text-sm text-muted-foreground">
           Nothing found.
         </Command.Empty>
@@ -260,6 +434,71 @@ function Palette({ close }: { close: () => void }) {
                     {hit.doc.body && (
                       <span className="block truncate text-xs text-muted-foreground">
                         <Highlight text={snippet(hit.doc.body, hit.terms, 40)} terms={hit.terms} />
+                      </span>
+                    )}
+                  </span>
+                </Item>
+              ),
+            )}
+          </Group>
+        )}
+
+        {(meaning.status === "loading" ||
+          meaning.status === "error" ||
+          meaningItems.length > 0) && (
+          <Group heading="Related by meaning">
+            {meaning.status === "loading" && meaningItems.length === 0 && (
+              <div className="px-2.5 py-2 text-xs text-muted-foreground">Searching by meaning…</div>
+            )}
+            {meaning.status === "error" && (
+              <div className="px-2.5 py-2 text-xs text-muted-foreground">
+                Meaning search is unavailable right now.
+              </div>
+            )}
+            {meaningItems.map((item) =>
+              item.kind === "series" ? (
+                <Item
+                  key={`meaning-series-${item.doc._id}`}
+                  value={`meaning-series-${item.doc._id}`}
+                  icon={<BookOpen />}
+                  onSelect={() => {
+                    close();
+                    void navigate({ to: "/library/$seriesId", params: { seriesId: item.doc._id } });
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{item.doc.title}</span>
+                    {item.doc.altNames.length > 0 && (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.doc.altNames.join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums">
+                    Ch. {formatChapter(item.doc.chapter)}
+                  </span>
+                </Item>
+              ) : (
+                <Item
+                  key={`meaning-note-${item.doc._id}`}
+                  value={`meaning-note-${item.doc._id}`}
+                  icon={<FileText />}
+                  onSelect={() => {
+                    close();
+                    void navigate({
+                      to: "/notes/$noteId",
+                      params: { noteId: item.doc._id },
+                      search: { q },
+                    });
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">
+                      {item.doc.title || "Untitled"}
+                    </span>
+                    {item.doc.body && (
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {snippet(item.doc.body, [], 40)}
                       </span>
                     )}
                   </span>
