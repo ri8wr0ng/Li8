@@ -16,10 +16,24 @@ import {
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#/components/ui/select";
 import { type AniListFill, type AniListMedia, fillFrom } from "#/lib/anilist";
 import { useOnline, useReadOnly } from "#/lib/offline";
-import { KIND_LABEL, KIND_ORDER, STATUS_LABEL, STATUS_ORDER, parseChapterCommand } from "#/lib/series";
+import {
+  KIND_LABEL,
+  KIND_ORDER,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  parseChapterCommand,
+  isSeriesKind,
+  isSeriesStatus,
+} from "#/lib/series";
 import { api } from "../../convex/_generated/api";
 import type { SeriesKind, SeriesStatus } from "../../convex/validators";
 
@@ -115,8 +129,8 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
       <DialogHeader>
         <DialogTitle className="font-display text-xl">Add to Library</DialogTitle>
         <DialogDescription>
-          Start typing and pick a match to fill in the rest. Or type the name and chapter together, like “Solo
-          Leveling 120”.
+          Start typing and pick a match to fill in the rest. Or type the name and chapter together,
+          like “Solo Leveling 120”.
         </DialogDescription>
       </DialogHeader>
 
@@ -130,7 +144,9 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
             setTitle(e.target.value);
             setActive(-1);
           }}
-          onKeyDown={(e) => handleListKey(e, results.length, active, setActive, (i) => pick(results[i]))}
+          onKeyDown={(e) =>
+            handleListKey(e, results.length, active, setActive, (i) => pick(results[i]))
+          }
           placeholder="Battle Through The Heavens"
           autoComplete="off"
           enterKeyHint="done"
@@ -174,7 +190,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
         </div>
         <div className="grid gap-2">
           <Label>Type</Label>
-          <Select value={kind} onValueChange={(v) => setKind(v as SeriesKind)}>
+          <Select value={kind} onValueChange={(v) => isSeriesKind(v) && setKind(v)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -198,12 +214,14 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
           placeholder="BTTH, Doupo Cangqiong, 斗破苍穹"
           autoComplete="off"
         />
-        <p className="text-xs text-muted-foreground">Separate with commas. Search finds any of them.</p>
+        <p className="text-xs text-muted-foreground">
+          Separate with commas. Search finds any of them.
+        </p>
       </div>
 
       <div className="grid gap-2">
         <Label>Status</Label>
-        <Select value={status} onValueChange={(v) => setStatus(v as SeriesStatus)}>
+        <Select value={status} onValueChange={(v) => isSeriesStatus(v) && setStatus(v)}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>

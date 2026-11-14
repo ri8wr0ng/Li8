@@ -8,7 +8,7 @@ import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useCachedQuery } from "#/lib/offline";
 import { useSearch } from "#/lib/search";
-import { STATUS_LABEL, STATUS_ORDER } from "#/lib/series";
+import { isSeriesStatus, STATUS_LABEL } from "#/lib/series";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { SeriesStatus } from "../../../convex/validators";
@@ -18,7 +18,7 @@ type Filter = SeriesStatus | "all";
 export const Route = createFileRoute("/_app/library/")({
   validateSearch: (search: Record<string, unknown>): { status?: Filter } => {
     const s = search.status;
-    return s === "all" || STATUS_ORDER.includes(s as SeriesStatus) ? { status: s as Filter } : {};
+    return s === "all" || isSeriesStatus(s) ? { status: s } : {};
   },
   component: LibraryPage,
 });
@@ -49,7 +49,9 @@ function LibraryPage() {
 
   const hits = useMemo(
     () =>
-      search(q, "series").flatMap((h) => (h.type === "series" ? [{ series: h.doc, terms: h.terms }] : [])),
+      search(q, "series").flatMap((h) =>
+        h.type === "series" ? [{ series: h.doc, terms: h.terms }] : [],
+      ),
     [search, q],
   );
   const shown = (series ?? []).filter((s) => status === "all" || s.status === status);
@@ -78,23 +80,27 @@ function LibraryPage() {
       {!q && (
         <div className="-mx-4 mt-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
           <div role="tablist" aria-label="Filter by status" className="flex w-max gap-1.5">
-            {(["reading", "planned", "on_hold", "completed", "dropped", "all"] as const).map((f) => (
-              <button
-                key={f}
-                role="tab"
-                aria-selected={status === f}
-                onClick={() => void navigate({ search: f === "reading" ? {} : { status: f }, replace: true })}
-                className={cn(
-                  "flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm whitespace-nowrap transition-colors",
-                  status === f
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "bg-card text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {f === "all" ? "All" : STATUS_LABEL[f]}
-                <span className="font-mono text-xs tabular-nums opacity-70">{counts[f]}</span>
-              </button>
-            ))}
+            {(["reading", "planned", "on_hold", "completed", "dropped", "all"] as const).map(
+              (f) => (
+                <button
+                  key={f}
+                  role="tab"
+                  aria-selected={status === f}
+                  onClick={() =>
+                    void navigate({ search: f === "reading" ? {} : { status: f }, replace: true })
+                  }
+                  className={cn(
+                    "flex h-9 items-center gap-2 rounded-full border px-3.5 text-sm whitespace-nowrap transition-colors",
+                    status === f
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {f === "all" ? "All" : STATUS_LABEL[f]}
+                  <span className="font-mono text-xs tabular-nums opacity-70">{counts[f]}</span>
+                </button>
+              ),
+            )}
           </div>
         </div>
       )}

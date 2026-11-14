@@ -69,8 +69,8 @@ function SignedOut() {
             Notes, and where you <span className="text-hanko italic">left off.</span>
           </h1>
           <p className="mt-5 text-lg text-muted-foreground text-pretty">
-            Write things down, find them in a keystroke, and never lose your place in a series again. Type{" "}
-            <Kbd>btth 349</Kbd> and you're done.
+            Write things down, find them in a keystroke, and never lose your place in a series
+            again. Type <Kbd>btth 349</Kbd> and you're done.
           </p>
 
           <Button
@@ -90,7 +90,9 @@ function SignedOut() {
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground">Your notes sync across every device you sign in on.</p>
+        <p className="text-xs text-muted-foreground">
+          Your notes sync across every device you sign in on.
+        </p>
       </section>
 
       <Showcase />
@@ -138,8 +140,8 @@ function Showcase() {
         <div className="translate-x-8 rotate-[1deg] rounded-2xl border bg-card p-5 shadow-[0_12px_32px_-16px_rgba(28,26,23,0.25)]">
           <div className="font-display text-lg font-semibold tracking-tight">Japan trip</div>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Book the ryokan in Kyoto before March. Rail pass covers the <mark>Shinkansen</mark>, not the
-            Nozomi trains…
+            Book the ryokan in Kyoto before March. Rail pass covers the <mark>Shinkansen</mark>, not
+            the Nozomi trains…
           </p>
         </div>
       </div>

@@ -2,7 +2,13 @@ import { Share, SquarePlus, X } from "lucide-react";
 import { useState } from "react";
 import { LogoMark } from "#/components/brand";
 import { Button } from "#/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "#/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "#/components/ui/dialog";
 import { bannerWanted, dismissBanner, useInstall } from "#/lib/install";
 import { cn } from "#/lib/utils";
 
@@ -71,15 +77,19 @@ export function IosInstallHelp({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-2xl sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Add Inkmark to your Home Screen</DialogTitle>
-          <DialogDescription>It opens full screen and works without a connection.</DialogDescription>
+          <DialogTitle className="font-display text-xl">
+            Add Inkmark to your Home Screen
+          </DialogTitle>
+          <DialogDescription>
+            It opens full screen and works without a connection.
+          </DialogDescription>
         </DialogHeader>
         <ol className="grid gap-3 text-sm">
           <li className="flex items-center gap-3">
             <Step n={1} />
             <span>
-              Tap <Share className="inline size-4 -translate-y-px" aria-label="Share" /> <b>Share</b> in
-              Safari's toolbar.
+              Tap <Share className="inline size-4 -translate-y-px" aria-label="Share" />{" "}
+              <b>Share</b> in Safari's toolbar.
             </span>
           </li>
           <li className="flex items-center gap-3">

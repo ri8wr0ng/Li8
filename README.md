@@ -43,7 +43,7 @@ pnpm dev                # http://localhost:3000 (keep `npx convex dev` running t
 
 ## Continuous integration
 
-Pull requests run `pnpm format:check` (Prettier) and `pnpm lint` (ESLint for TypeScript and React Hooks). Run `pnpm format` to apply formatting locally. Generated files and installed agent skills are excluded from these checks.
+Pull requests run `pnpm format:check` (Vite+ / oxfmt) and `pnpm lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `pnpm format` to apply formatting or `pnpm lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
 
 PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
 

@@ -28,7 +28,10 @@ function NotesPage() {
 
   const q = query.trim();
   const hits = useMemo(
-    () => search(q, "note").flatMap((h) => (h.type === "note" ? [{ note: h.doc, terms: h.terms }] : [])),
+    () =>
+      search(q, "note").flatMap((h) =>
+        h.type === "note" ? [{ note: h.doc, terms: h.terms }] : [],
+      ),
     [search, q],
   );
   const pinned = notes?.filter((n) => n.pinned) ?? [];
@@ -67,7 +70,8 @@ function NotesPage() {
         ) : notes.length === 0 ? (
           <EmptyState icon={<NotebookPen />} title="Your first note is one click away">
             Notes save as you type. Press <b>⌘K</b> anywhere to search, or type something like{" "}
-            <span className="font-mono">Battle Through The Heavens 348</span> to start tracking a series.
+            <span className="font-mono">Battle Through The Heavens 348</span> to start tracking a
+            series.
             <div className="mt-5">
               <Button variant="hanko" className="rounded-xl" onClick={newNote}>
                 <PenLine /> Write a note
@@ -109,7 +113,13 @@ function useHomeScreenShortcut(newNote: () => Promise<void>) {
   }, [wantsNew, navigate, newNote, isAuthenticated]);
 }
 
-function NoteList({ items, query }: { items: { note: Doc<"notes">; terms: string[] }[]; query?: string }) {
+function NoteList({
+  items,
+  query,
+}: {
+  items: { note: Doc<"notes">; terms: string[] }[];
+  query?: string;
+}) {
   return (
     <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
       {items.map(({ note, terms }) => (
@@ -122,14 +132,18 @@ function NoteList({ items, query }: { items: { note: Doc<"notes">; terms: string
           >
             <div className="flex items-baseline gap-3">
               <h3 className="min-w-0 flex-1 truncate font-medium">
-                {note.pinned && <Pin className="mr-1.5 inline size-3.5 -translate-y-px text-hanko" />}
+                {note.pinned && (
+                  <Pin className="mr-1.5 inline size-3.5 -translate-y-px text-hanko" />
+                )}
                 {note.title ? (
                   <Highlight text={note.title} terms={terms} />
                 ) : (
                   <span className="text-muted-foreground">Untitled</span>
                 )}
               </h3>
-              <time className="shrink-0 text-xs text-muted-foreground">{relativeTime(note.updatedAt)}</time>
+              <time className="shrink-0 text-xs text-muted-foreground">
+                {relativeTime(note.updatedAt)}
+              </time>
             </div>
             {note.body.trim() && (
               <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">

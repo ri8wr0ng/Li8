@@ -1,6 +1,10 @@
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 const dateFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
-const fullFmt = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+const fullFmt = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
 
 export function relativeTime(ms: number, now = Date.now()) {
   const diff = ms - now;
@@ -12,7 +16,9 @@ export function relativeTime(ms: number, now = Date.now()) {
   const days = Math.round(hours / 24);
   if (Math.abs(days) < 7) return rtf.format(days, "day");
   const date = new Date(ms);
-  return date.getFullYear() === new Date(now).getFullYear() ? dateFmt.format(date) : fullFmt.format(date);
+  return date.getFullYear() === new Date(now).getFullYear()
+    ? dateFmt.format(date)
+    : fullFmt.format(date);
 }
 
 export function fullDate(ms: number) {

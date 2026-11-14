@@ -7,7 +7,13 @@ export const STATUS_LABEL: Record<SeriesStatus, string> = {
   completed: "Completed",
   dropped: "Dropped",
 };
-export const STATUS_ORDER: SeriesStatus[] = ["reading", "planned", "on_hold", "completed", "dropped"];
+export const STATUS_ORDER: SeriesStatus[] = [
+  "reading",
+  "planned",
+  "on_hold",
+  "completed",
+  "dropped",
+];
 
 export const KIND_LABEL: Record<SeriesKind, string> = {
   manga: "Manga",
@@ -18,6 +24,9 @@ export const KIND_LABEL: Record<SeriesKind, string> = {
   other: "Other",
 };
 export const KIND_ORDER: SeriesKind[] = ["manhua", "manhwa", "manga", "webtoon", "novel", "other"];
+
+export const isSeriesStatus = (v: unknown): v is SeriesStatus => STATUS_ORDER.some((s) => s === v);
+export const isSeriesKind = (v: unknown): v is SeriesKind => KIND_ORDER.some((k) => k === v);
 
 /** 348 -> "348", 348.5 -> "348.5" */
 export function formatChapter(chapter: number) {

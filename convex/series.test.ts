@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { registerCore, sessionIdentity } from "@convex-dev/auth/test";
 import { convexTest } from "convex-test";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 import { api, components } from "./_generated/api";
 import schema from "./schema";
 
@@ -20,7 +20,10 @@ async function setup(chapter = 348) {
     sessionMaxLifetimeSeconds: 3600,
   });
   const reader = t.withIdentity(sessionIdentity(tokens));
-  const id = await reader.mutation(api.series.create, { title: "Battle Through The Heavens", chapter });
+  const id = await reader.mutation(api.series.create, {
+    title: "Battle Through The Heavens",
+    chapter,
+  });
   return { t, reader, id };
 }
 

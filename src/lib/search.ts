@@ -64,12 +64,12 @@ export function useSearch(notes: Doc<"notes">[] | undefined, series: Doc<"series
       const run = (combineWith: "AND" | "OR") =>
         index.search(q, {
           combineWith,
-          filter: filter ? (r) => typeOf(r.id as string) === filter : undefined,
+          filter: filter ? (r) => typeOf(String(r.id)) === filter : undefined,
         });
       let results = run("AND");
       if (results.length === 0 && !strict) results = run("OR");
       return results.flatMap((r): SearchHit[] => {
-        const doc = byId.get(r.id as string);
+        const doc = byId.get(String(r.id));
         if (!doc) return [];
         const hit = { terms: r.terms, score: r.score };
         return "chapter" in doc

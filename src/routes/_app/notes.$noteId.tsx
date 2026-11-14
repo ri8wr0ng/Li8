@@ -53,6 +53,8 @@ function NotePage() {
   const { noteId } = Route.useParams();
   const { isAuthenticated } = useConvexAuth();
   const online = useOnline();
+  // Route params are plain strings; the query validates the id with v.id().
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const live = useQuery(api.notes.get, isAuthenticated ? { id: noteId as Id<"notes"> } : "skip");
   // Until the live copy arrives (or with no connection), show the saved one.
   const list = useCachedQuery(api.notes.list, "notes");
@@ -154,6 +156,8 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   // Take edits made on another device, unless you're typing here.
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HighlightTextareaHandle>(null);
+  // Only re-sync when the server copy changes, not on every local edit.
+  /* oxlint-disable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (save.isDirty()) return;
     const editing =
@@ -162,9 +166,8 @@ function Editor({ note }: { note: Doc<"notes"> }) {
     setTitle(note.title);
     setBody(note.body);
     setTags(note.tags);
-    // Sync only on a server revision; local autosave state must not reset the editor.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.updatedAt]);
+  /* oxlint-enable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps */
 
   // Find in note
   const [findOpen, setFindOpen] = useState(Boolean(q));
@@ -214,7 +217,13 @@ function Editor({ note }: { note: Doc<"notes"> }) {
     <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-8">
       {/* Toolbar */}
       <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 flex h-14 items-center gap-1 bg-background/85 px-4 backdrop-blur-md sm:-mx-8 sm:px-8 lg:top-0">
-        <Button asChild variant="ghost" size="icon" className="-ml-2 rounded-xl" aria-label="Back to notes">
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="-ml-2 rounded-xl"
+          aria-label="Back to notes"
+        >
           <Link to="/">
             <ArrowLeft />
           </Link>

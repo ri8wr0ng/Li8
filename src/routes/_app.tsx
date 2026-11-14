@@ -38,10 +38,12 @@ function OfflineFirstRun() {
     <main className="pt-safe pb-safe grid min-h-dvh place-items-center px-6 text-center">
       <div className="max-w-xs">
         <LogoMark className="mx-auto size-12" />
-        <h1 className="mt-5 font-display text-2xl font-semibold tracking-[-0.02em]">You're offline</h1>
+        <h1 className="mt-5 font-display text-2xl font-semibold tracking-[-0.02em]">
+          You're offline
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground text-pretty">
-          Inkmark saves a copy of your notes and library once it has synced. Connect once and it'll open
-          without a network after that.
+          Inkmark saves a copy of your notes and library once it has synced. Connect once and it'll
+          open without a network after that.
         </p>
       </div>
     </main>

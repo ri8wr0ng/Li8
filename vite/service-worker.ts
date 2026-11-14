@@ -33,12 +33,15 @@ export function serviceWorker(): Plugin {
       const statics = publicDir
         ? readdirSync(publicDir).filter((f) => /\.(png|svg|webmanifest|ico)$/.test(f))
         : [];
-      const precache = ["/_shell.html", ...[...built, ...statics].map((f) => `/${f}`)].sort();
+      const precache = ["/_shell.html", ...[...built, ...statics].map((f) => `/${f}`)].toSorted();
       const version = randomUUID();
       this.emitFile({
         type: "asset",
         fileName: "sw.js",
-        source: SW_SOURCE.replace("__VERSION__", version).replace("__PRECACHE__", JSON.stringify(precache)),
+        source: SW_SOURCE.replace("__VERSION__", version).replace(
+          "__PRECACHE__",
+          JSON.stringify(precache),
+        ),
       });
     },
   };

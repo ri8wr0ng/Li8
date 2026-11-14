@@ -65,7 +65,13 @@ export function useSwipeRight({ onCommit, enabled }: { onCommit: () => void; ena
     onPointerDown(e: React.PointerEvent<HTMLElement>) {
       suppressClick.current = false;
       if (!enabled || e.pointerType === "mouse" || !e.isPrimary) return;
-      gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, state: "pending", armed: false };
+      gesture.current = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        state: "pending",
+        armed: false,
+      };
     },
     onPointerMove(e: React.PointerEvent<HTMLElement>) {
       const g = gesture.current;
@@ -105,5 +111,12 @@ export function useSwipeRight({ onCommit, enabled }: { onCommit: () => void; ena
     },
   };
 
-  return { surface, reveal, handlers };
+  const attachSurface = useCallback((el: HTMLElement | null) => {
+    surface.current = el;
+  }, []);
+  const attachReveal = useCallback((el: HTMLElement | null) => {
+    reveal.current = el;
+  }, []);
+
+  return { attachSurface, attachReveal, handlers };
 }

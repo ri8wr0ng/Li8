@@ -26,7 +26,11 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
   const nextUrl = readUrl(series.readUrlTemplate, next);
   const progress = series.totalChapters ? Math.min(1, series.chapter / series.totalChapters) : null;
   const readOnly = useReadOnly();
-  const swipe = useSwipeRight({
+  const {
+    attachSurface,
+    attachReveal,
+    handlers: swipeHandlers,
+  } = useSwipeRight({
     enabled: !readOnly,
     onCommit: () => void bump({ id: series._id, delta: 1 }),
   });
@@ -37,7 +41,10 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
     const previous = series.chapter;
     void setChapter({ id: series._id, chapter: next }).then(() =>
       toast(`Reading Ch. ${formatChapter(next)}`, {
-        action: { label: "Undo", onClick: () => void setChapter({ id: series._id, chapter: previous }) },
+        action: {
+          label: "Undo",
+          onClick: () => void setChapter({ id: series._id, chapter: previous }),
+        },
       }),
     );
   }
@@ -46,7 +53,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
     <div className="relative">
       {/* Revealed behind the card as you swipe right. */}
       <div
-        ref={(el) => void (swipe.reveal.current = el)}
+        ref={attachReveal}
         aria-hidden
         style={{ opacity: 0 }}
         className="group/reveal absolute inset-0 flex items-center gap-2 rounded-2xl bg-hanko pl-5 text-hanko-foreground"
@@ -54,11 +61,13 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
         <span className="grid size-10 place-items-center rounded-full bg-white/15 transition-transform duration-150 group-data-[armed=true]/reveal:scale-110">
           <Plus className="size-5" />
         </span>
-        <span className="font-mono text-sm font-semibold tabular-nums">Ch. {formatChapter(next)}</span>
+        <span className="font-mono text-sm font-semibold tabular-nums">
+          Ch. {formatChapter(next)}
+        </span>
       </div>
       <article
-        ref={(el) => void (swipe.surface.current = el)}
-        {...swipe.handlers}
+        ref={attachSurface}
+        {...swipeHandlers}
         className={cn(
           "group relative flex touch-pan-y flex-col rounded-2xl border bg-card p-4 select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:p-5",
         )}
@@ -97,7 +106,9 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
                 </span>
               )}
             </div>
-            <div className="mt-1.5 text-xs text-muted-foreground">{relativeTime(series.lastReadAt)}</div>
+            <div className="mt-1.5 text-xs text-muted-foreground">
+              {relativeTime(series.lastReadAt)}
+            </div>
           </div>
 
           <div className="relative z-10 flex items-center gap-1.5">

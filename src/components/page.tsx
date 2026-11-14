@@ -14,7 +14,9 @@ export function PageHeader({
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
-        <h1 className="font-display text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">{title}</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">
+          {title}
+        </h1>
         {meta && <p className="mt-1 text-sm text-muted-foreground">{meta}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -31,8 +33,8 @@ export const SearchField = forwardRef<
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const target = e.target as HTMLElement;
-      if (e.key !== "/" || target.closest("input, textarea, [contenteditable=true]")) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (e.key !== "/" || target?.closest("input, textarea, [contenteditable=true]")) return;
       e.preventDefault();
       local.current?.focus();
     }

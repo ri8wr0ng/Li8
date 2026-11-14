@@ -106,7 +106,9 @@ export const create = mutation({
       chapter,
       description: args.description?.trim() ?? "",
       genres: cleanList(args.genres ?? []),
-      ...(args.totalChapters && args.totalChapters > 0 ? { totalChapters: args.totalChapters } : {}),
+      ...(args.totalChapters && args.totalChapters > 0
+        ? { totalChapters: args.totalChapters }
+        : {}),
       ...(args.anilistId !== undefined ? { anilistId: args.anilistId } : {}),
       lastReadAt: now,
       updatedAt: now,
@@ -143,7 +145,9 @@ export const update = mutation({
       ...(altNames ? { altNames: cleanList(altNames) } : {}),
       ...(genres ? { genres: cleanList(genres) } : {}),
       ...(totalChapters !== undefined ? { totalChapters: totalChapters ?? undefined } : {}),
-      ...(readUrlTemplate !== undefined ? { readUrlTemplate: readUrlTemplate?.trim() || undefined } : {}),
+      ...(readUrlTemplate !== undefined
+        ? { readUrlTemplate: readUrlTemplate?.trim() || undefined }
+        : {}),
       ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
       updatedAt: Date.now(),
     });

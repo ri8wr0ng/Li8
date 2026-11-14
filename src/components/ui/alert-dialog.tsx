@@ -10,7 +10,9 @@ function AlertDialog({ ...props }: React.ComponentProps<typeof AlertDialogPrimit
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
 }
 
-function AlertDialogTrigger({ ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
+function AlertDialogTrigger({
+  ...props
+}: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
   return <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
 }
 
@@ -83,7 +85,10 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
   );
 }
 
-function AlertDialogTitle({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+function AlertDialogTitle({
+  className,
+  ...props
+}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
@@ -131,7 +136,11 @@ function AlertDialogAction({
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
   return (
     <Button variant={variant} size={size} asChild>
-      <AlertDialogPrimitive.Action data-slot="alert-dialog-action" className={cn(className)} {...props} />
+      <AlertDialogPrimitive.Action
+        data-slot="alert-dialog-action"
+        className={cn(className)}
+        {...props}
+      />
     </Button>
   );
 }
@@ -145,7 +154,11 @@ function AlertDialogCancel({
   Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
   return (
     <Button variant={variant} size={size} asChild>
-      <AlertDialogPrimitive.Cancel data-slot="alert-dialog-cancel" className={cn(className)} {...props} />
+      <AlertDialogPrimitive.Cancel
+        data-slot="alert-dialog-cancel"
+        className={cn(className)}
+        {...props}
+      />
     </Button>
   );
 }

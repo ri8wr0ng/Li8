@@ -22,9 +22,9 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 function openDb() {
   dbPromise ??= new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.addEventListener("upgradeneeded", () => req.result.createObjectStore(STORE));
+    req.addEventListener("success", () => resolve(req.result));
+    req.addEventListener("error", () => reject(req.error));
   });
   return dbPromise;
 }
@@ -34,8 +34,8 @@ function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequ
     (db) =>
       new Promise<T>((resolve, reject) => {
         const req = run(db.transaction(STORE, mode).objectStore(STORE));
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        req.addEventListener("success", () => resolve(req.result));
+        req.addEventListener("error", () => reject(req.error));
       }),
   );
 }
@@ -54,7 +54,7 @@ export const loadCache: () => Promise<void> = (() => {
           tx("readonly", (s) => s.getAllKeys()),
           tx("readonly", (s) => s.getAll()),
         ]);
-        keys.forEach((k, i) => memory.set(String(k), values[i]));
+        keys.forEach((k, i) => typeof k === "string" && memory.set(k, values[i]));
       } catch (err) {
         // No IndexedDB (private mode, old browser): run without a cache.
         console.warn("Offline cache unavailable", err);
@@ -113,12 +113,11 @@ const cacheKey = (name: string) => `${VERSION_KEY}:${name}`;
  * queries return an empty list to anonymous callers and that must never
  * overwrite the saved copy.
  */
-export function useCachedQuery<Query extends FunctionReference<"query", "public", Record<string, never>>>(
-  query: Query,
-  name: string,
-): FunctionReturnType<Query> | undefined {
+export function useCachedQuery<
+  Query extends FunctionReference<"query", "public", Record<string, never>>,
+>(query: Query, name: string): FunctionReturnType<Query> | undefined {
   const { isAuthenticated } = useConvexAuth();
-  const live = useQuery(query, ...((isAuthenticated ? [{}] : ["skip"]) as [Record<string, never>]));
+  const live = useQuery(query, isAuthenticated ? {} : "skip");
   const key = cacheKey(name);
   const cached = useSyncExternalStore(
     subscribe,

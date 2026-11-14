@@ -19,14 +19,28 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import { Label } from "#/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "#/components/ui/select";
-import { KIND_LABEL, KIND_ORDER, STATUS_LABEL, STATUS_ORDER, formatChapter, readUrl } from "#/lib/series";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#/components/ui/select";
+import {
+  KIND_LABEL,
+  KIND_ORDER,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  formatChapter,
+  readUrl,
+  isSeriesKind,
+  isSeriesStatus,
+} from "#/lib/series";
 import { useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
 import { fullDate, relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import type { SeriesKind, SeriesStatus } from "../../../convex/validators";
 
 export const Route = createFileRoute("/_app/library/$seriesId")({
   component: SeriesPage,
@@ -37,7 +51,12 @@ function SeriesPage() {
   const { seriesId } = Route.useParams();
   const { isAuthenticated } = useConvexAuth();
   const online = useOnline();
-  const live = useQuery(api.series.get, isAuthenticated ? { id: seriesId as Id<"series"> } : "skip");
+  const live = useQuery(
+    api.series.get,
+    // Route params are plain strings; the query validates the id with v.id().
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    isAuthenticated ? { id: seriesId as Id<"series"> } : "skip",
+  );
   // Until the live copy arrives (or with no connection), show the saved one.
   const list = useCachedQuery(api.series.list, "series");
   const cached = list?.find((s) => s._id === seriesId);
@@ -81,7 +100,12 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-8">
       <div className="flex h-14 items-center">
-        <Button asChild variant="ghost" size="sm" className="-ml-2 rounded-xl text-muted-foreground">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="-ml-2 rounded-xl text-muted-foreground"
+        >
           <Link to="/library">
             <ArrowLeft /> Library
           </Link>
@@ -102,7 +126,9 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             value={series.altNames}
             onChange={(altNames) => void save({ altNames })}
             placeholder={
-              series.altNames.length ? "Add another name" : "Add alternative names (BTTH, 斗破苍穹…)"
+              series.altNames.length
+                ? "Add another name"
+                : "Add alternative names (BTTH, 斗破苍穹…)"
             }
           />
         </div>
@@ -132,13 +158,17 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                     aria-label="Total chapters"
                     onCommit={(v) => {
                       const n = Number(v);
-                      void save({ totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null });
+                      void save({
+                        totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
+                      });
                     }}
                     className="w-20 bg-transparent font-mono tabular-nums outline-none placeholder:text-muted-foreground/60"
                   />
                 </span>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">Updated {relativeTime(series.lastReadAt)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Updated {relativeTime(series.lastReadAt)}
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -166,7 +196,9 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-secondary">
               <div
                 className="h-full rounded-full bg-hanko transition-[width]"
-                style={{ width: `${Math.min(100, (series.chapter / series.totalChapters) * 100)}%` }}
+                style={{
+                  width: `${Math.min(100, (series.chapter / series.totalChapters) * 100)}%`,
+                }}
               />
             </div>
           ) : null}
@@ -185,7 +217,10 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
           <AniListControls series={series} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Type">
-              <Select value={series.kind} onValueChange={(kind) => void save({ kind: kind as SeriesKind })}>
+              <Select
+                value={series.kind}
+                onValueChange={(kind) => isSeriesKind(kind) && void save({ kind })}
+              >
                 <SelectTrigger className="w-full rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
@@ -201,7 +236,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             <Field label="Status">
               <Select
                 value={series.status}
-                onValueChange={(status) => void save({ status: status as SeriesStatus })}
+                onValueChange={(status) => isSeriesStatus(status) && void save({ status })}
               >
                 <SelectTrigger className="w-full rounded-xl">
                   <SelectValue />
@@ -239,8 +274,8 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             label="Reading link"
             hint={
               <>
-                Paste a chapter URL and replace the number with <code className="font-mono">{"{n}"}</code>.
-                You'll get a “Read next” button.
+                Paste a chapter URL and replace the number with{" "}
+                <code className="font-mono">{"{n}"}</code>. You'll get a “Read next” button.
               </>
             }
           >
@@ -272,7 +307,9 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                       i === 0 ? "bg-hanko" : "bg-border",
                     )}
                   />
-                  <span className="font-mono font-medium tabular-nums">Ch. {formatChapter(h.chapter)}</span>
+                  <span className="font-mono font-medium tabular-nums">
+                    Ch. {formatChapter(h.chapter)}
+                  </span>
                   <span className="ml-2 text-muted-foreground" title={fullDate(h.at)}>
                     {relativeTime(h.at)}
                   </span>
@@ -391,11 +428,13 @@ function BlurTextarea({
   useEffect(() => {
     if (!focused.current) setDraft(value);
   }, [value]);
+  // `draft` is the trigger: resize to fit whenever the text changes.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight + 2}px`;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [draft]);
   return (
     <textarea
@@ -414,7 +453,15 @@ function BlurTextarea({
   );
 }
 
-function ChapterInput({ id, value, onCommit }: { id: string; value: number; onCommit: (n: number) => void }) {
+function ChapterInput({
+  id,
+  value,
+  onCommit,
+}: {
+  id: string;
+  value: number;
+  onCommit: (n: number) => void;
+}) {
   return (
     <BlurField
       id={id}

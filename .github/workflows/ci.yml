@@ -29,4 +29,5 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Scripts use the Vite+ formatter (oxfmt) and linter (oxlint).
       - run: pnpm run ${{ matrix.check }}

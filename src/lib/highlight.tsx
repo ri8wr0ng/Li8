@@ -7,7 +7,7 @@ function escapeRegExp(text: string) {
 /** A case-insensitive regex matching any of the terms, longest first. */
 export function termsRegex(terms: string[]) {
   const parts = [...new Set(terms.map((t) => t.trim()).filter(Boolean))]
-    .sort((a, b) => b.length - a.length)
+    .toSorted((a, b) => b.length - a.length)
     .map(escapeRegExp);
   return parts.length ? new RegExp(`(${parts.join("|")})`, "giu") : null;
 }
