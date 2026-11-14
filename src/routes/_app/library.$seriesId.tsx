@@ -56,6 +56,7 @@ function Missing() {
 function SeriesDetail({ series }: { series: Doc<'series'> }) {
   const update = useMutation(api.series.update)
   const setChapter = useMutation(api.series.setChapter)
+  const bump = useMutation(api.series.bump)
   const remove = useMutation(api.series.remove)
   const history = useQuery(api.series.history, { seriesId: series._id })
   const navigate = useNavigate()
@@ -129,7 +130,7 @@ function SeriesDetail({ series }: { series: Doc<'series'> }) {
               type="button"
               aria-label="One chapter back"
               disabled={series.chapter <= 0}
-              onClick={() => void setChapter({ id: series._id, chapter: Math.max(0, series.chapter - 1) })}
+              onClick={() => void bump({ id: series._id, delta: -1 })}
               className="grid size-12 place-items-center rounded-full border bg-background text-muted-foreground hover:text-foreground active:scale-95 disabled:opacity-40"
             >
               <Minus className="size-5" />
@@ -137,7 +138,7 @@ function SeriesDetail({ series }: { series: Doc<'series'> }) {
             <button
               type="button"
               aria-label="One chapter forward"
-              onClick={() => void setChapter({ id: series._id, chapter: series.chapter + 1 })}
+              onClick={() => void bump({ id: series._id, delta: 1 })}
               className="grid size-14 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm hover:bg-hanko/90 active:scale-90"
             >
               <Plus className="size-6" />
