@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "react-perf",
+    "import",
+    "jsx-a11y",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "eslint/no-underscore-dangle": "off",
+    "jsx-a11y/no-autofocus": "off",
+    "import/no-unassigned-import": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/require-to-throw-message": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "react/immutability": "warn",
+    "react/set-state-in-effect": "warn",
+    "react-hooks/exhaustive-deps": "warn"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true
+  },
+  "ignorePatterns": ["src/routeTree.gen.ts", "convex/_generated/**", ".agents/**", ".claude/**"]
+}

@@ -42,7 +42,11 @@ export function useAniListSearch(query: string, enabled = true): AniListSearchSt
         (err: unknown) => {
           if (controller.signal.aborted) return;
           if (!(err instanceof AniListError)) console.error(err);
-          setState((s) => ({ status: "error", message: errorMessage(err), results: "results" in s ? s.results : [] }));
+          setState((s) => ({
+            status: "error",
+            message: errorMessage(err),
+            results: "results" in s ? s.results : [],
+          }));
         },
       );
     }, 350);
@@ -121,7 +125,10 @@ export function AniListResults({
           })}
         </ul>
       )}
-      <p className="mt-1.5 flex min-h-4 items-center gap-1.5 px-1 text-xs text-muted-foreground" aria-live="polite">
+      <p
+        className="mt-1.5 flex min-h-4 items-center gap-1.5 px-1 text-xs text-muted-foreground"
+        aria-live="polite"
+      >
         {state.status === "loading" ? (
           <>
             <Loader2 className="size-3 animate-spin" /> Searching AniList…

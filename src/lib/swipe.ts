@@ -20,16 +20,16 @@ export function vibrate(pattern: number | number[]) {
  *
  * Writes styles directly instead of re-rendering on every move.
  */
-export function useSwipeRight({
-  onCommit,
-  enabled,
-}: {
-  onCommit: () => void;
-  enabled: boolean;
-}) {
+export function useSwipeRight({ onCommit, enabled }: { onCommit: () => void; enabled: boolean }) {
   const surface = useRef<HTMLElement | null>(null);
   const reveal = useRef<HTMLElement | null>(null);
-  const gesture = useRef<{ id: number; x: number; y: number; state: "pending" | "drag"; armed: boolean } | null>(null);
+  const gesture = useRef<{
+    id: number;
+    x: number;
+    y: number;
+    state: "pending" | "drag";
+    armed: boolean;
+  } | null>(null);
   const suppressClick = useRef(false);
 
   const paint = useCallback((x: number, animate: boolean) => {
@@ -65,7 +65,13 @@ export function useSwipeRight({
     onPointerDown(e: React.PointerEvent<HTMLElement>) {
       suppressClick.current = false;
       if (!enabled || e.pointerType === "mouse" || !e.isPrimary) return;
-      gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, state: "pending", armed: false };
+      gesture.current = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        state: "pending",
+        armed: false,
+      };
     },
     onPointerMove(e: React.PointerEvent<HTMLElement>) {
       const g = gesture.current;

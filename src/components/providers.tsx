@@ -22,7 +22,10 @@ export function Providers({ children }: { children: ReactNode }) {
     >
       <TooltipProvider delayDuration={400}>
         {children}
-        <Toaster position="top-center" offset={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }} />
+        <Toaster
+          position="top-center"
+          offset={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+        />
       </TooltipProvider>
     </ConvexAuthProvider>
   );
@@ -63,11 +66,13 @@ function useServiceWorker() {
         reg.addEventListener("updatefound", () => {
           const worker = reg.installing;
           worker?.addEventListener("statechange", () => {
-            if (worker.state === "installed" && navigator.serviceWorker.controller) offerUpdate(worker);
+            if (worker.state === "installed" && navigator.serviceWorker.controller)
+              offerUpdate(worker);
           });
         });
         // Installed apps can stay open for days; check when they come back to the foreground.
-        const check = () => document.visibilityState === "visible" && void reg.update().catch(() => {});
+        const check = () =>
+          document.visibilityState === "visible" && void reg.update().catch(() => {});
         document.addEventListener("visibilitychange", check);
       })
       .catch((err: unknown) => console.warn("Service worker registration failed", err));

@@ -11,7 +11,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p convex",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "dependencies": {
     "@convex-dev/auth": "^2.0.0",
@@ -44,6 +48,8 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "convex-test": "^0.0.71",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
     "vitest": "^5.1.0"

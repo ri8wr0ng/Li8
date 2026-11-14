@@ -86,12 +86,20 @@ function subscribe(listener: () => void) {
 }
 
 export function useCacheReady() {
-  return useSyncExternalStore(subscribe, () => ready, () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => ready,
+    () => false,
+  );
 }
 
 /** True when a saved copy of the notes and library exists. */
 export function useHasCache() {
-  return useSyncExternalStore(subscribe, () => memory.has(cacheKey("notes")), () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => memory.has(cacheKey("notes")),
+    () => false,
+  );
 }
 
 const cacheKey = (name: string) => `${VERSION_KEY}:${name}`;
@@ -105,10 +113,9 @@ const cacheKey = (name: string) => `${VERSION_KEY}:${name}`;
  * queries return an empty list to anonymous callers and that must never
  * overwrite the saved copy.
  */
-export function useCachedQuery<Query extends FunctionReference<"query", "public", Record<string, never>>>(
-  query: Query,
-  name: string,
-): FunctionReturnType<Query> | undefined {
+export function useCachedQuery<
+  Query extends FunctionReference<"query", "public", Record<string, never>>,
+>(query: Query, name: string): FunctionReturnType<Query> | undefined {
   const { isAuthenticated } = useConvexAuth();
   const live = useQuery(query, ...((isAuthenticated ? [{}] : ["skip"]) as [Record<string, never>]));
   const key = cacheKey(name);
@@ -136,7 +143,11 @@ function subscribeOnline(listener: () => void) {
 }
 
 export function useOnline() {
-  return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
+  return useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
 }
 
 /**

@@ -1,10 +1,27 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
 import { useMutation } from "convex/react";
-import { BookMarked, BookOpen, FilePlus2, FileText, Library, Moon, Plus, Sparkles } from "lucide-react";
+import {
+  BookMarked,
+  BookOpen,
+  FilePlus2,
+  FileText,
+  Library,
+  Moon,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { useCachedQuery, useReadOnly } from "#/lib/offline";
 import { useTheme } from "#/lib/theme";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "#/components/ui/dialog";
 import { Highlight, snippet } from "#/lib/highlight";
@@ -53,7 +70,11 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
-function findSeries(name: string, series: Doc<"series">[], searchSeries: (q: string) => Doc<"series">[]) {
+function findSeries(
+  name: string,
+  series: Doc<"series">[],
+  searchSeries: (q: string) => Doc<"series">[],
+) {
   const n = norm(name);
   const exact = series.find(
     (s) => norm(s.title) === n || s.altNames.some((a) => norm(a) === n) || acronym(s.title) === n,
@@ -112,7 +133,10 @@ function Palette({ close }: { close: () => void }) {
       const id = await createSeries({ title, chapter });
       toast.success(`Added ${title}`, {
         description: chapter ? `Chapter ${formatChapter(chapter)}` : undefined,
-        action: { label: "Open", onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }) },
+        action: {
+          label: "Open",
+          onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }),
+        },
       });
     });
 
@@ -122,7 +146,10 @@ function Palette({ close }: { close: () => void }) {
       const next = delta !== undefined ? await bump({ id: target._id, delta }) : chapter!;
       if (delta === undefined) await setChapter({ id: target._id, chapter: next });
       toast.success(`${target.title} → Ch. ${formatChapter(next)}`, {
-        action: { label: "Undo", onClick: () => void setChapter({ id: target._id, chapter: previous }) },
+        action: {
+          label: "Undo",
+          onClick: () => void setChapter({ id: target._id, chapter: previous }),
+        },
       });
     });
 
@@ -219,7 +246,11 @@ function Palette({ close }: { close: () => void }) {
                   icon={<FileText />}
                   onSelect={() => {
                     close();
-                    void navigate({ to: "/notes/$noteId", params: { noteId: hit.doc._id }, search: { q } });
+                    void navigate({
+                      to: "/notes/$noteId",
+                      params: { noteId: hit.doc._id },
+                      search: { q },
+                    });
                   }}
                 >
                   <span className="min-w-0 flex-1">
@@ -241,7 +272,11 @@ function Palette({ close }: { close: () => void }) {
         {q ? (
           <Group heading="Create">
             {command && !command.target && (
-              <Item value="create-series-cmd" icon={<Library />} onSelect={() => addSeries(command.name, command.chapter)}>
+              <Item
+                value="create-series-cmd"
+                icon={<Library />}
+                onSelect={() => addSeries(command.name, command.chapter)}
+              >
                 Add <b className="font-semibold">“{command.name}”</b> to Library
                 {command.chapter !== undefined && <> at Ch. {formatChapter(command.chapter)}</>}
               </Item>
@@ -260,10 +295,18 @@ function Palette({ close }: { close: () => void }) {
             <Item value="new-note" icon={<FilePlus2 />} onSelect={() => newNote()}>
               New note
             </Item>
-            <Item value="go-notes" icon={<FileText />} onSelect={() => (close(), void navigate({ to: "/" }))}>
+            <Item
+              value="go-notes"
+              icon={<FileText />}
+              onSelect={() => (close(), void navigate({ to: "/" }))}
+            >
               Notes
             </Item>
-            <Item value="go-library" icon={<Library />} onSelect={() => (close(), void navigate({ to: "/library" }))}>
+            <Item
+              value="go-library"
+              icon={<Library />}
+              onSelect={() => (close(), void navigate({ to: "/library" }))}
+            >
               Library
             </Item>
             <Item
@@ -286,7 +329,8 @@ function Palette({ close }: { close: () => void }) {
           <Key>↓</Key> move
         </span>
         <span className="ml-auto">
-          Tip: <span className="font-mono">name 349</span> or <span className="font-mono">name +1</span>
+          Tip: <span className="font-mono">name 349</span> or{" "}
+          <span className="font-mono">name +1</span>
         </span>
       </div>
     </Command>
