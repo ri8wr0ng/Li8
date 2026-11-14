@@ -53,6 +53,8 @@ function NotePage() {
   const { noteId } = Route.useParams();
   const { isAuthenticated } = useConvexAuth();
   const online = useOnline();
+  // Route params are plain strings; the query validates the id with v.id().
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const live = useQuery(api.notes.get, isAuthenticated ? { id: noteId as Id<"notes"> } : "skip");
   // Until the live copy arrives (or with no connection), show the saved one.
   const list = useCachedQuery(api.notes.list, "notes");
@@ -154,6 +156,8 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   // Take edits made on another device, unless you're typing here.
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HighlightTextareaHandle>(null);
+  // Only re-sync when the server copy changes, not on every local edit.
+  /* oxlint-disable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (save.isDirty()) return;
     const editing =
@@ -163,6 +167,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
     setBody(note.body);
     setTags(note.tags);
   }, [note.updatedAt]);
+  /* oxlint-enable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps */
 
   // Find in note
   const [findOpen, setFindOpen] = useState(Boolean(q));

@@ -22,9 +22,9 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 function openDb() {
   dbPromise ??= new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.addEventListener("upgradeneeded", () => req.result.createObjectStore(STORE));
+    req.addEventListener("success", () => resolve(req.result));
+    req.addEventListener("error", () => reject(req.error));
   });
   return dbPromise;
 }
@@ -34,8 +34,8 @@ function tx<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => IDBRequ
     (db) =>
       new Promise<T>((resolve, reject) => {
         const req = run(db.transaction(STORE, mode).objectStore(STORE));
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        req.addEventListener("success", () => resolve(req.result));
+        req.addEventListener("error", () => reject(req.error));
       }),
   );
 }
@@ -117,7 +117,7 @@ export function useCachedQuery<
   Query extends FunctionReference<"query", "public", Record<string, never>>,
 >(query: Query, name: string): FunctionReturnType<Query> | undefined {
   const { isAuthenticated } = useConvexAuth();
-  const live = useQuery(query, ...((isAuthenticated ? [{}] : ["skip"]) as [Record<string, never>]));
+  const live = useQuery(query, isAuthenticated ? {} : "skip");
   const key = cacheKey(name);
   const cached = useSyncExternalStore(
     subscribe,

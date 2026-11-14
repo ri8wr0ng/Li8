@@ -8,8 +8,14 @@ import { api } from "../../convex/_generated/api";
 // Starts listening for `beforeinstallprompt` as early as possible.
 import "#/lib/install";
 
+function convexUrl(): string {
+  const url: unknown = import.meta.env.VITE_CONVEX_URL;
+  if (typeof url !== "string") throw new Error("VITE_CONVEX_URL is not set");
+  return url;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
-  const [client] = useState(() => new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string));
+  const [client] = useState(() => new ConvexReactClient(convexUrl()));
   useServiceWorker();
   return (
     <ConvexAuthProvider
@@ -52,6 +58,8 @@ function useServiceWorker() {
           label: "Reload",
           onClick: () => {
             navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+            // ServiceWorker#postMessage has no targetOrigin; the rule is meant for window.postMessage.
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin
             worker.postMessage("SKIP_WAITING");
           },
         },

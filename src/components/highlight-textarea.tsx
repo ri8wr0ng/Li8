@@ -55,7 +55,7 @@ export const HighlightTextarea = forwardRef<HighlightTextareaHandle, Props>(
 
     useLayoutEffect(() => {
       const el = textarea.current;
-      if (!el) return;
+      if (!el) return undefined;
       const resize = () => {
         el.style.height = "auto";
         el.style.height = `${el.scrollHeight}px`;

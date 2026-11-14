@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 /**
  * A tiny replacement for next-themes. The class on <html> is set before first
@@ -91,6 +91,5 @@ export function useTheme() {
     () => state ?? serverSnapshot,
     () => serverSnapshot,
   );
-  const setTheme = useCallback((theme: string) => set(theme as Theme), []);
-  return { theme: s.theme, resolvedTheme: s.resolved, setTheme };
+  return { theme: s.theme, resolvedTheme: s.resolved, setTheme: set };
 }

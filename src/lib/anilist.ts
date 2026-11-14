@@ -80,10 +80,10 @@ async function request<T>(
     blockedUntil = Date.now() + seconds * 1000;
     throw new AniListError("rate_limit", "AniList is busy. Try again in a moment.", blockedUntil);
   }
-  const json = (await res.json().catch(() => null)) as {
+  const json: {
     data?: T;
     errors?: { message: string; status?: number }[];
-  } | null;
+  } | null = await res.json().catch(() => null);
   if (res.status === 404 || json?.errors?.some((e) => e.status === 404)) {
     throw new AniListError("not_found", "AniList doesn't have that series anymore.");
   }

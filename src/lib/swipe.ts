@@ -111,5 +111,12 @@ export function useSwipeRight({ onCommit, enabled }: { onCommit: () => void; ena
     },
   };
 
-  return { surface, reveal, handlers };
+  const attachSurface = useCallback((el: HTMLElement | null) => {
+    surface.current = el;
+  }, []);
+  const attachReveal = useCallback((el: HTMLElement | null) => {
+    reveal.current = el;
+  }, []);
+
+  return { attachSurface, attachReveal, handlers };
 }

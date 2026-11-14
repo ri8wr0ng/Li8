@@ -25,6 +25,9 @@ export const KIND_LABEL: Record<SeriesKind, string> = {
 };
 export const KIND_ORDER: SeriesKind[] = ["manhua", "manhwa", "manga", "webtoon", "novel", "other"];
 
+export const isSeriesStatus = (v: unknown): v is SeriesStatus => STATUS_ORDER.some((s) => s === v);
+export const isSeriesKind = (v: unknown): v is SeriesKind => KIND_ORDER.some((k) => k === v);
+
 /** 348 -> "348", 348.5 -> "348.5" */
 export function formatChapter(chapter: number) {
   return Number.isInteger(chapter) ? String(chapter) : chapter.toFixed(1).replace(/\.0$/, "");

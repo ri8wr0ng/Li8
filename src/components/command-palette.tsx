@@ -175,7 +175,7 @@ function Palette({ close }: { close: () => void }) {
           <Group heading="Update chapter">
             <Item
               value="command-set"
-              onSelect={() => applyCommand(command.target!, command.chapter, command.delta)}
+              onSelect={() => applyCommand(command.target, command.chapter, command.delta)}
               icon={<BookMarked className="text-hanko" />}
             >
               <span className="truncate">
@@ -187,7 +187,7 @@ function Palette({ close }: { close: () => void }) {
                 ) : (
                   <>
                     Set <b className="font-semibold">{command.target.title}</b> to Ch.{" "}
-                    {formatChapter(command.chapter!)}
+                    {formatChapter(command.chapter)}
                   </>
                 )}
               </span>

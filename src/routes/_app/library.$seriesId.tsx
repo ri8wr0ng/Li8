@@ -33,13 +33,14 @@ import {
   STATUS_ORDER,
   formatChapter,
   readUrl,
+  isSeriesKind,
+  isSeriesStatus,
 } from "#/lib/series";
 import { useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
 import { fullDate, relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import type { SeriesKind, SeriesStatus } from "../../../convex/validators";
 
 export const Route = createFileRoute("/_app/library/$seriesId")({
   component: SeriesPage,
@@ -52,6 +53,8 @@ function SeriesPage() {
   const online = useOnline();
   const live = useQuery(
     api.series.get,
+    // Route params are plain strings; the query validates the id with v.id().
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     isAuthenticated ? { id: seriesId as Id<"series"> } : "skip",
   );
   // Until the live copy arrives (or with no connection), show the saved one.
@@ -216,7 +219,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             <Field label="Type">
               <Select
                 value={series.kind}
-                onValueChange={(kind) => void save({ kind: kind as SeriesKind })}
+                onValueChange={(kind) => isSeriesKind(kind) && void save({ kind })}
               >
                 <SelectTrigger className="w-full rounded-xl">
                   <SelectValue />
@@ -233,7 +236,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             <Field label="Status">
               <Select
                 value={series.status}
-                onValueChange={(status) => void save({ status: status as SeriesStatus })}
+                onValueChange={(status) => isSeriesStatus(status) && void save({ status })}
               >
                 <SelectTrigger className="w-full rounded-xl">
                   <SelectValue />
@@ -425,11 +428,13 @@ function BlurTextarea({
   useEffect(() => {
     if (!focused.current) setDraft(value);
   }, [value]);
+  // `draft` is the trigger: resize to fit whenever the text changes.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight + 2}px`;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [draft]);
   return (
     <textarea

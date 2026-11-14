@@ -33,8 +33,8 @@ export const SearchField = forwardRef<
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const target = e.target as HTMLElement;
-      if (e.key !== "/" || target.closest("input, textarea, [contenteditable=true]")) return;
+      const target = e.target instanceof Element ? e.target : null;
+      if (e.key !== "/" || target?.closest("input, textarea, [contenteditable=true]")) return;
       e.preventDefault();
       local.current?.focus();
     }

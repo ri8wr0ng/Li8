@@ -8,7 +8,7 @@ import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useCachedQuery } from "#/lib/offline";
 import { useSearch } from "#/lib/search";
-import { STATUS_LABEL, STATUS_ORDER } from "#/lib/series";
+import { isSeriesStatus, STATUS_LABEL } from "#/lib/series";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { SeriesStatus } from "../../../convex/validators";
@@ -18,7 +18,7 @@ type Filter = SeriesStatus | "all";
 export const Route = createFileRoute("/_app/library/")({
   validateSearch: (search: Record<string, unknown>): { status?: Filter } => {
     const s = search.status;
-    return s === "all" || STATUS_ORDER.includes(s as SeriesStatus) ? { status: s as Filter } : {};
+    return s === "all" || isSeriesStatus(s) ? { status: s } : {};
   },
   component: LibraryPage,
 });

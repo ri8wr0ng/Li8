@@ -9,10 +9,16 @@ import { useSyncExternalStore } from "react";
  * so we show a hint instead.
  */
 
-type BeforeInstallPromptEvent = Event & {
+interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent;
+  }
+}
 
 export type InstallState =
   | { kind: "none" }
@@ -66,7 +72,7 @@ let cache: InstallState = { kind: "none" };
 if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); // We show our own, quieter prompt.
-    deferred = e as BeforeInstallPromptEvent;
+    deferred = e;
     notify();
   });
   window.addEventListener("appinstalled", () => {
