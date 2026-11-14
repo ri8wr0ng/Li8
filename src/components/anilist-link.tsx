@@ -4,7 +4,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AniListResults, handleListKey, useAniListSearch } from "#/components/anilist-results";
 import { Button } from "#/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "#/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
 import { type AniListMedia, AniListError, errorMessage, fillFrom, getAniList } from "#/lib/anilist";
 import { useReadOnly } from "#/lib/offline";
@@ -50,7 +56,9 @@ function snapshot(series: Doc<"series">): Patch {
  */
 function patchFrom(series: Doc<"series">, media: AniListMedia): Patch {
   const fill = fillFrom(media);
-  const names = [fill.title, ...fill.altNames].filter((n) => n.toLowerCase() !== series.title.toLowerCase());
+  const names = [fill.title, ...fill.altNames].filter(
+    (n) => n.toLowerCase() !== series.title.toLowerCase(),
+  );
   return {
     anilistId: fill.anilistId,
     altNames: merge(series.altNames, names),
@@ -103,7 +111,10 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
   async function unlink() {
     await update({ id: series._id, anilistId: null });
     toast("Unlinked from AniList", {
-      action: { label: "Undo", onClick: () => void update({ id: series._id, anilistId: series.anilistId ?? null }) },
+      action: {
+        label: "Undo",
+        onClick: () => void update({ id: series._id, anilistId: series.anilistId ?? null }),
+      },
     });
   }
 
@@ -111,10 +122,20 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
     <div className="flex flex-wrap items-center gap-2">
       {series.anilistId ? (
         <>
-          <Button variant="outline" className="rounded-xl" onClick={refresh} disabled={busy || readOnly}>
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={refresh}
+            disabled={busy || readOnly}
+          >
             {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />} Refresh from AniList
           </Button>
-          <Button variant="ghost" className="rounded-xl text-muted-foreground" onClick={() => setFinding(true)} disabled={readOnly}>
+          <Button
+            variant="ghost"
+            className="rounded-xl text-muted-foreground"
+            onClick={() => setFinding(true)}
+            disabled={readOnly}
+          >
             Change match
           </Button>
           <Button
@@ -129,7 +150,12 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
           </Button>
         </>
       ) : (
-        <Button variant="outline" className="rounded-xl" onClick={() => setFinding(true)} disabled={readOnly}>
+        <Button
+          variant="outline"
+          className="rounded-xl"
+          onClick={() => setFinding(true)}
+          disabled={readOnly}
+        >
           <Sparkles /> Fill in from AniList
         </Button>
       )}
@@ -174,7 +200,8 @@ function FindOnAniList({
       <DialogHeader>
         <DialogTitle className="font-display text-xl">Find on AniList</DialogTitle>
         <DialogDescription>
-          Adds names and genres, and fills in the description, type and chapter count. Your title stays as it is.
+          Adds names and genres, and fills in the description, type and chapter count. Your title
+          stays as it is.
         </DialogDescription>
       </DialogHeader>
       <Input
@@ -184,7 +211,9 @@ function FindOnAniList({
           setQuery(e.target.value);
           setActive(-1);
         }}
-        onKeyDown={(e) => handleListKey(e, results.length, active, setActive, (i) => onPick(results[i]))}
+        onKeyDown={(e) =>
+          handleListKey(e, results.length, active, setActive, (i) => onPick(results[i]))
+        }
         placeholder="Search AniList"
         autoComplete="off"
         enterKeyHint="search"

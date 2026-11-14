@@ -23,26 +23,25 @@ export type AniListSearchState =
 export function useAniListSearch(query: string, enabled = true): AniListSearchState {
   const online = useOnline();
   const q = query.trim();
-  const [state, setState] = useState<AniListSearchState>({ status: "idle" });
+  // The last finished request. Loading is derived: it's whenever that request was for another query.
+  const [fetched, setFetched] = useState<{
+    q: string;
+    results: AniListMedia[];
+    error?: string;
+  } | null>(null);
+
+  const idle = !enabled || q.length < 2;
 
   useEffect(() => {
-    if (!enabled || q.length < 2) {
-      setState({ status: "idle" });
-      return;
-    }
-    if (!online) {
-      setState({ status: "offline" });
-      return;
-    }
+    if (idle || !online) return undefined;
     const controller = new AbortController();
-    setState((s) => ({ status: "loading", results: "results" in s ? s.results : [] }));
     const timer = setTimeout(() => {
       searchAniList(q, controller.signal).then(
-        (results) => setState({ status: "done", results }),
+        (results) => setFetched({ q, results }),
         (err: unknown) => {
           if (controller.signal.aborted) return;
           if (!(err instanceof AniListError)) console.error(err);
-          setState((s) => ({ status: "error", message: errorMessage(err), results: "results" in s ? s.results : [] }));
+          setFetched((f) => ({ q, results: f?.results ?? [], error: errorMessage(err) }));
         },
       );
     }, 350);
@@ -50,9 +49,14 @@ export function useAniListSearch(query: string, enabled = true): AniListSearchSt
       clearTimeout(timer);
       controller.abort();
     };
-  }, [q, enabled, online]);
+  }, [q, idle, online]);
 
-  return state;
+  if (idle) return { status: "idle" };
+  if (!online) return { status: "offline" };
+  const results = fetched?.results ?? [];
+  if (fetched?.q !== q) return { status: "loading", results };
+  if (fetched.error !== undefined) return { status: "error", message: fetched.error, results };
+  return { status: "done", results };
 }
 
 /** The list of matches. Keyboard focus stays in the input; `active` is driven by arrow keys there. */
@@ -85,7 +89,7 @@ export function AniListResults({
   return (
     <div className={className}>
       {results.length > 0 && (
-        <ul
+        <div
           id={id}
           role="listbox"
           aria-label="AniList matches"
@@ -95,10 +99,13 @@ export function AniListResults({
             const selected = media.id === selectedId;
             const original = media.title.native ?? media.title.romaji;
             return (
-              <li
+              // Keyboard selection is handled by the combobox input (aria-activedescendant).
+              // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
+              <div
                 key={media.id}
                 id={`${id}-${i}`}
                 role="option"
+                tabIndex={-1}
                 aria-selected={i === active}
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => onPick(media)}
@@ -116,12 +123,15 @@ export function AniListResults({
                   </div>
                 </div>
                 {selected && <Check className="mt-0.5 size-4 shrink-0 text-hanko" />}
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
-      <p className="mt-1.5 flex min-h-4 items-center gap-1.5 px-1 text-xs text-muted-foreground" aria-live="polite">
+      <p
+        className="mt-1.5 flex min-h-4 items-center gap-1.5 px-1 text-xs text-muted-foreground"
+        aria-live="polite"
+      >
         {state.status === "loading" ? (
           <>
             <Loader2 className="size-3 animate-spin" /> Searching AniList…

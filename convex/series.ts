@@ -106,7 +106,9 @@ export const create = mutation({
       chapter,
       description: args.description?.trim() ?? "",
       genres: cleanList(args.genres ?? []),
-      ...(args.totalChapters && args.totalChapters > 0 ? { totalChapters: args.totalChapters } : {}),
+      ...(args.totalChapters && args.totalChapters > 0
+        ? { totalChapters: args.totalChapters }
+        : {}),
       ...(args.anilistId !== undefined ? { anilistId: args.anilistId } : {}),
       lastReadAt: now,
       updatedAt: now,
@@ -131,7 +133,10 @@ export const update = mutation({
     readUrlTemplate: v.optional(v.union(v.string(), v.null())),
     anilistId: v.optional(v.union(v.number(), v.null())),
   },
-  handler: async (ctx, { id, altNames, genres, totalChapters, readUrlTemplate, anilistId, title, ...rest }) => {
+  handler: async (
+    ctx,
+    { id, altNames, genres, totalChapters, readUrlTemplate, anilistId, title, ...rest },
+  ) => {
     await ownSeries(ctx, id);
     if (title !== undefined && !title.trim()) throw new Error("Title is required");
     await ctx.db.patch("series", id, {

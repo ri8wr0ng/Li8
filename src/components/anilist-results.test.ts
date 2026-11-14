@@ -1,15 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { handleListKey } from "./anilist-results";
 
-describe("AniList keyboard selection", () => {
-  function press(key: string, count: number, active: number) {
-    const event = { key, preventDefault: vi.fn(), stopPropagation: vi.fn() };
-    const setActive = vi.fn();
-    const pick = vi.fn();
-    handleListKey(event, count, active, setActive, pick);
-    return { event, setActive, pick };
-  }
+function press(key: string, count: number, active: number) {
+  const event = { key, preventDefault: vi.fn(), stopPropagation: vi.fn() };
+  const setActive = vi.fn();
+  const pick = vi.fn();
+  handleListKey(event, count, active, setActive, pick);
+  return { event, setActive, pick };
+}
 
+describe("AniList keyboard selection", () => {
   it("clears a stale selection without picking or submitting after results shrink", () => {
     const { event, setActive, pick } = press("Enter", 2, 7);
     expect(pick).not.toHaveBeenCalled();

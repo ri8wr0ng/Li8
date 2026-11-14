@@ -1,0 +1,73 @@
+name: PR size
+
+# Only GitHub API calls: never check out or execute code from the PR here.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: pr-size-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    name: Label PR size
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner, repo, pull_number: number, per_page: 100,
+            });
+            const ignored = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|skills-lock\.json)$|(^|\/)_generated\/|(^|\/)routeTree\.gen\.ts$/;
+            // GitHub returns at most 3,000 files; use totals if the list is incomplete.
+            const lines = files.length < pr.changed_files
+              ? pr.additions + pr.deletions
+              : files.filter(file => !ignored.test(file.filename))
+                  .reduce((total, file) => total + file.additions + file.deletions, 0);
+            const sizes = [
+              { name: "size/XS", max: 9, color: "3CBF00" },
+              { name: "size/S", max: 49, color: "5D9801" },
+              { name: "size/M", max: 249, color: "7F7203" },
+              { name: "size/L", max: 499, color: "A14C05" },
+              { name: "size/XL", max: 999, color: "C32607" },
+              { name: "size/XXL", max: Infinity, color: "E50009" },
+            ];
+            const selected = sizes.find(size => lines <= size.max);
+            const labels = await github.paginate(github.rest.issues.listLabelsForRepo, {
+              owner, repo, per_page: 100,
+            });
+            if (!labels.some(label => label.name === selected.name)) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner, repo, name: selected.name, color: selected.color,
+                  description: "PR size based on added and deleted lines (excluding generated files and lockfiles)",
+                });
+              } catch (error) {
+                // Another PR may have created the same label concurrently.
+                if (error.status !== 422) throw error;
+                const refreshed = await github.paginate(github.rest.issues.listLabelsForRepo, {
+                  owner, repo, per_page: 100,
+                });
+                if (!refreshed.some(label => label.name === selected.name)) throw error;
+              }
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number: number, labels: [selected.name] });
+            const current = await github.paginate(github.rest.issues.listLabelsOnIssue, {
+              owner, repo, issue_number: number, per_page: 100,
+            });
+            for (const label of current) {
+              if (sizes.some(size => size.name === label.name) && label.name !== selected.name) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number: number, name: label.name });
+              }
+            }
+            await core.summary.addHeading("PR size")
+              .addRaw(`${selected.name}: ${lines} added + deleted lines.`).write();

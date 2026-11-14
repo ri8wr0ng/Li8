@@ -8,8 +8,14 @@ import { api } from "../../convex/_generated/api";
 // Starts listening for `beforeinstallprompt` as early as possible.
 import "#/lib/install";
 
+function convexUrl(): string {
+  const url: unknown = import.meta.env.VITE_CONVEX_URL;
+  if (typeof url !== "string") throw new Error("VITE_CONVEX_URL is not set");
+  return url;
+}
+
 export function Providers({ children }: { children: ReactNode }) {
-  const [client] = useState(() => new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string));
+  const [client] = useState(() => new ConvexReactClient(convexUrl()));
   useServiceWorker();
   return (
     <ConvexAuthProvider
@@ -22,7 +28,10 @@ export function Providers({ children }: { children: ReactNode }) {
     >
       <TooltipProvider delayDuration={400}>
         {children}
-        <Toaster position="top-center" offset={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }} />
+        <Toaster
+          position="top-center"
+          offset={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+        />
       </TooltipProvider>
     </ConvexAuthProvider>
   );
@@ -49,6 +58,8 @@ function useServiceWorker() {
           label: "Reload",
           onClick: () => {
             navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+            // ServiceWorker#postMessage has no targetOrigin; the rule is meant for window.postMessage.
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin
             worker.postMessage("SKIP_WAITING");
           },
         },
@@ -63,11 +74,13 @@ function useServiceWorker() {
         reg.addEventListener("updatefound", () => {
           const worker = reg.installing;
           worker?.addEventListener("statechange", () => {
-            if (worker.state === "installed" && navigator.serviceWorker.controller) offerUpdate(worker);
+            if (worker.state === "installed" && navigator.serviceWorker.controller)
+              offerUpdate(worker);
           });
         });
         // Installed apps can stay open for days; check when they come back to the foreground.
-        const check = () => document.visibilityState === "visible" && void reg.update().catch(() => {});
+        const check = () =>
+          document.visibilityState === "visible" && void reg.update().catch(() => {});
         document.addEventListener("visibilitychange", check);
       })
       .catch((err: unknown) => console.warn("Service worker registration failed", err));

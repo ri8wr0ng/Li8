@@ -1,7 +1,7 @@
 /// <reference types="node" />
-import { randomUUID } from 'node:crypto'
-import { readdirSync } from 'node:fs'
-import type { Plugin } from 'vite'
+import { randomUUID } from "node:crypto";
+import { readdirSync } from "node:fs";
+import type { Plugin } from "vite";
 
 /**
  * Emits /sw.js into the client build.
@@ -15,13 +15,13 @@ import type { Plugin } from 'vite'
  * public files with unchanged names also install a new worker.
  */
 export function serviceWorker(): Plugin {
-  let publicDir = ''
+  let publicDir = "";
   return {
-    name: 'inkmark:service-worker',
-    apply: 'build',
-    applyToEnvironment: (env) => env.name === 'client',
+    name: "inkmark:service-worker",
+    apply: "build",
+    applyToEnvironment: (env) => env.name === "client",
     configResolved(config) {
-      publicDir = config.publicDir
+      publicDir = config.publicDir;
     },
     generateBundle(_, bundle) {
       const built = Object.keys(bundle).filter(
@@ -29,19 +29,22 @@ export function serviceWorker(): Plugin {
           /\.(js|css)$/.test(file) ||
           // Latin subsets only; other scripts' font files are cached the first time they're used.
           /-latin-wght-normal-[\w-]+\.woff2$/.test(file),
-      )
+      );
       const statics = publicDir
         ? readdirSync(publicDir).filter((f) => /\.(png|svg|webmanifest|ico)$/.test(f))
-        : []
-      const precache = ['/_shell.html', ...[...built, ...statics].map((f) => `/${f}`)].sort()
-      const version = randomUUID()
+        : [];
+      const precache = ["/_shell.html", ...[...built, ...statics].map((f) => `/${f}`)].toSorted();
+      const version = randomUUID();
       this.emitFile({
-        type: 'asset',
-        fileName: 'sw.js',
-        source: SW_SOURCE.replace('__VERSION__', version).replace('__PRECACHE__', JSON.stringify(precache)),
-      })
+        type: "asset",
+        fileName: "sw.js",
+        source: SW_SOURCE.replace("__VERSION__", version).replace(
+          "__PRECACHE__",
+          JSON.stringify(precache),
+        ),
+      });
     },
-  }
+  };
 }
 
 const SW_SOURCE = /* js */ `// Inkmark service worker. Generated at build time by vite/service-worker.ts.
@@ -128,4 +131,4 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
-`
+`;

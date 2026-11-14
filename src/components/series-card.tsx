@@ -26,7 +26,11 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
   const nextUrl = readUrl(series.readUrlTemplate, next);
   const progress = series.totalChapters ? Math.min(1, series.chapter / series.totalChapters) : null;
   const readOnly = useReadOnly();
-  const swipe = useSwipeRight({
+  const {
+    attachSurface,
+    attachReveal,
+    handlers: swipeHandlers,
+  } = useSwipeRight({
     enabled: !readOnly,
     onCommit: () => void bump({ id: series._id, delta: 1 }),
   });
@@ -37,7 +41,10 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
     const previous = series.chapter;
     void setChapter({ id: series._id, chapter: next }).then(() =>
       toast(`Reading Ch. ${formatChapter(next)}`, {
-        action: { label: "Undo", onClick: () => void setChapter({ id: series._id, chapter: previous }) },
+        action: {
+          label: "Undo",
+          onClick: () => void setChapter({ id: series._id, chapter: previous }),
+        },
       }),
     );
   }
@@ -46,7 +53,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
     <div className="relative">
       {/* Revealed behind the card as you swipe right. */}
       <div
-        ref={(el) => void (swipe.reveal.current = el)}
+        ref={attachReveal}
         aria-hidden
         style={{ opacity: 0 }}
         className="group/reveal absolute inset-0 flex items-center gap-2 rounded-2xl bg-hanko pl-5 text-hanko-foreground"
@@ -54,89 +61,95 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
         <span className="grid size-10 place-items-center rounded-full bg-white/15 transition-transform duration-150 group-data-[armed=true]/reveal:scale-110">
           <Plus className="size-5" />
         </span>
-        <span className="font-mono text-sm font-semibold tabular-nums">Ch. {formatChapter(next)}</span>
+        <span className="font-mono text-sm font-semibold tabular-nums">
+          Ch. {formatChapter(next)}
+        </span>
       </div>
-    <article
-      ref={(el) => void (swipe.surface.current = el)}
-      {...swipe.handlers}
-      className={cn(
-        "group relative flex touch-pan-y flex-col rounded-2xl border bg-card p-4 select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:p-5",
-      )}
-    >
-      <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
-        {KIND_LABEL[series.kind]}
-        <span className="size-1 rounded-full bg-border" />
-        {STATUS_LABEL[series.status]}
-      </div>
-
-      <Link
-        to="/library/$seriesId"
-        params={{ seriesId: series._id }}
-        className="mt-1 font-display text-lg leading-snug font-semibold tracking-tight after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
+      <article
+        ref={attachSurface}
+        {...swipeHandlers}
+        className={cn(
+          "group relative flex touch-pan-y flex-col rounded-2xl border bg-card p-4 select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:p-5",
+        )}
       >
-        <Highlight text={series.title} terms={terms} />
-      </Link>
-      {series.altNames.length > 0 && (
-        <p className="truncate text-sm text-muted-foreground">
-          <Highlight text={series.altNames.join(" · ")} terms={terms} />
-        </p>
-      )}
-
-      <div className="mt-auto flex items-end justify-between gap-3 pt-5">
-        <div>
-          <div className="text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">Chapter</div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-mono text-4xl leading-none font-semibold tabular-nums">
-              {formatChapter(series.chapter)}
-            </span>
-            {series.totalChapters && (
-              <span className="font-mono text-sm text-muted-foreground tabular-nums">
-                / {formatChapter(series.totalChapters)}
-              </span>
-            )}
-          </div>
-          <div className="mt-1.5 text-xs text-muted-foreground">{relativeTime(series.lastReadAt)}</div>
+        <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
+          {KIND_LABEL[series.kind]}
+          <span className="size-1 rounded-full bg-border" />
+          {STATUS_LABEL[series.status]}
         </div>
 
-        <div className="relative z-10 flex items-center gap-1.5">
-          <button
-            type="button"
-            aria-label={`One chapter back on ${series.title}`}
-            disabled={series.chapter <= 0 || readOnly}
-            onClick={() => void bump({ id: series._id, delta: -1 })}
-            className="grid size-10 place-items-center rounded-full border bg-background text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-40"
-          >
-            <Minus className="size-4" />
-          </button>
-          <button
-            type="button"
-            aria-label={`One chapter forward on ${series.title}`}
-            disabled={readOnly}
-            onClick={() => void bump({ id: series._id, delta: 1 })}
-            className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90 disabled:opacity-40"
-          >
-            <Plus className="size-5" />
-          </button>
-        </div>
-      </div>
-
-      {nextUrl && (
-        <button
-          type="button"
-          onClick={readNext}
-          disabled={readOnly}
-          className="relative z-10 mt-4 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
+        <Link
+          to="/library/$seriesId"
+          params={{ seriesId: series._id }}
+          className="mt-1 font-display text-lg leading-snug font-semibold tracking-tight after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
         >
-          Read Ch. {formatChapter(next)} <ExternalLink className="size-3.5" />
-        </button>
-      )}
+          <Highlight text={series.title} terms={terms} />
+        </Link>
+        {series.altNames.length > 0 && (
+          <p className="truncate text-sm text-muted-foreground">
+            <Highlight text={series.altNames.join(" · ")} terms={terms} />
+          </p>
+        )}
 
-      {progress !== null && (
-        <div className="absolute inset-x-5 bottom-0 h-0.5 overflow-hidden rounded-full bg-border">
-          <div className="h-full bg-hanko" style={{ width: `${progress * 100}%` }} />
+        <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+          <div>
+            <div className="text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+              Chapter
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono text-4xl leading-none font-semibold tabular-nums">
+                {formatChapter(series.chapter)}
+              </span>
+              {series.totalChapters && (
+                <span className="font-mono text-sm text-muted-foreground tabular-nums">
+                  / {formatChapter(series.totalChapters)}
+                </span>
+              )}
+            </div>
+            <div className="mt-1.5 text-xs text-muted-foreground">
+              {relativeTime(series.lastReadAt)}
+            </div>
+          </div>
+
+          <div className="relative z-10 flex items-center gap-1.5">
+            <button
+              type="button"
+              aria-label={`One chapter back on ${series.title}`}
+              disabled={series.chapter <= 0 || readOnly}
+              onClick={() => void bump({ id: series._id, delta: -1 })}
+              className="grid size-10 place-items-center rounded-full border bg-background text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-40"
+            >
+              <Minus className="size-4" />
+            </button>
+            <button
+              type="button"
+              aria-label={`One chapter forward on ${series.title}`}
+              disabled={readOnly}
+              onClick={() => void bump({ id: series._id, delta: 1 })}
+              className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90 disabled:opacity-40"
+            >
+              <Plus className="size-5" />
+            </button>
+          </div>
         </div>
-      )}
-    </article>
+
+        {nextUrl && (
+          <button
+            type="button"
+            onClick={readNext}
+            disabled={readOnly}
+            className="relative z-10 mt-4 flex h-9 items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
+          >
+            Read Ch. {formatChapter(next)} <ExternalLink className="size-3.5" />
+          </button>
+        )}
+
+        {progress !== null && (
+          <div className="absolute inset-x-5 bottom-0 h-0.5 overflow-hidden rounded-full bg-border">
+            <div className="h-full bg-hanko" style={{ width: `${progress * 100}%` }} />
+          </div>
+        )}
+      </article>
     </div>
   );
 }

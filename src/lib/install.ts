@@ -9,10 +9,16 @@ import { useSyncExternalStore } from "react";
  * so we show a hint instead.
  */
 
-type BeforeInstallPromptEvent = Event & {
+interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent;
+  }
+}
 
 export type InstallState =
   | { kind: "none" }
@@ -66,7 +72,7 @@ let cache: InstallState = { kind: "none" };
 if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); // We show our own, quieter prompt.
-    deferred = e as BeforeInstallPromptEvent;
+    deferred = e;
     notify();
   });
   window.addEventListener("appinstalled", () => {
@@ -75,9 +81,10 @@ if (typeof window !== "undefined") {
     notify();
   });
   try {
-    sessionStorage.getItem("counted") ??
-      (sessionStorage.setItem("counted", "1"),
-      localStorage.setItem(VISITS_KEY, String(Number(localStorage.getItem(VISITS_KEY) ?? 0) + 1)));
+    if (sessionStorage.getItem("counted") === null) {
+      sessionStorage.setItem("counted", "1");
+      localStorage.setItem(VISITS_KEY, String(Number(localStorage.getItem(VISITS_KEY) ?? 0) + 1));
+    }
   } catch {
     // Storage blocked: the banner just won't wait for a second visit.
   }
@@ -91,7 +98,11 @@ function subscribe(listener: () => void) {
 
 /** How the app can be installed here, if at all. */
 export function useInstall() {
-  return useSyncExternalStore(subscribe, () => cache, () => cache);
+  return useSyncExternalStore(
+    subscribe,
+    () => cache,
+    () => cache,
+  );
 }
 
 /** The banner waits for a second visit and stays away for a month once dismissed. */
