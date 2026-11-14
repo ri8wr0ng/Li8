@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppLibraryIndexRouteImport } from './routes/_app/library.index'
 import { Route as AppLibrarySeriesIdRouteImport } from './routes/_app/library.$seriesId'
 import { Route as AppNotesNoteIdRouteImport } from './routes/_app/notes.$noteId'
@@ -28,6 +29,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAskRoute = AppAskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => AppRoute,
 } as any)
 const AppLibraryIndexRoute = AppLibraryIndexRouteImport.update({
@@ -49,12 +55,14 @@ const AppNotesNoteIdRoute = AppNotesNoteIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/ask': typeof AppAskRoute
   '/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
   '/library/': typeof AppLibraryIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/ask': typeof AppAskRoute
   '/': typeof AppIndexRoute
   '/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -64,6 +72,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/ask': typeof AppAskRoute
   '/_app/': typeof AppIndexRoute
   '/_app/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -72,13 +81,25 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/library/$seriesId' | '/notes/$noteId' | '/library/'
+    | '/'
+    | '/login'
+    | '/ask'
+    | '/library/$seriesId'
+    | '/notes/$noteId'
+    | '/library/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/' | '/library/$seriesId' | '/notes/$noteId' | '/library'
+  to:
+    | '/login'
+    | '/ask'
+    | '/'
+    | '/library/$seriesId'
+    | '/notes/$noteId'
+    | '/library'
   id:
     | '__root__'
     | '/_app'
     | '/login'
+    | '/_app/ask'
     | '/_app/'
     | '/_app/library/$seriesId'
     | '/_app/notes/$noteId'
@@ -113,6 +134,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ask': {
+      id: '/_app/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AppAskRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/library/': {
       id: '/_app/library/'
       path: '/library'
@@ -138,6 +166,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAskRoute: typeof AppAskRoute
   AppIndexRoute: typeof AppIndexRoute
   AppLibrarySeriesIdRoute: typeof AppLibrarySeriesIdRoute
   AppNotesNoteIdRoute: typeof AppNotesNoteIdRoute
@@ -145,6 +174,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAskRoute: AppAskRoute,
   AppIndexRoute: AppIndexRoute,
   AppLibrarySeriesIdRoute: AppLibrarySeriesIdRoute,
   AppNotesNoteIdRoute: AppNotesNoteIdRoute,

@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { deleteEmbedding, scheduleNoteEmbedding } from "./embeddings";
 import { cleanList, requireUserId } from "./lib";
 
 /** Personal-scale cap; the client indexes these for instant search. */
@@ -30,18 +31,30 @@ export const get = query({
   },
 });
 
+/** Shared with the AI assistant's createNote tool. */
+export async function insertNote(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  args: { title?: string; body?: string; tags?: string[] },
+) {
+  const now = Date.now();
+  const id = await ctx.db.insert("notes", {
+    userId,
+    title: args.title?.trim() ?? "",
+    body: args.body ?? "",
+    tags: cleanList(args.tags ?? []),
+    pinned: false,
+    updatedAt: now,
+  });
+  if (args.title?.trim() || args.body?.trim() || args.tags?.length) await scheduleNoteEmbedding(ctx, id, now);
+  return id;
+}
+
 export const create = mutation({
   args: { title: v.optional(v.string()), body: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    return await ctx.db.insert("notes", {
-      userId,
-      title: args.title?.trim() ?? "",
-      body: args.body ?? "",
-      tags: [],
-      pinned: false,
-      updatedAt: Date.now(),
-    });
+    return await insertNote(ctx, userId, args);
   },
 });
 
@@ -62,11 +75,14 @@ export const update = mutation({
   },
   handler: async (ctx, { id, tags, ...rest }) => {
     await ownNote(ctx, id);
+    const now = Date.now();
     await ctx.db.patch("notes", id, {
       ...rest,
       ...(tags ? { tags: cleanList(tags) } : {}),
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
+    // Every update schedules a job so the latest one always runs; unchanged text is skipped.
+    await scheduleNoteEmbedding(ctx, id, now);
   },
 });
 
@@ -74,6 +90,7 @@ export const remove = mutation({
   args: { id: v.id("notes") },
   handler: async (ctx, { id }) => {
     await ownNote(ctx, id);
+    await deleteEmbedding(ctx, { noteId: id });
     await ctx.db.delete("notes", id);
   },
 });

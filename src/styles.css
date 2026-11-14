@@ -171,3 +171,162 @@
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);
 }
+
+/* Utilities used by the shadcn AI Elements (trace, message-scroller). */
+
+/* Text with a highlight sweeping across it: "the assistant is working on this". */
+@utility shimmer {
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    var(--color-muted-foreground) 0%,
+    var(--color-muted-foreground) 35%,
+    var(--color-foreground) 50%,
+    var(--color-muted-foreground) 65%,
+    var(--color-muted-foreground) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: shimmer 2.2s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    color: var(--color-muted-foreground);
+    background-image: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+/* Fade the last bit of a scroll area so content slides under its bottom edge. */
+@utility scroll-fade-b {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5rem), transparent);
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+}
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+/* A soft light travelling around the prompt box while the assistant works. */
+@property --prompt-glow-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes prompt-glow-spin {
+  to {
+    --prompt-glow-angle: 360deg;
+  }
+}
+@utility prompt-glow {
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--prompt-glow-angle),
+      transparent 0deg,
+      color-mix(in oklch, var(--hanko) 85%, transparent) 60deg,
+      transparent 140deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: prompt-glow-spin 2.4s linear infinite;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::before {
+      animation: none;
+      background: color-mix(in oklch, var(--hanko) 50%, transparent);
+    }
+  }
+}
+
+/*
+ * Frosted glass for floating chrome (the phone tab bar and its search button):
+ * the page shows through, blurred and slightly brightened, with a lit top edge.
+ */
+@utility glass {
+  background: color-mix(in oklch, var(--background) 62%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in oklch, white 45%, transparent),
+    inset 0 -1px 0 0 color-mix(in oklch, var(--foreground) 6%, transparent),
+    0 10px 30px -10px color-mix(in oklch, black 35%, transparent),
+    0 2px 6px -2px color-mix(in oklch, black 15%, transparent);
+  .dark & {
+    background: color-mix(in oklch, var(--card) 58%, transparent);
+    border-color: color-mix(in oklch, white 10%, transparent);
+    box-shadow:
+      inset 0 1px 0 0 color-mix(in oklch, white 14%, transparent),
+      inset 0 -1px 0 0 color-mix(in oklch, black 30%, transparent),
+      0 12px 32px -10px color-mix(in oklch, black 70%, transparent);
+  }
+  /* Without blur support, fall back to a solid bar so text stays readable. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: var(--card);
+  }
+}
+
+/* The lit blob behind the active tab: Hanko melting into marker orange. */
+@utility glass-active {
+  background:
+    radial-gradient(120% 140% at 85% 110%, color-mix(in oklch, var(--marker-active) 75%, transparent) 0%, transparent 55%),
+    radial-gradient(120% 140% at 10% -20%, color-mix(in oklch, var(--hanko) 85%, transparent) 0%, transparent 60%),
+    color-mix(in oklch, var(--hanko) 78%, transparent);
+  box-shadow:
+    inset 0 1px 0 0 color-mix(in oklch, white 40%, transparent),
+    0 6px 18px -6px color-mix(in oklch, var(--hanko) 70%, transparent);
+}
+
+/* The tab lens stretches toward where it's heading, then settles (scaleX only, so it stays on the compositor). */
+@keyframes lens-stretch {
+  0% {
+    transform: scaleX(1);
+  }
+  40% {
+    transform: scaleX(1.16) scaleY(0.94);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* Glass falls back to solid surfaces when people ask for less transparency or more contrast. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .glass {
+    background: var(--card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: var(--foreground);
+  }
+}

@@ -145,7 +145,9 @@ function Editor({ note }: { note: Doc<'notes'> }) {
   const bodyRef = useRef<HighlightTextareaHandle>(null)
   useEffect(() => {
     if (save.isDirty()) return
-    const editing = document.activeElement === titleRef.current || document.activeElement?.tagName === 'TEXTAREA'
+    const active = document.activeElement
+    const editing =
+      active === titleRef.current || (active?.tagName === 'TEXTAREA' && !active.closest('[data-ai-panel]'))
     if (editing) return
     setTitle(note.title)
     setBody(note.body)

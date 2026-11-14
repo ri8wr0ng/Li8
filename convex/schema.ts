@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { vSeriesKind, vSeriesStatus } from "./validators";
+import { vSeriesKind, vSeriesStatus, vUsageKind } from "./validators";
 
 export default defineSchema({
   users: defineTable({
@@ -41,4 +41,34 @@ export default defineSchema({
     chapter: v.number(),
     at: v.number(),
   }).index("by_series_at", ["seriesId", "at"]),
+
+  // One row per AI model call, for the Usage tab. Cost is in US dollars.
+  aiUsage: defineTable({
+    userId: v.id("users"),
+    kind: vUsageKind,
+    model: v.string(),
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    cost: v.number(),
+    // True when the provider didn't report a cost and it was worked out from list prices.
+    estimated: v.boolean(),
+  }).index("by_user", ["userId"]),
+
+  // One embedding per note or series, for search by meaning. Kept out of the
+  // notes/series documents so lists synced to the client stay small.
+  embeddings: defineTable({
+    userId: v.id("users"),
+    noteId: v.optional(v.id("notes")),
+    seriesId: v.optional(v.id("series")),
+    // Hash of the embedded text; unchanged text is not re-embedded.
+    hash: v.string(),
+    embedding: v.array(v.float64()),
+  })
+    .index("by_note", ["noteId"])
+    .index("by_series", ["seriesId"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["userId"],
+    }),
 });
