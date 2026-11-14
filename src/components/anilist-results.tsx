@@ -140,7 +140,7 @@ export function AniListResults({
 
 /** Arrow/Enter/Escape handling for an input that drives <AniListResults>. Returns true when it handled the key. */
 export function handleListKey(
-  e: React.KeyboardEvent,
+  e: Pick<React.KeyboardEvent, "key" | "preventDefault" | "stopPropagation">,
   count: number,
   active: number,
   setActive: (i: number) => void,
@@ -150,9 +150,10 @@ export function handleListKey(
   if (e.key === "ArrowDown") {
     setActive((active + 1) % count);
   } else if (e.key === "ArrowUp") {
-    setActive(active <= 0 ? count - 1 : active - 1);
+    setActive(active <= 0 ? count - 1 : Math.min(active - 1, count - 1));
   } else if (e.key === "Enter" && active >= 0) {
-    pick(active);
+    if (active < count) pick(active);
+    else setActive(-1);
   } else if (e.key === "Escape" && active >= 0) {
     setActive(-1);
   } else {

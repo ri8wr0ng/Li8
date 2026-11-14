@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { readdirSync } from 'node:fs'
 import type { Plugin } from 'vite'
 
@@ -11,8 +11,8 @@ import type { Plugin } from 'vite'
  * Workbox's build-time manifest can't see it. All we need is "precache this
  * build's files, serve the shell for every navigation", which is ~80 lines.
  *
- * The precache list (and so the SW's bytes) changes with every build that
- * changes an asset, which is what makes the browser install the new worker.
+ * Every build gets a new version so changes to the prerendered shell and
+ * public files with unchanged names also install a new worker.
  */
 export function serviceWorker(): Plugin {
   let publicDir = ''
@@ -34,7 +34,7 @@ export function serviceWorker(): Plugin {
         ? readdirSync(publicDir).filter((f) => /\.(png|svg|webmanifest|ico)$/.test(f))
         : []
       const precache = ['/_shell.html', ...[...built, ...statics].map((f) => `/${f}`)].sort()
-      const version = createHash('sha256').update(precache.join('\n')).digest('hex').slice(0, 12)
+      const version = randomUUID()
       this.emitFile({
         type: 'asset',
         fileName: 'sw.js',
