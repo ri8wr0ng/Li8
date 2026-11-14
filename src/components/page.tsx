@@ -2,7 +2,15 @@ import { Search, X } from "lucide-react";
 import { forwardRef, useEffect, useRef, type ReactNode } from "react";
 import { cn } from "#/lib/utils";
 
-export function PageHeader({ title, meta, actions }: { title: string; meta?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({
+  title,
+  meta,
+  actions,
+}: {
+  title: string;
+  meta?: ReactNode;
+  actions?: ReactNode;
+}) {
   return (
     <div className="flex items-end justify-between gap-4">
       <div>
@@ -76,20 +84,32 @@ export const SearchField = forwardRef<
   );
 });
 
-export function EmptyState({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
+export function EmptyState({
+  icon,
+  title,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex flex-col items-center rounded-2xl border border-dashed px-6 py-14 text-center">
       <div className="grid size-12 place-items-center rounded-2xl bg-secondary text-muted-foreground [&>svg]:size-5">
         {icon}
       </div>
       <h2 className="mt-4 font-display text-lg font-semibold">{title}</h2>
-      {children && <div className="mt-1.5 max-w-sm text-sm text-muted-foreground text-pretty">{children}</div>}
+      {children && (
+        <div className="mt-1.5 max-w-sm text-sm text-muted-foreground text-pretty">{children}</div>
+      )}
     </div>
   );
 }
 
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-2 px-1 text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase">{children}</h2>
+    <h2 className="mb-2 px-1 text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase">
+      {children}
+    </h2>
   );
 }

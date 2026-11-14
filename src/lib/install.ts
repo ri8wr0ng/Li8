@@ -15,9 +15,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 export type InstallState =
-  | { kind: "none" }
-  | { kind: "prompt"; install: () => Promise<boolean> }
-  | { kind: "ios" };
+  { kind: "none" } | { kind: "prompt"; install: () => Promise<boolean> } | { kind: "ios" };
 
 const DISMISS_KEY = "install-dismissed-at";
 const VISITS_KEY = "visits";
@@ -75,9 +73,10 @@ if (typeof window !== "undefined") {
     notify();
   });
   try {
-    sessionStorage.getItem("counted") ??
-      (sessionStorage.setItem("counted", "1"),
-      localStorage.setItem(VISITS_KEY, String(Number(localStorage.getItem(VISITS_KEY) ?? 0) + 1)));
+    if (sessionStorage.getItem("counted") === null) {
+      sessionStorage.setItem("counted", "1");
+      localStorage.setItem(VISITS_KEY, String(Number(localStorage.getItem(VISITS_KEY) ?? 0) + 1));
+    }
   } catch {
     // Storage blocked: the banner just won't wait for a second visit.
   }
@@ -91,7 +90,11 @@ function subscribe(listener: () => void) {
 
 /** How the app can be installed here, if at all. */
 export function useInstall() {
-  return useSyncExternalStore(subscribe, () => cache, () => cache);
+  return useSyncExternalStore(
+    subscribe,
+    () => cache,
+    () => cache,
+  );
 }
 
 /** The banner waits for a second visit and stays away for a month once dismissed. */

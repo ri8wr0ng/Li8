@@ -103,7 +103,10 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
   async function unlink() {
     await update({ id: series._id, anilistId: null });
     toast("Unlinked from AniList", {
-      action: { label: "Undo", onClick: () => void update({ id: series._id, anilistId: series.anilistId ?? null }) },
+      action: {
+        label: "Undo",
+        onClick: () => void update({ id: series._id, anilistId: series.anilistId ?? null }),
+      },
     });
   }
 
@@ -114,7 +117,12 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
           <Button variant="outline" className="rounded-xl" onClick={refresh} disabled={busy || readOnly}>
             {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />} Refresh from AniList
           </Button>
-          <Button variant="ghost" className="rounded-xl text-muted-foreground" onClick={() => setFinding(true)} disabled={readOnly}>
+          <Button
+            variant="ghost"
+            className="rounded-xl text-muted-foreground"
+            onClick={() => setFinding(true)}
+            disabled={readOnly}
+          >
             Change match
           </Button>
           <Button
@@ -174,7 +182,8 @@ function FindOnAniList({
       <DialogHeader>
         <DialogTitle className="font-display text-xl">Find on AniList</DialogTitle>
         <DialogDescription>
-          Adds names and genres, and fills in the description, type and chapter count. Your title stays as it is.
+          Adds names and genres, and fills in the description, type and chapter count. Your title stays as it
+          is.
         </DialogDescription>
       </DialogHeader>
       <Input

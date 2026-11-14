@@ -35,12 +35,15 @@ test("repeated bumps preserve every increment and clamp decrements at zero", asy
   expect((await reader.query(api.series.get, { id }))?.chapter).toBe(0);
 });
 
-test.each([NaN, Infinity, -Infinity])("rejects non-finite delta %s without changing progress", async (delta) => {
-  const { reader, id } = await setup();
-  await expect(reader.mutation(api.series.bump, { id, delta })).rejects.toThrow();
-  expect((await reader.query(api.series.get, { id }))?.chapter).toBe(348);
-  expect((await reader.query(api.series.history, { seriesId: id }))[0].chapter).toBe(348);
-});
+test.each([NaN, Infinity, -Infinity])(
+  "rejects non-finite delta %s without changing progress",
+  async (delta) => {
+    const { reader, id } = await setup();
+    await expect(reader.mutation(api.series.bump, { id, delta })).rejects.toThrow();
+    expect((await reader.query(api.series.get, { id }))?.chapter).toBe(348);
+    expect((await reader.query(api.series.history, { seriesId: id }))[0].chapter).toBe(348);
+  },
+);
 
 test("rejects overflow without changing progress", async () => {
   const { reader, id } = await setup(Number.MAX_VALUE);

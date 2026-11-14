@@ -1,7 +1,18 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation } from "convex/react";
-import { Download, FileText, Library, LogOut, Monitor, Moon, PenLine, Search, Sun, WifiOff } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Library,
+  LogOut,
+  Monitor,
+  Moon,
+  PenLine,
+  Search,
+  Sun,
+  WifiOff,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Wordmark } from "#/components/brand";
@@ -84,7 +95,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">{children}</main>
+      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(5rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
+        {children}
+      </main>
 
       <InstallBanner className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-30 mx-auto max-w-md lg:hidden" />
 
@@ -217,7 +230,9 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">
-        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">{me?.email ?? name}</DropdownMenuLabel>
+        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+          {me?.email ?? name}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Theme</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>

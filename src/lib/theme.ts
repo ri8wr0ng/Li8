@@ -84,7 +84,11 @@ function onStorage(e: StorageEvent) {
 const serverSnapshot = { theme: "system" as Theme, resolved: "light" as ResolvedTheme };
 
 export function useTheme() {
-  const s = useSyncExternalStore(subscribe, () => state ?? serverSnapshot, () => serverSnapshot);
+  const s = useSyncExternalStore(
+    subscribe,
+    () => state ?? serverSnapshot,
+    () => serverSnapshot,
+  );
   const setTheme = useCallback((theme: string) => set(theme as Theme), []);
   return { theme: s.theme, resolvedTheme: s.resolved, setTheme };
 }

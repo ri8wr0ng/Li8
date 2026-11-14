@@ -10,10 +10,10 @@ export const { signOut, refreshSession, isAuthenticated } = auth;
 const allowedRedirectOrigins = ["http://localhost:3000"];
 if (env.SITE_URL) allowedRedirectOrigins.push(env.SITE_URL);
 
-export const { startSignInWithGoogle, completeSignInWithGoogle } = setupGoogle(
-  auth,
-  { component: components.authGoogle, allowedRedirectOrigins },
-).attachUserCallbacks({
+export const { startSignInWithGoogle, completeSignInWithGoogle } = setupGoogle(auth, {
+  component: components.authGoogle,
+  allowedRedirectOrigins,
+}).attachUserCallbacks({
   createUser: internal.users.createUser,
   onSignIn: internal.users.onSignIn,
 });

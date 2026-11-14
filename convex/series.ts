@@ -131,7 +131,10 @@ export const update = mutation({
     readUrlTemplate: v.optional(v.union(v.string(), v.null())),
     anilistId: v.optional(v.union(v.number(), v.null())),
   },
-  handler: async (ctx, { id, altNames, genres, totalChapters, readUrlTemplate, anilistId, title, ...rest }) => {
+  handler: async (
+    ctx,
+    { id, altNames, genres, totalChapters, readUrlTemplate, anilistId, title, ...rest },
+  ) => {
     await ownSeries(ctx, id);
     if (title !== undefined && !title.trim()) throw new Error("Title is required");
     await ctx.db.patch("series", id, {
@@ -140,9 +143,7 @@ export const update = mutation({
       ...(altNames ? { altNames: cleanList(altNames) } : {}),
       ...(genres ? { genres: cleanList(genres) } : {}),
       ...(totalChapters !== undefined ? { totalChapters: totalChapters ?? undefined } : {}),
-      ...(readUrlTemplate !== undefined
-        ? { readUrlTemplate: readUrlTemplate?.trim() || undefined }
-        : {}),
+      ...(readUrlTemplate !== undefined ? { readUrlTemplate: readUrlTemplate?.trim() || undefined } : {}),
       ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
       updatedAt: Date.now(),
     });

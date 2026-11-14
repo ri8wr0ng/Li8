@@ -112,7 +112,10 @@ function Palette({ close }: { close: () => void }) {
       const id = await createSeries({ title, chapter });
       toast.success(`Added ${title}`, {
         description: chapter ? `Chapter ${formatChapter(chapter)}` : undefined,
-        action: { label: "Open", onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }) },
+        action: {
+          label: "Open",
+          onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }),
+        },
       });
     });
 
@@ -241,7 +244,11 @@ function Palette({ close }: { close: () => void }) {
         {q ? (
           <Group heading="Create">
             {command && !command.target && (
-              <Item value="create-series-cmd" icon={<Library />} onSelect={() => addSeries(command.name, command.chapter)}>
+              <Item
+                value="create-series-cmd"
+                icon={<Library />}
+                onSelect={() => addSeries(command.name, command.chapter)}
+              >
                 Add <b className="font-semibold">“{command.name}”</b> to Library
                 {command.chapter !== undefined && <> at Ch. {formatChapter(command.chapter)}</>}
               </Item>
@@ -263,7 +270,11 @@ function Palette({ close }: { close: () => void }) {
             <Item value="go-notes" icon={<FileText />} onSelect={() => (close(), void navigate({ to: "/" }))}>
               Notes
             </Item>
-            <Item value="go-library" icon={<Library />} onSelect={() => (close(), void navigate({ to: "/library" }))}>
+            <Item
+              value="go-library"
+              icon={<Library />}
+              onSelect={() => (close(), void navigate({ to: "/library" }))}
+            >
               Library
             </Item>
             <Item

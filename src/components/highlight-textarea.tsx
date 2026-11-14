@@ -78,7 +78,11 @@ export const HighlightTextarea = forwardRef<HighlightTextareaHandle, Props>(func
 
   return (
     <div className={cn("relative", className)}>
-      <div ref={layer} aria-hidden className={cn(TYPO, "pointer-events-none absolute inset-0 text-transparent select-none")}>
+      <div
+        ref={layer}
+        aria-hidden
+        className={cn(TYPO, "pointer-events-none absolute inset-0 text-transparent select-none")}
+      >
         {pieces}
         {/* Keeps a trailing newline from collapsing. */}
         {"​"}

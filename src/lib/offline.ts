@@ -86,12 +86,20 @@ function subscribe(listener: () => void) {
 }
 
 export function useCacheReady() {
-  return useSyncExternalStore(subscribe, () => ready, () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => ready,
+    () => false,
+  );
 }
 
 /** True when a saved copy of the notes and library exists. */
 export function useHasCache() {
-  return useSyncExternalStore(subscribe, () => memory.has(cacheKey("notes")), () => false);
+  return useSyncExternalStore(
+    subscribe,
+    () => memory.has(cacheKey("notes")),
+    () => false,
+  );
 }
 
 const cacheKey = (name: string) => `${VERSION_KEY}:${name}`;
@@ -136,7 +144,11 @@ function subscribeOnline(listener: () => void) {
 }
 
 export function useOnline() {
-  return useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
+  return useSyncExternalStore(
+    subscribeOnline,
+    () => navigator.onLine,
+    () => true,
+  );
 }
 
 /**

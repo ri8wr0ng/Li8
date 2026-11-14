@@ -55,7 +55,11 @@ const BY_ID = `query ($id: Int) { Media(id: $id, type: MANGA) { ${FIELDS} } }`;
 let blockedUntil = 0;
 const searchCache = new Map<string, AniListMedia[]>();
 
-async function request<T>(query: string, variables: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+async function request<T>(
+  query: string,
+  variables: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<T> {
   if (Date.now() < blockedUntil) {
     throw new AniListError("rate_limit", "AniList is busy. Try again in a moment.", blockedUntil);
   }
@@ -123,7 +127,21 @@ export function displayTitle(media: AniListMedia) {
   return media.title.english ?? media.title.romaji ?? media.title.native ?? "Untitled";
 }
 
-const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "—", ndash: "–", hellip: "…", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“" };
+const ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  mdash: "—",
+  ndash: "–",
+  hellip: "…",
+  rsquo: "’",
+  lsquo: "‘",
+  rdquo: "”",
+  ldquo: "“",
+};
 
 /** AniList descriptions carry <br>, <i> and entities even with asHtml: false. */
 export function stripHtml(html: string) {

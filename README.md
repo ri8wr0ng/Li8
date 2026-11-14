@@ -41,6 +41,12 @@ npx convex dev          # log in, create the project, keep it running
 pnpm dev                # http://localhost:3000 (keep `npx convex dev` running too)
 ```
 
+## Continuous integration
+
+Pull requests run `pnpm format:check` (Prettier) and `pnpm lint` (ESLint for TypeScript and React Hooks). Run `pnpm format` to apply formatting locally. Generated files and installed agent skills are excluded from these checks.
+
+PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
+
 ## Deploy
 
 `pnpm build` produces a static app in `dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy`.

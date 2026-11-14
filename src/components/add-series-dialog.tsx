@@ -54,7 +54,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
   // Typing "Battle Through The Heavens 348" fills both fields.
   const parsed = !chapter && !linked ? parseChapterCommand(title) : null;
   const finalTitle = parsed && parsed.chapter !== undefined ? parsed.name : title.trim();
-  const finalChapter = chapter ? Number(chapter) : parsed?.chapter ?? 0;
+  const finalChapter = chapter ? Number(chapter) : (parsed?.chapter ?? 0);
 
   // Search by the name part only, and stop once a pick has filled the title.
   const searchTerm = parsed?.chapter !== undefined ? parsed.name : title;
@@ -98,7 +98,10 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
       });
       onDone();
       toast.success(`Added ${finalTitle}`, {
-        action: { label: "Open", onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }) },
+        action: {
+          label: "Open",
+          onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }),
+        },
       });
     } catch (err) {
       console.error(err);
@@ -112,8 +115,8 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
       <DialogHeader>
         <DialogTitle className="font-display text-xl">Add to Library</DialogTitle>
         <DialogDescription>
-          Start typing and pick a match to fill in the rest. Or type the name and chapter together, like “Solo Leveling
-          120”.
+          Start typing and pick a match to fill in the rest. Or type the name and chapter together, like “Solo
+          Leveling 120”.
         </DialogDescription>
       </DialogHeader>
 
@@ -220,7 +223,12 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
             {online ? "Connecting…" : "You're offline."}
           </p>
         )}
-        <Button type="submit" variant="hanko" className="rounded-xl" disabled={!finalTitle || pending || readOnly}>
+        <Button
+          type="submit"
+          variant="hanko"
+          className="rounded-xl"
+          disabled={!finalTitle || pending || readOnly}
+        >
           Add series
         </Button>
       </DialogFooter>
@@ -234,7 +242,9 @@ function LinkedCard({ fill, onUnlink }: { fill: AniListFill; onUnlink: () => voi
       <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
         <Sparkles className="size-3" /> Filled from AniList
         {fill.totalChapters ? (
-          <span className="ml-1 font-mono tracking-normal normal-case tabular-nums">· {fill.totalChapters} ch</span>
+          <span className="ml-1 font-mono tracking-normal normal-case tabular-nums">
+            · {fill.totalChapters} ch
+          </span>
         ) : null}
       </div>
       {fill.genres.length > 0 && (
@@ -246,7 +256,9 @@ function LinkedCard({ fill, onUnlink }: { fill: AniListFill; onUnlink: () => voi
           ))}
         </div>
       )}
-      {fill.description && <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{fill.description}</p>}
+      {fill.description && (
+        <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{fill.description}</p>
+      )}
       <button
         type="button"
         onClick={onUnlink}

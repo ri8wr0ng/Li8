@@ -34,14 +34,21 @@ export function readUrl(template: string | undefined, chapter: number) {
 /** First letter of each word: "Battle Through The Heavens" -> "btth". */
 export function acronym(title: string) {
   const words = title.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
-  return words.length > 1 ? words.map((w) => w[0]).join("").toLowerCase() : "";
+  return words.length > 1
+    ? words
+        .map((w) => w[0])
+        .join("")
+        .toLowerCase()
+    : "";
 }
 
 /**
  * Parse commands like "btth 352", "Battle Through The Heavens ch 348", "btth +1".
  * Returns null when the text doesn't end with a chapter number or delta.
  */
-export function parseChapterCommand(input: string):
+export function parseChapterCommand(
+  input: string,
+):
   | { name: string; chapter: number; delta?: undefined }
   | { name: string; delta: number; chapter?: undefined }
   | null {

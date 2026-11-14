@@ -60,7 +60,13 @@ export function InstallBanner({ className }: { className?: string }) {
   );
 }
 
-export function IosInstallHelp({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function IosInstallHelp({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-2xl sm:max-w-sm">
@@ -72,14 +78,15 @@ export function IosInstallHelp({ open, onOpenChange }: { open: boolean; onOpenCh
           <li className="flex items-center gap-3">
             <Step n={1} />
             <span>
-              Tap <Share className="inline size-4 -translate-y-px" aria-label="Share" /> <b>Share</b> in Safari's
-              toolbar.
+              Tap <Share className="inline size-4 -translate-y-px" aria-label="Share" /> <b>Share</b> in
+              Safari's toolbar.
             </span>
           </li>
           <li className="flex items-center gap-3">
             <Step n={2} />
             <span>
-              Choose <SquarePlus className="inline size-4 -translate-y-px" aria-hidden /> <b>Add to Home Screen</b>.
+              Choose <SquarePlus className="inline size-4 -translate-y-px" aria-hidden />{" "}
+              <b>Add to Home Screen</b>.
             </span>
           </li>
           <li className="flex items-center gap-3">
