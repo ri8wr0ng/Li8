@@ -45,6 +45,8 @@ pnpm dev                # http://localhost:3000 (keep `npx convex dev` running t
 
 `pnpm build` produces a static app in `dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy`.
 
+On Vercel, `vercel.json` selects the static output and configures the route fallback and cache headers. The TanStack Start server preset is disabled because this app uses SPA mode.
+
 ## Layout
 
 ```
