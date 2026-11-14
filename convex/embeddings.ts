@@ -14,7 +14,15 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import { aiAllowedFor, aiEnabled, embeddingModel, noteText, requireAi, seriesText, textHash } from "./aiModels";
+import {
+  aiAllowedFor,
+  aiEnabled,
+  embeddingModel,
+  noteText,
+  requireAi,
+  seriesText,
+  textHash,
+} from "./aiModels";
 import { requireUserId } from "./lib";
 import { recordEmbedding } from "./usage";
 import { limitAi } from "./rateLimits";
@@ -62,12 +70,15 @@ async function findEmbedding(ctx: QueryCtx, target: Target) {
 }
 
 /** What to embed for a note or series, or null when its stored embedding is current. */
-async function pendingFor(ctx: QueryCtx, doc: Doc<"notes"> | Doc<"series">): Promise<Pending | null> {
+async function pendingFor(
+  ctx: QueryCtx,
+  doc: Doc<"notes"> | Doc<"series">,
+): Promise<Pending | null> {
   // Only embed for users who may use AI.
   if (!(await aiAllowedFor(ctx, doc.userId))) return null;
   const isNote = "body" in doc;
-  const target: Target = isNote ? { noteId: doc._id as Id<"notes"> } : { seriesId: doc._id as Id<"series"> };
-  const text = isNote ? noteText(doc) : seriesText(doc as Doc<"series">);
+  const target: Target = isNote ? { noteId: doc._id } : { seriesId: doc._id };
+  const text = isNote ? noteText(doc) : seriesText(doc);
   const hash = textHash(text);
   const existing = await findEmbedding(ctx, target);
   if (existing?.hash === hash) return null;
@@ -80,7 +91,11 @@ async function pendingFor(ctx: QueryCtx, doc: Doc<"notes"> | Doc<"series">): Pro
 export const pendingOne = internalQuery({
   args: { ...vTarget, at: v.optional(v.number()) },
   handler: async (ctx, { noteId, seriesId, at }): Promise<Pending | null> => {
-    const doc = noteId ? await ctx.db.get("notes", noteId) : seriesId ? await ctx.db.get("series", seriesId) : null;
+    const doc = noteId
+      ? await ctx.db.get("notes", noteId)
+      : seriesId
+        ? await ctx.db.get("series", seriesId)
+        : null;
     if (!doc) return null;
     // A later edit scheduled its own job.
     if (at !== undefined && doc.updatedAt > at) return null;
@@ -101,7 +116,9 @@ export const embedOne = internalAction({
     }
     const result = await embed({ model: embeddingModel, value: text });
     await recordEmbedding(ctx, item.userId, "index", result);
-    await ctx.runMutation(internal.embeddings.save, { items: [{ ...item, embedding: result.embedding }] });
+    await ctx.runMutation(internal.embeddings.save, {
+      items: [{ ...item, embedding: result.embedding }],
+    });
   },
 });
 
@@ -122,7 +139,9 @@ export const save = internalMutation({
       const target: Target | null = noteId ? { noteId } : seriesId ? { seriesId } : null;
       if (!target) continue;
       // The document may have been deleted while we were embedding it.
-      const doc = noteId ? await ctx.db.get("notes", noteId) : await ctx.db.get("series", seriesId!);
+      const doc = noteId
+        ? await ctx.db.get("notes", noteId)
+        : await ctx.db.get("series", seriesId!);
       const existing = await findEmbedding(ctx, target);
       if (!doc || embedding === null) {
         if (existing) await ctx.db.delete("embeddings", existing._id);
@@ -142,12 +161,20 @@ export const reindexMine = mutation({
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
     if (!(await aiAllowedFor(ctx, userId))) return;
-    await ctx.scheduler.runAfter(0, internal.embeddings.backfill, { userId, kind: "notes" as const, cursor: null });
+    await ctx.scheduler.runAfter(0, internal.embeddings.backfill, {
+      userId,
+      kind: "notes" as const,
+      cursor: null,
+    });
   },
 });
 
 export const staleBatch = internalQuery({
-  args: { userId: v.id("users"), kind: v.union(v.literal("notes"), v.literal("series")), paginationOpts: paginationOptsValidator },
+  args: {
+    userId: v.id("users"),
+    kind: v.union(v.literal("notes"), v.literal("series")),
+    paginationOpts: paginationOptsValidator,
+  },
   handler: async (ctx, { userId, kind, paginationOpts }) => {
     const result = await ctx.db
       .query(kind)
@@ -164,7 +191,11 @@ export const staleBatch = internalQuery({
 });
 
 export const backfill = internalAction({
-  args: { userId: v.id("users"), kind: v.union(v.literal("notes"), v.literal("series")), cursor: v.union(v.string(), v.null()) },
+  args: {
+    userId: v.id("users"),
+    kind: v.union(v.literal("notes"), v.literal("series")),
+    cursor: v.union(v.string(), v.null()),
+  },
   handler: async (ctx, { userId, kind, cursor }) => {
     if (!aiEnabled()) return;
     const batch = await ctx.runQuery(internal.embeddings.staleBatch, {
@@ -174,19 +205,39 @@ export const backfill = internalAction({
     });
     const withText = batch.items.filter((i) => i.text.trim());
     // Now-empty documents: drop their old embedding.
-    const items: { noteId?: Id<"notes">; seriesId?: Id<"series">; userId: Id<"users">; hash: string; embedding: number[] | null }[] =
-      batch.items.filter((i) => !i.text.trim()).map(({ text: _text, ...item }) => ({ ...item, embedding: null }));
+    const items: {
+      noteId?: Id<"notes">;
+      seriesId?: Id<"series">;
+      userId: Id<"users">;
+      hash: string;
+      embedding: number[] | null;
+    }[] = batch.items
+      .filter((i) => !i.text.trim())
+      .map(({ text: _text, ...item }) => ({ ...item, embedding: null }));
     if (withText.length) {
-      const result = await embedMany({ model: embeddingModel, values: withText.map((i) => i.text) });
+      const result = await embedMany({
+        model: embeddingModel,
+        values: withText.map((i) => i.text),
+      });
       await recordEmbedding(ctx, userId, "index", result);
       const { embeddings } = result;
-      items.push(...withText.map(({ text: _text, ...item }, i) => ({ ...item, embedding: embeddings[i]! })));
+      items.push(
+        ...withText.map(({ text: _text, ...item }, i) => ({ ...item, embedding: embeddings[i] })),
+      );
     }
     if (items.length) await ctx.runMutation(internal.embeddings.save, { items });
     if (!batch.isDone) {
-      await ctx.scheduler.runAfter(0, internal.embeddings.backfill, { userId, kind, cursor: batch.continueCursor });
+      await ctx.scheduler.runAfter(0, internal.embeddings.backfill, {
+        userId,
+        kind,
+        cursor: batch.continueCursor,
+      });
     } else if (kind === "notes") {
-      await ctx.scheduler.runAfter(0, internal.embeddings.backfill, { userId, kind: "series" as const, cursor: null });
+      await ctx.scheduler.runAfter(0, internal.embeddings.backfill, {
+        userId,
+        kind: "series" as const,
+        cursor: null,
+      });
     }
   },
 });
@@ -199,7 +250,10 @@ export type MeaningHit =
   | { kind: "series"; score: number; series: Doc<"series"> };
 
 export const hydrate = internalQuery({
-  args: { userId: v.id("users"), hits: v.array(v.object({ id: v.id("embeddings"), score: v.number() })) },
+  args: {
+    userId: v.id("users"),
+    hits: v.array(v.object({ id: v.id("embeddings"), score: v.number() })),
+  },
   handler: async (ctx, { userId, hits }): Promise<MeaningHit[]> => {
     const out: MeaningHit[] = [];
     for (const { id, score } of hits) {
@@ -243,7 +297,9 @@ export async function searchByMeaningFor(
     limit,
     filter: (q) => q.eq("userId", userId),
   });
-  const hits = results.filter((r) => r._score >= MIN_SCORE).map((r) => ({ id: r._id, score: r._score }));
+  const hits = results
+    .filter((r) => r._score >= MIN_SCORE)
+    .map((r) => ({ id: r._id, score: r._score }));
   if (!hits.length) return [];
   return await ctx.runQuery(internal.embeddings.hydrate, { userId, hits });
 }
@@ -251,7 +307,10 @@ export async function searchByMeaningFor(
 /** Ids and scores only; the client already has the documents. */
 export const search = action({
   args: { query: v.string() },
-  handler: async (ctx, { query }): Promise<{ kind: "note" | "series"; id: string; score: number }[]> => {
+  handler: async (
+    ctx,
+    { query },
+  ): Promise<{ kind: "note" | "series"; id: string; score: number }[]> => {
     requireAi();
     const { userId, allowed } = await ctx.runQuery(internal.embeddings.viewer, {});
     if (userId === null) throw new Error("Not signed in");
@@ -261,7 +320,9 @@ export const search = action({
     await limitAi(ctx, "search", userId);
     const hits = await searchByMeaningFor(ctx, userId, q, 12);
     return hits.map((h) =>
-      h.kind === "note" ? { kind: h.kind, id: h.note._id, score: h.score } : { kind: h.kind, id: h.series._id, score: h.score },
+      h.kind === "note"
+        ? { kind: h.kind, id: h.note._id, score: h.score }
+        : { kind: h.kind, id: h.series._id, score: h.score },
     );
   },
 });

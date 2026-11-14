@@ -55,7 +55,11 @@ const BY_ID = `query ($id: Int) { Media(id: $id, type: MANGA) { ${FIELDS} } }`;
 let blockedUntil = 0;
 const searchCache = new Map<string, AniListMedia[]>();
 
-async function request<T>(query: string, variables: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
+async function request<T>(
+  query: string,
+  variables: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<T> {
   if (Date.now() < blockedUntil) {
     throw new AniListError("rate_limit", "AniList is busy. Try again in a moment.", blockedUntil);
   }
@@ -76,10 +80,10 @@ async function request<T>(query: string, variables: Record<string, unknown>, sig
     blockedUntil = Date.now() + seconds * 1000;
     throw new AniListError("rate_limit", "AniList is busy. Try again in a moment.", blockedUntil);
   }
-  const json = (await res.json().catch(() => null)) as {
+  const json: {
     data?: T;
     errors?: { message: string; status?: number }[];
-  } | null;
+  } | null = await res.json().catch(() => null);
   if (res.status === 404 || json?.errors?.some((e) => e.status === 404)) {
     throw new AniListError("not_found", "AniList doesn't have that series anymore.");
   }
@@ -93,7 +97,11 @@ export async function searchAniList(search: string, signal?: AbortSignal) {
   const key = search.trim().toLowerCase();
   const hit = searchCache.get(key);
   if (hit) return hit;
-  const data = await request<{ Page: { media: AniListMedia[] } }>(SEARCH, { search: search.trim() }, signal);
+  const data = await request<{ Page: { media: AniListMedia[] } }>(
+    SEARCH,
+    { search: search.trim() },
+    signal,
+  );
   searchCache.set(key, data.Page.media);
   return data.Page.media;
 }
@@ -123,7 +131,21 @@ export function displayTitle(media: AniListMedia) {
   return media.title.english ?? media.title.romaji ?? media.title.native ?? "Untitled";
 }
 
-const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "—", ndash: "–", hellip: "…", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“" };
+const ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  mdash: "—",
+  ndash: "–",
+  hellip: "…",
+  rsquo: "’",
+  lsquo: "‘",
+  rdquo: "”",
+  ldquo: "“",
+};
 
 /** AniList descriptions carry <br>, <i> and entities even with asHtml: false. */
 export function stripHtml(html: string) {
@@ -133,7 +155,8 @@ export function stripHtml(html: string) {
     .replace(/<[^>]+>/g, "")
     .replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e: string) => {
       if (e[0] === "#") {
-        const code = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        const code =
+          e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
         return Number.isFinite(code) ? String.fromCodePoint(code) : m;
       }
       return ENTITIES[e.toLowerCase()] ?? m;
@@ -145,7 +168,12 @@ export function stripHtml(html: string) {
 
 export function fillFrom(media: AniListMedia): AniListFill {
   const title = displayTitle(media);
-  const names = [media.title.english, media.title.romaji, media.title.native, ...(media.synonyms ?? [])];
+  const names = [
+    media.title.english,
+    media.title.romaji,
+    media.title.native,
+    ...(media.synonyms ?? []),
+  ];
   const seen = new Set([title.toLowerCase()]);
   const altNames: string[] = [];
   for (const name of names) {

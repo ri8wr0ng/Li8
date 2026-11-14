@@ -28,7 +28,9 @@ export function aiEnabled() {
 
 export function requireAi() {
   if (!aiEnabled()) {
-    throw new ConvexError("AI isn't set up on this deployment yet. Set OPENROUTER_API_KEY to turn it on.");
+    throw new ConvexError(
+      "AI isn't set up on this deployment yet. Set OPENROUTER_API_KEY to turn it on.",
+    );
   }
 }
 
@@ -47,14 +49,18 @@ export async function aiAllowedFor(ctx: QueryCtx, userId: Id<"users">) {
 
 export async function requireAiFor(ctx: QueryCtx, userId: Id<"users">) {
   requireAi();
-  if (!(await aiAllowedFor(ctx, userId))) throw new ConvexError("AI isn't available on your account yet.");
+  if (!(await aiAllowedFor(ctx, userId)))
+    throw new ConvexError("AI isn't available on your account yet.");
 }
 
 const MAX_EMBED_CHARS = 8000;
 
 export function noteText(note: Pick<Doc<"notes">, "title" | "body" | "tags">) {
   const tags = note.tags.map((t) => `#${t}`).join(" ");
-  return [note.title.trim(), tags, note.body.trim()].filter(Boolean).join("\n\n").slice(0, MAX_EMBED_CHARS);
+  return [note.title.trim(), tags, note.body.trim()]
+    .filter(Boolean)
+    .join("\n\n")
+    .slice(0, MAX_EMBED_CHARS);
 }
 
 export function seriesText(

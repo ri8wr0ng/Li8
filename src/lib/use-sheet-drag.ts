@@ -6,6 +6,11 @@ const START = 6; // px of movement before a press on the handle becomes a drag (
 const SETTLE = "transform 320ms cubic-bezier(0.32, 0.72, 0, 1)"; // iOS sheet curve, no overshoot
 const AWAY_MS = 220;
 
+function paint(el: HTMLElement, y: number, transition: string) {
+  el.style.transition = transition;
+  el.style.transform = y ? `translate3d(0, ${y}px, 0)` : "";
+}
+
 /**
  * Drag a bottom sheet down to dismiss it, the way iOS sheets work: it tracks
  * the finger 1:1, resists when pulled up, and on release closes if the throw
@@ -16,16 +21,22 @@ const AWAY_MS = 220;
  * sheet. While dismissing by drag the sheet gets `data-dragged`, so callers can
  * skip their own exit animation (it has already left).
  */
-export function useSheetDrag({ onDismiss, enabled = true }: { onDismiss: () => void; enabled?: boolean }) {
+export function useSheetDrag({
+  onDismiss,
+  enabled = true,
+}: {
+  onDismiss: () => void;
+  enabled?: boolean;
+}) {
   const sheetRef = useRef<HTMLElement | null>(null);
-  const drag = useRef<{ id: number; startY: number; from: number; y: number; active: boolean; tracker: VelocityTracker } | null>(null);
-
-  const set = (y: number, transition: string) => {
-    const el = sheetRef.current;
-    if (!el) return;
-    el.style.transition = transition;
-    el.style.transform = y ? `translate3d(0, ${y}px, 0)` : "";
-  };
+  const drag = useRef<{
+    id: number;
+    startY: number;
+    from: number;
+    y: number;
+    active: boolean;
+    tracker: VelocityTracker;
+  } | null>(null);
 
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLElement>) => {
@@ -36,7 +47,14 @@ export function useSheetDrag({ onDismiss, enabled = true }: { onDismiss: () => v
       if (!el) return;
       // Start from the sheet's live position, so grabbing it mid-settle doesn't jump.
       const from = new DOMMatrix(getComputedStyle(el).transform).m42 || 0;
-      drag.current = { id: e.pointerId, startY: e.clientY, from, y: from, active: false, tracker: new VelocityTracker() };
+      drag.current = {
+        id: e.pointerId,
+        startY: e.clientY,
+        from,
+        y: from,
+        active: false,
+        tracker: new VelocityTracker(),
+      };
     },
     [enabled],
   );
@@ -61,7 +79,7 @@ export function useSheetDrag({ onDismiss, enabled = true }: { onDismiss: () => v
     const raw = d.from + dy;
     d.y = raw >= 0 ? raw : -rubberband(-raw, el.offsetHeight);
     d.tracker.add(raw);
-    set(d.y, "none");
+    paint(el, d.y, "none");
   }, []);
 
   const finish = useCallback(
@@ -76,10 +94,10 @@ export function useSheetDrag({ onDismiss, enabled = true }: { onDismiss: () => v
         // Leave along the path it was already travelling, then let the caller unmount it.
         el.dataset.dragged = "";
         vibrate(6);
-        set(el.offsetHeight + 48, `transform ${AWAY_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`);
+        paint(el, el.offsetHeight + 48, `transform ${AWAY_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`);
         window.setTimeout(onDismiss, AWAY_MS);
       } else {
-        set(0, SETTLE);
+        paint(el, 0, SETTLE);
       }
     },
     [onDismiss],

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { noteText, seriesText, textHash } from "./aiModels";
 
 describe("aiModels pure helpers", () => {
@@ -142,7 +142,9 @@ describe("aiModels pure helpers", () => {
       };
       const formatted = seriesText(series);
       expect(formatted.length).toBe(8000);
-      expect(formatted.startsWith("Very Long Series\nAlso known as: VLS\nnovel, Epic\nBBBB")).toBe(true);
+      expect(formatted.startsWith("Very Long Series\nAlso known as: VLS\nnovel, Epic\nBBBB")).toBe(
+        true,
+      );
     });
 
     it("does not truncate series text when within 8000 characters", () => {
@@ -155,7 +157,9 @@ describe("aiModels pure helpers", () => {
       };
       const formatted = seriesText(series);
       expect(formatted.length).toBeLessThan(8000);
-      expect(formatted).toBe("Short Series\nAlso known as: SS\nmanhua, Martial Arts\nA short story.");
+      expect(formatted).toBe(
+        "Short Series\nAlso known as: SS\nmanhua, Martial Arts\nA short story.",
+      );
     });
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 
 /**
  * A tiny replacement for next-themes. The class on <html> is set before first
@@ -42,7 +42,9 @@ function apply() {
   document.head.appendChild(style);
   root.classList.toggle("dark", state.resolved === "dark");
   root.style.colorScheme = state.resolved;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", COLORS[state.resolved]);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", COLORS[state.resolved]);
   void getComputedStyle(document.body).opacity;
   requestAnimationFrame(() => style.remove());
 }
@@ -58,7 +60,8 @@ function set(theme: Theme) {
   // Crossfade the swap (styles.css sets 240ms) so the whole screen doesn't flash
   // from light to dark. Skipped without View Transitions or with reduced motion.
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!reduce && typeof document.startViewTransition === "function") document.startViewTransition(apply);
+  if (!reduce && typeof document.startViewTransition === "function")
+    document.startViewTransition(apply);
   else apply();
   listeners.forEach((l) => l());
 }
@@ -88,7 +91,10 @@ function onStorage(e: StorageEvent) {
 const serverSnapshot = { theme: "system" as Theme, resolved: "light" as ResolvedTheme };
 
 export function useTheme() {
-  const s = useSyncExternalStore(subscribe, () => state ?? serverSnapshot, () => serverSnapshot);
-  const setTheme = useCallback((theme: string) => set(theme as Theme), []);
-  return { theme: s.theme, resolvedTheme: s.resolved, setTheme };
+  const s = useSyncExternalStore(
+    subscribe,
+    () => state ?? serverSnapshot,
+    () => serverSnapshot,
+  );
+  return { theme: s.theme, resolvedTheme: s.resolved, setTheme: set };
 }

@@ -1,8 +1,8 @@
-@import '@fontsource-variable/geist';
-@import '@fontsource-variable/geist-mono';
-@import '@fontsource-variable/fraunces';
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/fraunces";
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -61,9 +61,9 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
-  --font-display: 'Fraunces Variable', ui-serif, Georgia, serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -114,18 +114,18 @@
   }
   /* Controls fire on tap without the double-tap-zoom wait, and long-press doesn't select their labels. */
   button,
-  [role='button'],
-  [role='tab'],
-  [role='option'],
-  [role='menuitem'],
+  [role="button"],
+  [role="tab"],
+  [role="option"],
+  [role="menuitem"],
   a {
     touch-action: manipulation;
   }
   button,
-  [role='button'],
-  [role='tab'],
-  [role='option'],
-  [role='menuitem'] {
+  [role="button"],
+  [role="tab"],
+  [role="option"],
+  [role="menuitem"] {
     -webkit-user-select: none;
     user-select: none;
   }
@@ -134,16 +134,16 @@
    * property, so it composes with any translate/transform a button already has;
    * components that set their own active:scale-* override it (utilities win over base).
    */
-  :where(button, [role='button']):not(:disabled):active {
+  :where(button, [role="button"]):not(:disabled):active {
     scale: 0.97;
   }
-  :where(button, [role='button']) {
+  :where(button, [role="button"]) {
     transition-property: color, background-color, border-color, box-shadow, opacity, scale;
     transition-duration: 120ms;
     transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
   }
   @media (prefers-reduced-motion: reduce) {
-    :where(button, [role='button']):active {
+    :where(button, [role="button"]):active {
       scale: none;
     }
   }
@@ -152,7 +152,7 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'ss01', 'cv11';
+    font-feature-settings: "ss01", "cv11";
   }
   ::selection {
     background: color-mix(in oklab, var(--hanko) 22%, transparent);
@@ -177,7 +177,7 @@
     padding: 0 0.08em;
     margin: 0 -0.08em;
   }
-  mark[data-active='true'] {
+  mark[data-active="true"] {
     background: var(--marker-active);
     color: #1c1a17;
   }
@@ -240,7 +240,7 @@
 
 /* A soft light travelling around the prompt box while the assistant works. */
 @property --prompt-glow-angle {
-  syntax: '<angle>';
+  syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
@@ -252,7 +252,7 @@
 @utility prompt-glow {
   position: relative;
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: -1px;
     border-radius: inherit;
@@ -311,8 +311,16 @@
 /* The lit blob behind the active tab: Hanko melting into marker orange. */
 @utility glass-active {
   background:
-    radial-gradient(120% 140% at 85% 110%, color-mix(in oklch, var(--marker-active) 75%, transparent) 0%, transparent 55%),
-    radial-gradient(120% 140% at 10% -20%, color-mix(in oklch, var(--hanko) 85%, transparent) 0%, transparent 60%),
+    radial-gradient(
+      120% 140% at 85% 110%,
+      color-mix(in oklch, var(--marker-active) 75%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      120% 140% at 10% -20%,
+      color-mix(in oklch, var(--hanko) 85%, transparent) 0%,
+      transparent 60%
+    ),
     color-mix(in oklch, var(--hanko) 78%, transparent);
   box-shadow:
     inset 0 1px 0 0 color-mix(in oklch, white 40%, transparent),

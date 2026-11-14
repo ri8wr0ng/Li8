@@ -1,8 +1,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -170,14 +169,18 @@ describe("assistantData internal functions", () => {
         userId: userA,
         seriesId,
       });
-      expect(noArgsRes).toEqual({ error: "Give a chapter number of 0 or more, or a change like +1." });
+      expect(noArgsRes).toEqual({
+        error: "Give a chapter number of 0 or more, or a change like +1.",
+      });
 
       const negativeChapterRes = await t.mutation(internal.assistantData.updateChapter, {
         userId: userA,
         seriesId,
         chapter: -1,
       });
-      expect(negativeChapterRes).toEqual({ error: "Give a chapter number of 0 or more, or a change like +1." });
+      expect(negativeChapterRes).toEqual({
+        error: "Give a chapter number of 0 or more, or a change like +1.",
+      });
     });
   });
 
@@ -203,9 +206,7 @@ describe("assistantData internal functions", () => {
         tags: ["cultivation", "reference"],
         body: "1. Qi Refinement\n2. Foundation Building",
       });
-      if ("updatedAt" in readRes && readRes.updatedAt !== undefined) {
-        expect(typeof readRes.updatedAt).toBe("string");
-      }
+      expect("updatedAt" in readRes ? typeof readRes.updatedAt : "missing").toBe("string");
     });
 
     it("returns title as Untitled if note has empty title", async () => {
@@ -295,7 +296,7 @@ describe("assistantData internal functions", () => {
         title: "Reading List",
       });
 
-      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id as Id<"notes">));
+      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id));
       expect(note?.body).toBe("1. Martial Peak\n2. Apotheosis");
     });
 
@@ -314,7 +315,7 @@ describe("assistantData internal functions", () => {
         text: "First line",
       });
 
-      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id as Id<"notes">));
+      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id));
       expect(note?.body).toBe("First line");
     });
 
@@ -333,7 +334,7 @@ describe("assistantData internal functions", () => {
         text: "Second line",
       });
 
-      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id as Id<"notes">));
+      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id));
       expect(note?.body).toBe("First line\nSecond line");
     });
 
@@ -355,7 +356,7 @@ describe("assistantData internal functions", () => {
       expect(appendRes).toEqual({ error: "No note with that id." });
 
       // Note content unchanged
-      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id as Id<"notes">));
+      const note = await t.run((ctx) => ctx.db.get("notes", noteRes.id));
       expect(note?.body).toBe("Original text");
     });
 
@@ -388,7 +389,7 @@ describe("assistantData internal functions", () => {
       });
       if ("error" in res || !res.id) throw new Error("Expected series id");
 
-      const doc = await t.run((ctx) => ctx.db.get("series", res.id as Id<"series">));
+      const doc = await t.run((ctx) => ctx.db.get("series", res.id));
       expect(doc).not.toBeNull();
       expect(doc?.userId).toBe(userA);
       expect(doc?.title).toBe("The Beginning After The End");
@@ -401,7 +402,7 @@ describe("assistantData internal functions", () => {
       const history = await t.run((ctx) =>
         ctx.db
           .query("chapterHistory")
-          .withIndex("by_series_at", (q) => q.eq("seriesId", res.id as Id<"series">))
+          .withIndex("by_series_at", (q) => q.eq("seriesId", res.id))
           .collect(),
       );
       expect(history.length).toBe(1);
@@ -440,7 +441,7 @@ describe("assistantData internal functions", () => {
       });
       if ("error" in res || !res.id) throw new Error("Expected note id");
 
-      const doc = await t.run((ctx) => ctx.db.get("notes", res.id as Id<"notes">));
+      const doc = await t.run((ctx) => ctx.db.get("notes", res.id));
       expect(doc).not.toBeNull();
       expect(doc?.userId).toBe(userA);
       expect(doc?.title).toBe("Artifacts Guide");
@@ -462,7 +463,7 @@ describe("assistantData internal functions", () => {
       });
       if ("error" in res || !res.id) throw new Error("Expected note id");
 
-      const doc = await t.run((ctx) => ctx.db.get("notes", res.id as Id<"notes">));
+      const doc = await t.run((ctx) => ctx.db.get("notes", res.id));
       expect(doc?.title).toBe("");
     });
   });

@@ -32,8 +32,8 @@ export class VelocityTracker {
   velocity(now = performance.now()) {
     const recent = this.samples.filter((s) => now - s.t <= 100);
     if (recent.length < 2) return 0;
-    const first = recent[0]!;
-    const last = recent[recent.length - 1]!;
+    const first = recent[0];
+    const last = recent[recent.length - 1];
     const dt = last.t - first.t;
     return dt > 0 ? ((last.v - first.v) / dt) * 1000 : 0;
   }

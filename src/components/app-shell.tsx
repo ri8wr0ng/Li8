@@ -1,7 +1,20 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { Download, FileText, Library, LogOut, MessageCircle, Monitor, Moon, PenLine, Search, Sparkles, Sun, WifiOff } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Library,
+  LogOut,
+  MessageCircle,
+  Monitor,
+  Moon,
+  PenLine,
+  Search,
+  Sparkles,
+  Sun,
+  WifiOff,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AiPanel, AiPanelProvider, useAiPanel } from "#/components/ask/ai-panel";
@@ -49,7 +62,9 @@ function Shell({ children }: { children: ReactNode }) {
     <div
       className={cn(
         "min-h-dvh lg:grid",
-        panel.open ? "lg:grid-cols-[16rem_minmax(0,1fr)_24rem] xl:grid-cols-[16rem_minmax(0,1fr)_28rem]" : "lg:grid-cols-[16rem_1fr]",
+        panel.open
+          ? "lg:grid-cols-[16rem_minmax(0,1fr)_24rem] xl:grid-cols-[16rem_minmax(0,1fr)_28rem]"
+          : "lg:grid-cols-[16rem_1fr]",
       )}
     >
       {/* Desktop sidebar */}
@@ -90,7 +105,13 @@ function Shell({ children }: { children: ReactNode }) {
 
         <nav className="flex flex-col gap-0.5">
           <SideLink to="/" icon={<FileText />} label="Notes" count={notes?.length} />
-          <SideLink to="/library" icon={<Library />} label="Library" count={reading} countLabel="reading" />
+          <SideLink
+            to="/library"
+            icon={<Library />}
+            label="Library"
+            count={reading}
+            countLabel="reading"
+          />
           {chatStatus?.enabled && <SideLink to="/ask" icon={<MessageCircle />} label="Ask" />}
         </nav>
 
@@ -118,7 +139,9 @@ function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">{children}</main>
+      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
+        {children}
+      </main>
 
       <AiPanel notes={notes} series={series} />
 
@@ -221,14 +244,20 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
         {!compact && (
           <span className="min-w-0">
             <span className="block truncate font-medium">{me?.name ?? "Signed in"}</span>
-            {me?.email && <span className="block truncate text-xs text-muted-foreground">{me.email}</span>}
+            {me?.email && (
+              <span className="block truncate text-xs text-muted-foreground">{me.email}</span>
+            )}
           </span>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">
-        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">{me?.email ?? name}</DropdownMenuLabel>
+        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+          {me?.email ?? name}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Theme</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+          Theme
+        </DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light">
             <Sun /> Light

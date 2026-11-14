@@ -66,6 +66,12 @@ One key covers both models: `anthropic/claude-haiku-5.5` for chat and `openai/te
 - Per user, chat allows a burst of 15 messages and refills one a minute; meaning search allows a burst of 30 and refills about three a minute. Past that, Ask says how long to wait.
 - With AI on, the text of your notes and Library entries is sent through OpenRouter to those model providers, to build embeddings and to answer Ask. Remove the key with `npx convex env remove OPENROUTER_API_KEY` to turn AI off.
 
+## Continuous integration
+
+Pull requests run `pnpm format:check` (Vite+ / oxfmt) and `pnpm lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `pnpm format` to apply formatting or `pnpm lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
+
+PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
+
 ## Deploy
 
 `pnpm build` produces a static app in `dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy`.

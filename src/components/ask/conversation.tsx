@@ -59,8 +59,17 @@ const GENERAL_PROMPTS = [
   "what am I reading right now?",
   "find my notes about favorite characters",
 ];
-const NOTE_PROMPTS = ["Summarize this note", "Suggest tags for this note", "Tidy this note into a list", "What else did I write about this?"];
-const SERIES_PROMPTS = ["Bump this to the next chapter", "Mark this as completed", "What did I note about this series?"];
+const NOTE_PROMPTS = [
+  "Summarize this note",
+  "Suggest tags for this note",
+  "Tidy this note into a list",
+  "What else did I write about this?",
+];
+const SERIES_PROMPTS = [
+  "Bump this to the next chapter",
+  "Mark this as completed",
+  "What did I note about this series?",
+];
 
 /** How each assistant tool reads in the UI: while running, and once done. */
 const TOOLS: Record<string, { icon: LucideIcon; running: string; done: string }> = {
@@ -74,9 +83,16 @@ const TOOLS: Record<string, { icon: LucideIcon; running: string; done: string }>
   updateNote: { icon: FilePen, running: "Editing the note", done: "Edited the note" },
   updateSeries: { icon: Library, running: "Updating the series", done: "Updated the series" },
 };
-const toolInfo = (name: string) => TOOLS[name] ?? { icon: Wrench, running: "Working", done: "Used a tool" };
+const toolInfo = (name: string) =>
+  TOOLS[name] ?? { icon: Wrench, running: "Working", done: "Used a tool" };
 
-type ToolPart = { name: string; state?: string; input?: unknown; output?: unknown; errorText?: string };
+type ToolPart = {
+  name: string;
+  state?: string;
+  input?: unknown;
+  output?: unknown;
+  errorText?: string;
+};
 
 function toolParts(message: UIMessage): ToolPart[] {
   return message.parts.flatMap((part) => {
@@ -98,8 +114,15 @@ const isDone = (state?: string) => state === "output-available" || state === "ou
 function activity(messages: UIMessage[], sending: boolean): string | null {
   const last = messages.at(-1);
   if (sending || last?.role === "user") return "Thinking";
-  if (!last || last.role !== "assistant" || (last.status !== "streaming" && last.status !== "pending")) return null;
-  const running = toolParts(last).filter((t) => !isDone(t.state)).pop();
+  if (
+    !last ||
+    last.role !== "assistant" ||
+    (last.status !== "streaming" && last.status !== "pending")
+  )
+    return null;
+  const running = toolParts(last)
+    .filter((t) => !isDone(t.state))
+    .pop();
   if (running) return toolInfo(running.name).running;
   return last.text ? "Writing a reply" : "Thinking";
 }
@@ -108,16 +131,19 @@ function activity(messages: UIMessage[], sending: boolean): string | null {
 function useElapsed(active: boolean) {
   const [start, setStart] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // Starting/stopping a clock when `active` flips is a genuine sync with time, not derived state.
+  /* oxlint-disable react/set-state-in-effect */
   useEffect(() => {
     if (!active) {
       setStart(null);
-      return;
+      return undefined;
     }
     setStart(Date.now());
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [active]);
+  /* oxlint-enable react/set-state-in-effect */
   return start === null ? 0 : Math.max(0, Math.floor((now - start) / 1000));
 }
 
@@ -144,18 +170,22 @@ export function Conversation({
   const send = useMutation(api.chat.send);
   const [prompt, setPrompt] = useState("");
   const [sending, setSending] = useState(false);
-  // Page context is on by default and comes back whenever the page changes.
-  const [usePage, setUsePage] = useState(true);
+  // Page context is on by default and comes back whenever the page changes:
+  // we only remember which page it was turned off for.
   const pageKey = page ? `${page.kind}:${page.id}` : "";
-  useEffect(() => setUsePage(true), [pageKey]);
-  const attached = usePage && page ? page : null;
+  const [offFor, setOffFor] = useState<string | null>(null);
+  const attached = page && offFor !== pageKey ? page : null;
+  const setUsePage = (on: boolean) => setOffFor(on ? null : pageKey);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { results: messages, status, loadMore } = useUIMessages(
-    api.chat.messages,
-    threadId ? { threadId } : "skip",
-    { initialNumItems: 30, stream: true },
-  );
+  const {
+    results: messages,
+    status,
+    loadMore,
+  } = useUIMessages(api.chat.messages, threadId ? { threadId } : "skip", {
+    initialNumItems: 30,
+    stream: true,
+  });
   const working = activity(messages, sending);
   const elapsed = useElapsed(working !== null);
 
@@ -167,7 +197,14 @@ export function Conversation({
       const id = await send({
         prompt: text,
         ...(threadId ? { threadId } : {}),
-        ...(attached ? { page: { kind: attached.kind, id: attached.id } as PageRef } : {}),
+        ...(attached
+          ? {
+              page:
+                attached.kind === "note"
+                  ? ({ kind: "note", id: attached.id } satisfies PageRef)
+                  : ({ kind: "series", id: attached.id } satisfies PageRef),
+            }
+          : {}),
       });
       setPrompt("");
       if (id !== threadId) onThread(id);
@@ -185,7 +222,12 @@ export function Conversation({
     }
   }
 
-  const suggestions = attached?.kind === "note" ? NOTE_PROMPTS : attached?.kind === "series" ? SERIES_PROMPTS : GENERAL_PROMPTS;
+  const suggestions =
+    attached?.kind === "note"
+      ? NOTE_PROMPTS
+      : attached?.kind === "series"
+        ? SERIES_PROMPTS
+        : GENERAL_PROMPTS;
   const pad = compact ? "px-4" : "px-4 sm:px-6";
 
   return (
@@ -213,14 +255,26 @@ export function Conversation({
         <MessageScrollerProvider autoScroll>
           <MessageScroller className="min-h-0 flex-1">
             <MessageScrollerViewport aria-label="Conversation">
-              <MessageScrollerContent aria-busy={working !== null} className={cn("mx-auto w-full max-w-3xl gap-6 py-5", pad)}>
+              <MessageScrollerContent
+                aria-busy={working !== null}
+                className={cn("mx-auto w-full max-w-3xl gap-6 py-5", pad)}
+              >
                 {status === "CanLoadMore" && (
-                  <Button variant="ghost" size="sm" className="self-center text-muted-foreground" onClick={() => loadMore(30)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="self-center text-muted-foreground"
+                    onClick={() => loadMore(30)}
+                  >
                     Load earlier messages
                   </Button>
                 )}
                 {messages.map((message) => (
-                  <MessageScrollerItem key={message.key} messageId={message.key} scrollAnchor={message.role === "user"}>
+                  <MessageScrollerItem
+                    key={message.key}
+                    messageId={message.key}
+                    scrollAnchor={message.role === "user"}
+                  >
                     <ChatMessage message={message} />
                   </MessageScrollerItem>
                 ))}
@@ -231,7 +285,10 @@ export function Conversation({
         </MessageScrollerProvider>
       )}
 
-      <form onSubmit={submit} className={cn("shrink-0 pt-2", compact ? "px-3 pb-3" : "px-3 pb-3 sm:px-4 sm:pb-4")}>
+      <form
+        onSubmit={submit}
+        className={cn("shrink-0 pt-2", compact ? "px-3 pb-3" : "px-3 pb-3 sm:px-4 sm:pb-4")}
+      >
         <div className="mx-auto max-w-3xl">
           <InputGroup
             className={cn(
@@ -244,7 +301,11 @@ export function Conversation({
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={onKeyDown}
-              placeholder={attached ? `Ask about this ${attached.kind === "note" ? "note" : "series"}…` : "Ask about your notes or Library…"}
+              placeholder={
+                attached
+                  ? `Ask about this ${attached.kind === "note" ? "note" : "series"}…`
+                  : "Ask about your notes or Library…"
+              }
               aria-label="Message"
               rows={1}
               maxLength={4000}
@@ -254,17 +315,30 @@ export function Conversation({
               {page &&
                 (attached ? (
                   <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full border bg-background py-0.5 pr-0.5 pl-2 text-xs font-normal">
-                    {page.kind === "note" ? <FileText className="size-3.5 shrink-0" /> : <Library className="size-3.5 shrink-0" />}
+                    {page.kind === "note" ? (
+                      <FileText className="size-3.5 shrink-0" />
+                    ) : (
+                      <Library className="size-3.5 shrink-0" />
+                    )}
                     <span className="max-w-48 truncate">
                       <span className="sr-only">Using this page: </span>
                       {page.title || "Untitled"}
                     </span>
-                    <InputGroupButton size="icon-xs" aria-label="Don't use this page" onClick={() => setUsePage(false)} className="rounded-full">
+                    <InputGroupButton
+                      size="icon-xs"
+                      aria-label="Don't use this page"
+                      onClick={() => setUsePage(false)}
+                      className="rounded-full"
+                    >
                       <X />
                     </InputGroupButton>
                   </span>
                 ) : (
-                  <InputGroupButton size="xs" onClick={() => setUsePage(true)} className="rounded-full border border-dashed font-normal">
+                  <InputGroupButton
+                    size="xs"
+                    onClick={() => setUsePage(true)}
+                    className="rounded-full border border-dashed font-normal"
+                  >
                     + Use this page
                   </InputGroupButton>
                 ))}
@@ -285,12 +359,23 @@ export function Conversation({
           <div className="mt-2 flex h-5 items-center gap-1.5 px-1 text-xs" aria-live="polite">
             {working ? (
               <>
-                <Sparkles className="size-3.5 shrink-0 animate-pulse text-muted-foreground" aria-hidden />
+                <Sparkles
+                  className="size-3.5 shrink-0 animate-pulse text-muted-foreground"
+                  aria-hidden
+                />
                 <span className="shimmer font-medium">{working}…</span>
-                {elapsed >= 2 && <span className="tabular-nums text-muted-foreground">· {formatElapsed(elapsed)}</span>}
+                {elapsed >= 2 && (
+                  <span className="tabular-nums text-muted-foreground">
+                    · {formatElapsed(elapsed)}
+                  </span>
+                )}
               </>
             ) : (
-              !compact && <span className="text-muted-foreground">Enter to send · Shift + Enter for a new line</span>
+              !compact && (
+                <span className="text-muted-foreground">
+                  Enter to send · Shift + Enter for a new line
+                </span>
+              )
             )}
           </div>
         </div>
@@ -313,8 +398,12 @@ function EmptyConversation({
       <div className="grid size-12 place-items-center rounded-2xl bg-secondary text-muted-foreground">
         <Sparkles className="size-5" />
       </div>
-      <h2 className={cn("mt-4 font-display font-semibold", compact ? "text-lg" : "text-xl")}>What would you like to do?</h2>
-      <p className="mt-1.5 text-sm text-muted-foreground">Ask about your notes, update a chapter, or look something up.</p>
+      <h2 className={cn("mt-4 font-display font-semibold", compact ? "text-lg" : "text-xl")}>
+        What would you like to do?
+      </h2>
+      <p className="mt-1.5 text-sm text-muted-foreground">
+        Ask about your notes, update a chapter, or look something up.
+      </p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
         {prompts.map((example) => (
           <button
@@ -337,7 +426,9 @@ function ChatMessage({ message }: { message: UIMessage }) {
       <Message align="end">
         <MessageContent>
           <Bubble align="end" variant="secondary">
-            <BubbleContent className="rounded-2xl px-4 py-2.5 whitespace-pre-wrap">{message.text}</BubbleContent>
+            <BubbleContent className="rounded-2xl px-4 py-2.5 whitespace-pre-wrap">
+              {message.text}
+            </BubbleContent>
           </Bubble>
         </MessageContent>
       </Message>
@@ -363,7 +454,11 @@ function ChatMessage({ message }: { message: UIMessage }) {
             </div>
           ) : null,
         )}
-        {message.status === "failed" && <p className="text-sm text-destructive">The assistant couldn't finish this reply. Try again.</p>}
+        {message.status === "failed" && (
+          <p className="text-sm text-destructive">
+            The assistant couldn't finish this reply. Try again.
+          </p>
+        )}
       </MessageContent>
     </Message>
   );
@@ -381,7 +476,9 @@ function ToolStep({ tool, streaming }: { tool: ToolPart; streaming: boolean }) {
         <TraceIcon>
           <Icon />
         </TraceIcon>
-        <TraceTitle>{streaming ? `${info.running}…` : `Couldn't finish: ${info.running.toLowerCase()}`}</TraceTitle>
+        <TraceTitle>
+          {streaming ? `${info.running}…` : `Couldn't finish: ${info.running.toLowerCase()}`}
+        </TraceTitle>
       </TraceLine>
     );
   }
@@ -394,7 +491,9 @@ function ToolStep({ tool, streaming }: { tool: ToolPart; streaming: boolean }) {
             <Icon />
           </TraceIcon>
           <TraceTitle>{failed ? `Failed: ${info.running.toLowerCase()}` : info.done}</TraceTitle>
-          {summary(tool) && <span className="truncate text-xs text-muted-foreground/80">{summary(tool)}</span>}
+          {summary(tool) && (
+            <span className="truncate text-xs text-muted-foreground/80">{summary(tool)}</span>
+          )}
         </TraceLine>
       </TraceCollapsibleTrigger>
       <TraceCollapsibleContent>
@@ -406,16 +505,25 @@ function ToolStep({ tool, streaming }: { tool: ToolPart; streaming: boolean }) {
   );
 }
 
+/** A tool's input/output as a plain record, whatever shape it arrived in. */
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? Object.fromEntries(Object.entries(value))
+    : {};
+}
+
 /** A few words on the collapsed line, e.g. the search query or "348 → 352". */
 function summary(tool: ToolPart): string | null {
-  const input = (tool.input ?? {}) as Record<string, unknown>;
-  const output = (tool.output ?? {}) as Record<string, unknown>;
+  const input = record(tool.input);
+  const output = record(tool.output);
   if (typeof output.error === "string") return output.error;
   switch (tool.name) {
     case "search":
       return typeof input.query === "string" ? `“${input.query}”` : null;
     case "updateChapter":
-      return typeof output.title === "string" ? `${output.title}: ${output.from} → ${output.to}` : null;
+      return typeof output.title === "string"
+        ? `${output.title}: ${String(output.from)} → ${String(output.to)}`
+        : null;
     case "listLibrary":
       return Array.isArray(tool.output) ? `${tool.output.length} series` : null;
     default:

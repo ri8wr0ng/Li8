@@ -2,7 +2,8 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 // Link labels may contain one level of brackets, e.g. "[[AI test] Ranks](/notes/…)".
-const INLINE_PATTERN = /\[((?:[^[\]]|\[[^[\]]*\])+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|`([^`]+)`|(?<![\w*])[*_]([^*_\n]+)[*_](?![\w*])/g;
+const INLINE_PATTERN =
+  /\[((?:[^[\]]|\[[^[\]]*\])+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*|`([^`]+)`|(?<![\w*])[*_]([^*_\n]+)[*_](?![\w*])/g;
 
 export function Markdown({ text }: { text: string }) {
   const lines = text.split("\n");
@@ -30,7 +31,10 @@ export function Markdown({ text }: { text: string }) {
     if (!list.length) return;
     const List = orderedList ? "ol" : "ul";
     blocks.push(
-      <List key={`list-${blocks.length}`} className={`my-2 space-y-1 pl-5 ${orderedList ? "list-decimal" : "list-disc"}`}>
+      <List
+        key={`list-${blocks.length}`}
+        className={`my-2 space-y-1 pl-5 ${orderedList ? "list-decimal" : "list-disc"}`}
+      >
         {list.map((line, index) => (
           <li key={index}>{inline(line.replace(/^\s*(?:[-*]\s+|\d+\.\s+)/, ""))}</li>
         ))}
@@ -70,11 +74,22 @@ function inline(text: string): ReactNode[] {
     if (label !== undefined && href !== undefined) {
       result.push(internalLink(label, href, `l-${index}`));
     } else if (bold !== undefined) {
-      result.push(<strong key={`b-${index}`} className="font-semibold">{bold}</strong>);
+      result.push(
+        <strong key={`b-${index}`} className="font-semibold">
+          {bold}
+        </strong>,
+      );
     } else if (italic !== undefined) {
       result.push(<em key={`i-${index}`}>{italic}</em>);
     } else if (code !== undefined) {
-      result.push(<code key={`c-${index}`} className="rounded bg-secondary px-1 py-0.5 font-mono text-[0.9em]">{code}</code>);
+      result.push(
+        <code
+          key={`c-${index}`}
+          className="rounded bg-secondary px-1 py-0.5 font-mono text-[0.9em]"
+        >
+          {code}
+        </code>,
+      );
     }
     lastIndex = index + match[0].length;
   }
@@ -86,7 +101,12 @@ function internalLink(label: string, href: string, key: string) {
   const note = /^\/notes\/([^/?#]+)$/.exec(href);
   if (note) {
     return (
-      <Link key={key} to="/notes/$noteId" params={{ noteId: note[1]! }} className="font-medium text-primary underline underline-offset-2">
+      <Link
+        key={key}
+        to="/notes/$noteId"
+        params={{ noteId: note[1] }}
+        className="font-medium text-primary underline underline-offset-2"
+      >
         {label}
       </Link>
     );
@@ -94,7 +114,12 @@ function internalLink(label: string, href: string, key: string) {
   const series = /^\/library\/([^/?#]+)$/.exec(href);
   if (series) {
     return (
-      <Link key={key} to="/library/$seriesId" params={{ seriesId: series[1]! }} className="font-medium text-primary underline underline-offset-2">
+      <Link
+        key={key}
+        to="/library/$seriesId"
+        params={{ seriesId: series[1] }}
+        className="font-medium text-primary underline underline-offset-2"
+      >
         {label}
       </Link>
     );

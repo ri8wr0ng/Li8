@@ -1,6 +1,6 @@
 # Inkmark brand
 
-**Inkmark** stands for *ink* (your notes) and *bookmark* (your place in a series).
+**Inkmark** stands for _ink_ (your notes) and _bookmark_ (your place in a series).
 
 **Tagline:** Notes, and where you left off.
 
@@ -22,26 +22,26 @@ Inkmark should feel like a good paper notebook with a red bookmark ribbon: warm,
 
 ## Color
 
-| Token | Light (Paper) | Dark (Ink) | Use |
-|---|---|---|---|
-| `--paper` / background | `#F7F4EE` | `#131210` | App background |
-| card | `#FFFDF9` | `#1B1A17` | Cards, inputs, popovers |
-| `--ink` / foreground | `#1C1A17` | `#EEE9E0` | Text, primary buttons |
-| muted text | `#6E675C` | `#9D968A` | Secondary text |
-| border | `#E3DDD1` | `#2C2A26` | Hairlines |
-| `--hanko` | `#E5412D` | `#FF5A43` | Forward actions, logo, progress |
-| `--marker` | `#FFE066` | `rgb(255 214 10 / .34)` | Search highlights |
-| `--marker-active` | `#FF9F1C` | `#FFB020` | Current find-in-note match |
+| Token                  | Light (Paper) | Dark (Ink)              | Use                             |
+| ---------------------- | ------------- | ----------------------- | ------------------------------- |
+| `--paper` / background | `#F7F4EE`     | `#131210`               | App background                  |
+| card                   | `#FFFDF9`     | `#1B1A17`               | Cards, inputs, popovers         |
+| `--ink` / foreground   | `#1C1A17`     | `#EEE9E0`               | Text, primary buttons           |
+| muted text             | `#6E675C`     | `#9D968A`               | Secondary text                  |
+| border                 | `#E3DDD1`     | `#2C2A26`               | Hairlines                       |
+| `--hanko`              | `#E5412D`     | `#FF5A43`               | Forward actions, logo, progress |
+| `--marker`             | `#FFE066`     | `rgb(255 214 10 / .34)` | Search highlights               |
+| `--marker-active`      | `#FF9F1C`     | `#FFB020`               | Current find-in-note match      |
 
 The marker colors exist only for search highlighting. A highlighted word should look like it was marked with a highlighter pen.
 
 ## Type
 
-| Role | Font | Notes |
-|---|---|---|
-| Display: page titles, note titles, series titles, wordmark | **Fraunces** (variable serif) | Semibold, tracking −0.02em |
-| UI and body text | **Geist** | 15–17px body; note text is 17px with 1.75 line height |
-| Numbers: chapters, counts, shortcuts | **Geist Mono** | Always `tabular-nums` |
+| Role                                                       | Font                          | Notes                                                 |
+| ---------------------------------------------------------- | ----------------------------- | ----------------------------------------------------- |
+| Display: page titles, note titles, series titles, wordmark | **Fraunces** (variable serif) | Semibold, tracking −0.02em                            |
+| UI and body text                                           | **Geist**                     | 15–17px body; note text is 17px with 1.75 line height |
+| Numbers: chapters, counts, shortcuts                       | **Geist Mono**                | Always `tabular-nums`                                 |
 
 All fonts are self-hosted through `@fontsource-variable`, so they work offline and in the installed app.
 

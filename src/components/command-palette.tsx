@@ -1,10 +1,28 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
-import { BookMarked, BookOpen, FilePlus2, FileText, Library, Moon, Plus, Sparkles } from "lucide-react";
+import {
+  BookMarked,
+  BookOpen,
+  FilePlus2,
+  FileText,
+  Library,
+  Moon,
+  Plus,
+  Sparkles,
+} from "lucide-react";
 import { useCachedQuery, useReadOnly } from "#/lib/offline";
 import { useTheme } from "#/lib/theme";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "#/components/ui/dialog";
@@ -22,7 +40,8 @@ export const useCommandPalette = () => useContext(Ctx);
 
 /** "sheet" on phones: a panel above the tab bar with the search box at the bottom, by the thumb. */
 type Variant = "dialog" | "sheet";
-const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
+const isDesktop = () =>
+  typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches;
 
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -56,18 +75,18 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       {variant === "sheet" ? (
         <SearchSheet open={open} onOpenChange={setOpen} />
       ) : (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          showCloseButton={false}
-          className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl"
-        >
-          <DialogTitle className="sr-only">Search or run a command</DialogTitle>
-          <DialogDescription className="sr-only">
-            Search notes and series, or type a series name and a chapter number to update it.
-          </DialogDescription>
-          {open && <Palette close={() => setOpen(false)} />}
-        </DialogContent>
-      </Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent
+            showCloseButton={false}
+            className="top-[12%] translate-y-0 gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl"
+          >
+            <DialogTitle className="sr-only">Search or run a command</DialogTitle>
+            <DialogDescription className="sr-only">
+              Search notes and series, or type a series name and a chapter number to update it.
+            </DialogDescription>
+            {open && <Palette close={() => setOpen(false)} />}
+          </DialogContent>
+        </Dialog>
       )}
     </Ctx.Provider>
   );
@@ -78,7 +97,13 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
  * the Ask AI sheet. The input sits at the bottom where the thumb already is;
  * results fill the space above it. The tab bar stays visible (tapping it closes).
  */
-function SearchSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function SearchSheet({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { sheetRef, handleProps } = useSheetDrag({ onDismiss: () => onOpenChange(false) });
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -98,7 +123,10 @@ function SearchSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (ope
           <DialogPrimitive.Title className="sr-only">Search or run a command</DialogPrimitive.Title>
           {/* Drag handle: pull down to dismiss. */}
           <div {...handleProps} className="relative h-5 shrink-0">
-            <span aria-hidden className="pointer-events-none absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foreground/25 lg:hidden" />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foreground/25 lg:hidden"
+            />
           </div>
           {open && <Palette close={() => onOpenChange(false)} variant="sheet" />}
         </DialogPrimitive.Content>
@@ -111,9 +139,7 @@ const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
 type MeaningResult = { kind: "note" | "series"; id: string; score: number };
 type MeaningState = { status: "idle" | "loading" | "done" | "error"; results: MeaningResult[] };
-type MeaningItem =
-  | { kind: "note"; doc: Doc<"notes"> }
-  | { kind: "series"; doc: Doc<"series"> };
+type MeaningItem = { kind: "note"; doc: Doc<"notes"> } | { kind: "series"; doc: Doc<"series"> };
 
 const MEANING_MIN_CHARS = 3;
 const MEANING_DEBOUNCE_MS = 400;
@@ -121,7 +147,11 @@ const REINDEX_KEY = "inkmark:reindexed:v1";
 /** Users already reindexed this browser session (localStorage covers later sessions). */
 const reindexed = new Set<string>();
 
-function findSeries(name: string, series: Doc<"series">[], searchSeries: (q: string) => Doc<"series">[]) {
+function findSeries(
+  name: string,
+  series: Doc<"series">[],
+  searchSeries: (q: string) => Doc<"series">[],
+) {
   const n = norm(name);
   const exact = series.find(
     (s) => norm(s.title) === n || s.altNames.some((a) => norm(a) === n) || acronym(s.title) === n,
@@ -178,8 +208,10 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
   useEffect(() => {
     if (!aiEnabled || q.length < MEANING_MIN_CHARS) {
       meaningSeq.current++;
+      // Clearing results as the query drops below the minimum; this effect owns the debounced request.
+      // oxlint-disable-next-line react/set-state-in-effect
       setMeaning({ status: "idle", results: [] });
-      return;
+      return undefined;
     }
     const seq = ++meaningSeq.current;
     const timer = setTimeout(() => {
@@ -208,13 +240,13 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
       const key = `${r.kind}:${r.id}`;
       if (shown.has(key) || seen.has(key)) continue;
       seen.add(key);
-      const doc = r.kind === "note" ? noteById.get(r.id) : seriesById.get(r.id);
-      if (!doc) continue;
-      out.push(
-        r.kind === "note"
-          ? { kind: "note", doc: doc as Doc<"notes"> }
-          : { kind: "series", doc: doc as Doc<"series"> },
-      );
+      if (r.kind === "note") {
+        const doc = noteById.get(r.id);
+        if (doc) out.push({ kind: "note", doc });
+      } else {
+        const doc = seriesById.get(r.id);
+        if (doc) out.push({ kind: "series", doc });
+      }
       if (out.length >= 6) break;
     }
     return out;
@@ -255,7 +287,10 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
       const id = await createSeries({ title, chapter });
       toast.success(`Added ${title}`, {
         description: chapter ? `Chapter ${formatChapter(chapter)}` : undefined,
-        action: { label: "Open", onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }) },
+        action: {
+          label: "Open",
+          onClick: () => navigate({ to: "/library/$seriesId", params: { seriesId: id } }),
+        },
       });
     });
 
@@ -265,14 +300,28 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
       const next = delta !== undefined ? await bump({ id: target._id, delta }) : chapter!;
       if (delta === undefined) await setChapter({ id: target._id, chapter: next });
       toast.success(`${target.title} → Ch. ${formatChapter(next)}`, {
-        action: { label: "Undo", onClick: () => void setChapter({ id: target._id, chapter: previous }) },
+        action: {
+          label: "Undo",
+          onClick: () => void setChapter({ id: target._id, chapter: previous }),
+        },
       });
     });
 
   return (
     // In the sheet the input renders last visually (flex-col-reverse) but stays first in the DOM, so focus order is unchanged.
-    <Command shouldFilter={false} loop className={cn("flex", variant === "sheet" ? "min-h-0 flex-1 flex-col-reverse" : "flex-col")}>
-      <div className={cn("flex items-center gap-3 px-4", variant === "sheet" ? "m-2 mt-0 shrink-0 rounded-2xl border bg-card shadow-sm" : "border-b")}>
+    <Command
+      shouldFilter={false}
+      loop
+      className={cn("flex", variant === "sheet" ? "min-h-0 flex-1 flex-col-reverse" : "flex-col")}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-3 px-4",
+          variant === "sheet"
+            ? "m-2 mt-0 shrink-0 rounded-2xl border bg-card shadow-sm"
+            : "border-b",
+        )}
+      >
         <Sparkles className="size-4 shrink-0 text-hanko" />
         <Command.Input
           autoFocus
@@ -287,7 +336,9 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
       <Command.List
         className={cn(
           "overflow-y-auto overscroll-contain p-2",
-          variant === "sheet" ? "min-h-0 flex-1 [&>[cmdk-list-sizer]]:flex [&>[cmdk-list-sizer]]:min-h-full [&>[cmdk-list-sizer]]:flex-col [&>[cmdk-list-sizer]]:justify-end" : "max-h-[min(60dvh,28rem)]",
+          variant === "sheet"
+            ? "min-h-0 flex-1 [&>[cmdk-list-sizer]]:flex [&>[cmdk-list-sizer]]:min-h-full [&>[cmdk-list-sizer]]:flex-col [&>[cmdk-list-sizer]]:justify-end"
+            : "max-h-[min(60dvh,28rem)]",
         )}
       >
         <Command.Empty className="px-3 py-8 text-center text-sm text-muted-foreground">
@@ -298,7 +349,7 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
           <Group heading="Update chapter">
             <Item
               value="command-set"
-              onSelect={() => applyCommand(command.target!, command.chapter, command.delta)}
+              onSelect={() => applyCommand(command.target, command.chapter, command.delta)}
               icon={<BookMarked className="text-hanko" />}
             >
               <span className="truncate">
@@ -310,7 +361,7 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
                 ) : (
                   <>
                     Set <b className="font-semibold">{command.target.title}</b> to Ch.{" "}
-                    {formatChapter(command.chapter!)}
+                    {formatChapter(command.chapter)}
                   </>
                 )}
               </span>
@@ -369,7 +420,11 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
                   icon={<FileText />}
                   onSelect={() => {
                     close();
-                    void navigate({ to: "/notes/$noteId", params: { noteId: hit.doc._id }, search: { q } });
+                    void navigate({
+                      to: "/notes/$noteId",
+                      params: { noteId: hit.doc._id },
+                      search: { q },
+                    });
                   }}
                 >
                   <span className="min-w-0 flex-1">
@@ -388,7 +443,9 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
           </Group>
         )}
 
-        {(meaning.status === "loading" || meaning.status === "error" || meaningItems.length > 0) && (
+        {(meaning.status === "loading" ||
+          meaning.status === "error" ||
+          meaningItems.length > 0) && (
           <Group heading="Related by meaning">
             {meaning.status === "loading" && meaningItems.length === 0 && (
               <div className="px-2.5 py-2 text-xs text-muted-foreground">Searching by meaning…</div>
@@ -428,11 +485,17 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
                   icon={<FileText />}
                   onSelect={() => {
                     close();
-                    void navigate({ to: "/notes/$noteId", params: { noteId: item.doc._id }, search: { q } });
+                    void navigate({
+                      to: "/notes/$noteId",
+                      params: { noteId: item.doc._id },
+                      search: { q },
+                    });
                   }}
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{item.doc.title || "Untitled"}</span>
+                    <span className="block truncate font-medium">
+                      {item.doc.title || "Untitled"}
+                    </span>
                     {item.doc.body && (
                       <span className="block truncate text-xs text-muted-foreground">
                         {snippet(item.doc.body, [], 40)}
@@ -448,7 +511,11 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
         {q ? (
           <Group heading="Create">
             {command && !command.target && (
-              <Item value="create-series-cmd" icon={<Library />} onSelect={() => addSeries(command.name, command.chapter)}>
+              <Item
+                value="create-series-cmd"
+                icon={<Library />}
+                onSelect={() => addSeries(command.name, command.chapter)}
+              >
                 Add <b className="font-semibold">“{command.name}”</b> to Library
                 {command.chapter !== undefined && <> at Ch. {formatChapter(command.chapter)}</>}
               </Item>
@@ -467,10 +534,18 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
             <Item value="new-note" icon={<FilePlus2 />} onSelect={() => newNote()}>
               New note
             </Item>
-            <Item value="go-notes" icon={<FileText />} onSelect={() => (close(), void navigate({ to: "/" }))}>
+            <Item
+              value="go-notes"
+              icon={<FileText />}
+              onSelect={() => (close(), void navigate({ to: "/" }))}
+            >
               Notes
             </Item>
-            <Item value="go-library" icon={<Library />} onSelect={() => (close(), void navigate({ to: "/library" }))}>
+            <Item
+              value="go-library"
+              icon={<Library />}
+              onSelect={() => (close(), void navigate({ to: "/library" }))}
+            >
               Library
             </Item>
             <Item
@@ -493,7 +568,8 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
           <Key>↓</Key> move
         </span>
         <span className="ml-auto">
-          Tip: <span className="font-mono">name 349</span> or <span className="font-mono">name +1</span>
+          Tip: <span className="font-mono">name 349</span> or{" "}
+          <span className="font-mono">name +1</span>
         </span>
       </div>
     </Command>

@@ -35,8 +35,13 @@ export const record = internalMutation({
 
 /** OpenRouter reports the charged cost in provider metadata when usage accounting is on. */
 export function reportedCost(providerMetadata: unknown): number | undefined {
-  const usage = (providerMetadata as { openrouter?: { usage?: { cost?: unknown } } } | undefined)?.openrouter?.usage;
-  return typeof usage?.cost === "number" && Number.isFinite(usage.cost) ? usage.cost : undefined;
+  const cost = field(field(field(providerMetadata, "openrouter"), "usage"), "cost");
+  return typeof cost === "number" && Number.isFinite(cost) ? cost : undefined;
+}
+
+/** Read a property from an unknown value without trusting its shape. */
+function field(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 }
 
 /** Log an embedding call. Never throws: usage logging must not break the feature. */
@@ -102,7 +107,7 @@ export const summary = query({
     let estimated = false;
     for (const row of rows) {
       const i = Math.min(days - 1, Math.floor((row._creationTime - since) / DAY));
-      add(daily[i]!, row);
+      add(daily[i], row);
       add(total, row);
       if (row._creationTime >= todayStart) add(today, row);
       add((byKind[row.kind] ??= empty()), row);

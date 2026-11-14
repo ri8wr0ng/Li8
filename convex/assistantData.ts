@@ -51,7 +51,10 @@ export const readNote = internalQuery({
       title: note.title || "Untitled",
       tags: note.tags,
       updatedAt: new Date(note.updatedAt).toISOString(),
-      body: note.body.length > MAX_NOTE_CHARS ? `${note.body.slice(0, MAX_NOTE_CHARS)}\n…(truncated)` : note.body,
+      body:
+        note.body.length > MAX_NOTE_CHARS
+          ? `${note.body.slice(0, MAX_NOTE_CHARS)}\n…(truncated)`
+          : note.body,
     };
   },
 });
@@ -97,7 +100,12 @@ export const addSeries = internalMutation({
 });
 
 export const createNote = internalMutation({
-  args: { userId: v.id("users"), title: v.string(), body: v.string(), tags: v.optional(v.array(v.string())) },
+  args: {
+    userId: v.id("users"),
+    title: v.string(),
+    body: v.string(),
+    tags: v.optional(v.array(v.string())),
+  },
   handler: async (ctx, { userId, ...args }) => {
     const id = await insertNote(ctx, userId, args);
     return { id, title: args.title.trim() || "Untitled" };
@@ -171,7 +179,11 @@ export const updateNote = internalMutation({
     const now = Date.now();
     await ctx.db.patch("notes", note._id, { ...patch, updatedAt: now });
     await scheduleNoteEmbedding(ctx, note._id, now);
-    return { id: note._id, title: (patch.title ?? note.title) || "Untitled", changed: Object.keys(patch) };
+    return {
+      id: note._id,
+      title: (patch.title ?? note.title) || "Untitled",
+      changed: Object.keys(patch),
+    };
   },
 });
 

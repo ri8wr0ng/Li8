@@ -1,4 +1,11 @@
-import { getThreadMetadata, listUIMessages, saveMessage, syncStreams, vStreamArgs, createThread } from "@convex-dev/agent";
+import {
+  getThreadMetadata,
+  listUIMessages,
+  saveMessage,
+  syncStreams,
+  vStreamArgs,
+  createThread,
+} from "@convex-dev/agent";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
@@ -34,7 +41,11 @@ export const threads = query({
       order: "desc",
       paginationOpts: { numItems: 50, cursor: null },
     });
-    return result.page.map((t) => ({ id: t._id, title: t.title ?? "New chat", createdAt: t._creationTime }));
+    return result.page.map((t) => ({
+      id: t._id,
+      title: t.title ?? "New chat",
+      createdAt: t._creationTime,
+    }));
   },
 });
 
@@ -69,21 +80,33 @@ export const send = mutation({
       threadId = await createThread(ctx, components.agent, { userId, title: titleFrom(prompt) });
     }
     const { messageId } = await saveMessage(ctx, components.agent, { threadId, userId, prompt });
-    await ctx.scheduler.runAfter(0, internal.chat.respond, { threadId, userId, promptMessageId: messageId, page: args.page });
+    await ctx.scheduler.runAfter(0, internal.chat.respond, {
+      threadId,
+      userId,
+      promptMessageId: messageId,
+      page: args.page,
+    });
     return threadId;
   },
 });
 
 function titleFrom(prompt: string) {
-  const line = prompt.split("\n")[0]!.trim();
+  const line = prompt.split("\n")[0].trim();
   return line.length > 60 ? `${line.slice(0, 57).trimEnd()}…` : line;
 }
 
 export const respond = internalAction({
-  args: { threadId: v.string(), userId: v.id("users"), promptMessageId: v.string(), page: v.optional(vPageRef) },
+  args: {
+    threadId: v.string(),
+    userId: v.id("users"),
+    promptMessageId: v.string(),
+    page: v.optional(vPageRef),
+  },
   handler: async (ctx, { threadId, userId, promptMessageId, page }) => {
     // pageContext checks ownership; a page that isn't the user's is ignored.
-    const pageText = page ? await ctx.runQuery(internal.assistantData.pageContext, { userId, page }) : null;
+    const pageText = page
+      ? await ctx.runQuery(internal.assistantData.pageContext, { userId, page })
+      : null;
     const result = await assistant.streamText(
       ctx,
       { threadId, userId },
@@ -101,7 +124,6 @@ export const remove = mutation({
     await assistant.deleteThreadAsync(ctx, { threadId });
   },
 });
-
 
 /** Whether AI is configured and allowed for the signed-in user, so the client can hide it otherwise. */
 export const status = query({

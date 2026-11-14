@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 import { registerCore, sessionIdentity } from "@convex-dev/auth/test";
-import rateLimiterTest from "@convex-dev/rate-limiter/test";
+import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { api, components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -13,7 +13,7 @@ const modules = import.meta.glob("./**/*.ts");
 async function setup() {
   const t = convexTest(schema, modules);
   registerCore(t);
-  rateLimiterTest.register(t);
+  registerRateLimiter(t);
   const alice = await t.run((ctx) => ctx.db.insert("users", { name: "Alice" }));
   const bob = await t.run((ctx) => ctx.db.insert("users", { name: "Bob" }));
   const tokens = await t.mutation(components.auth.public._internal_dangerous_signIn, {
@@ -25,7 +25,12 @@ async function setup() {
     sessionMaxLifetimeSeconds: 3600,
   });
   const asAlice = t.withIdentity(sessionIdentity(tokens));
-  const record = (userId: Id<"users">, kind: "chat" | "index" | "search", cost: number, inputTokens = 100) =>
+  const record = (
+    userId: Id<"users">,
+    kind: "chat" | "index" | "search",
+    cost: number,
+    inputTokens = 100,
+  ) =>
     t.mutation(internal.usage.record, {
       userId,
       kind,
@@ -60,13 +65,15 @@ describe("usage.summary", () => {
     expect(s.total.inputTokens).toBe(5210);
     expect(s.today).toMatchObject({ calls: 1, inputTokens: 5000 });
     expect(s.byKind.chat).toMatchObject({ calls: 2, outputTokens: 40 });
-    expect(s.byModel["openai/text-embedding-3-small"]!.calls).toBe(2);
+    expect(s.byModel["openai/text-embedding-3-small"].calls).toBe(2);
     expect(s.estimated).toBe(true);
 
     expect(s.daily).toHaveLength(7);
-    expect(s.daily[s.daily.length - 1]!.calls).toBe(1); // Nov 16 (today)
-    expect(s.daily[s.daily.length - 3]!.calls).toBe(3); // Nov 14
-    expect(new Date(s.daily[s.daily.length - 1]!.day).toISOString()).toBe("2026-11-16T00:00:00.000Z");
+    expect(s.daily[s.daily.length - 1].calls).toBe(1); // Nov 16 (today)
+    expect(s.daily[s.daily.length - 3].calls).toBe(3); // Nov 14
+    expect(new Date(s.daily[s.daily.length - 1].day).toISOString()).toBe(
+      "2026-11-16T00:00:00.000Z",
+    );
   });
 
   it("leaves out calls older than the range", async () => {
@@ -83,7 +90,7 @@ describe("usage.summary", () => {
     await record(alice, "chat", 1);
     const s = (await asAlice.query(api.usage.summary, { days: 2, tzOffsetMinutes: -13 * 60 }))!;
     expect(s.today.calls).toBe(1);
-    expect(s.daily[s.daily.length - 1]!.calls).toBe(1);
+    expect(s.daily[s.daily.length - 1].calls).toBe(1);
   });
 
   it("reports full limits for a user who hasn't used AI", async () => {

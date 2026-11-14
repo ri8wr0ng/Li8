@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { project, rubberband, VelocityTracker } from "./motion";
 
 describe("project", () => {
@@ -15,7 +15,9 @@ describe("rubberband", () => {
     const h = 700;
     expect(rubberband(0, h)).toBe(0);
     expect(rubberband(80, h)).toBeLessThan(80);
-    expect(rubberband(400, h) - rubberband(300, h)).toBeLessThan(rubberband(100, h) - rubberband(0, h));
+    expect(rubberband(400, h) - rubberband(300, h)).toBeLessThan(
+      rubberband(100, h) - rubberband(0, h),
+    );
   });
 });
 

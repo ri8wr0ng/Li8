@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 
@@ -13,19 +13,34 @@ const KIND_LABELS: Record<string, string> = {
   search: "Searches by meaning",
 };
 
-const LIMIT_LABELS: Record<string, string> = { chat: "Chat messages", search: "Searches by meaning" };
+const LIMIT_LABELS: Record<string, string> = {
+  chat: "Chat messages",
+  search: "Searches by meaning",
+};
 
 function usd(value: number) {
   if (value === 0) return "$0";
   if (value < 0.0001) return "<$0.0001";
   // Two significant digits, written out (no exponent).
   if (value < 0.01) return `$${value.toFixed(1 - Math.floor(Math.log10(value)))}`;
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
-const count = (value: number) => new Intl.NumberFormat(undefined, { notation: value >= 100_000 ? "compact" : "standard" }).format(value);
+const count = (value: number) =>
+  new Intl.NumberFormat(undefined, { notation: value >= 100_000 ? "compact" : "standard" }).format(
+    value,
+  );
 const dayLabel = (ms: number, long = false) =>
-  new Date(ms).toLocaleDateString(undefined, long ? { weekday: "short", month: "short", day: "numeric" } : { month: "short", day: "numeric" });
+  new Date(ms).toLocaleDateString(
+    undefined,
+    long
+      ? { weekday: "short", month: "short", day: "numeric" }
+      : { month: "short", day: "numeric" },
+  );
 
 /** Ticks once a second while mounted, so limit refills count up live. */
 function useNow(intervalMs = 1000) {
@@ -40,7 +55,8 @@ function useNow(intervalMs = 1000) {
 export function UsageView() {
   const [days, setDays] = useState<(typeof RANGES)[number]>(30);
   const [measure, setMeasure] = useState<Measure>("cost");
-  const tzOffsetMinutes = useMemo(() => new Date().getTimezoneOffset(), []);
+  // Read once: the client's zone decides which day a call falls on.
+  const [tzOffsetMinutes] = useState(() => new Date().getTimezoneOffset());
   const data = useQuery(api.usage.summary, { days, tzOffsetMinutes });
 
   if (data === undefined) {
@@ -52,8 +68,12 @@ export function UsageView() {
   }
   if (data === null) return null;
 
-  const kinds = Object.entries(data.byKind).sort((a, b) => b[1].cost - a[1].cost || b[1].calls - a[1].calls);
-  const models = Object.entries(data.byModel).sort((a, b) => b[1].cost - a[1].cost || b[1].calls - a[1].calls);
+  const kinds = Object.entries(data.byKind).toSorted(
+    (a, b) => b[1].cost - a[1].cost || b[1].calls - a[1].calls,
+  );
+  const models = Object.entries(data.byModel).toSorted(
+    (a, b) => b[1].cost - a[1].cost || b[1].calls - a[1].calls,
+  );
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
@@ -62,9 +82,9 @@ export function UsageView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Segmented
             label="Range"
-            value={String(days)}
-            options={RANGES.map((d) => ({ value: String(d), label: `${d} days` }))}
-            onChange={(v) => setDays(Number(v) as (typeof RANGES)[number])}
+            value={days}
+            options={RANGES.map((d) => ({ value: d, label: `${d} days` }))}
+            onChange={setDays}
           />
           <Segmented
             label="Chart shows"
@@ -73,29 +93,53 @@ export function UsageView() {
               { value: "cost", label: "Cost" },
               { value: "calls", label: "Calls" },
             ]}
-            onChange={(v) => setMeasure(v as Measure)}
+            onChange={setMeasure}
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="Today" value={usd(data.today.cost)} detail={`${count(data.today.calls)} calls`} />
-          <Stat label={`Last ${data.days} days`} value={usd(data.total.cost)} detail={`${count(data.total.calls)} calls`} />
-          <Stat label="Tokens in" value={count(data.total.inputTokens)} detail={`last ${data.days} days`} />
-          <Stat label="Tokens out" value={count(data.total.outputTokens)} detail={`last ${data.days} days`} />
+          <Stat
+            label="Today"
+            value={usd(data.today.cost)}
+            detail={`${count(data.today.calls)} calls`}
+          />
+          <Stat
+            label={`Last ${data.days} days`}
+            value={usd(data.total.cost)}
+            detail={`${count(data.total.calls)} calls`}
+          />
+          <Stat
+            label="Tokens in"
+            value={count(data.total.inputTokens)}
+            detail={`last ${data.days} days`}
+          />
+          <Stat
+            label="Tokens out"
+            value={count(data.total.outputTokens)}
+            detail={`last ${data.days} days`}
+          />
         </div>
 
-        <section aria-labelledby="usage-chart-title" className="rounded-2xl border bg-background p-4 sm:p-5">
+        <section
+          aria-labelledby="usage-chart-title"
+          className="rounded-2xl border bg-background p-4 sm:p-5"
+        >
           <h3 id="usage-chart-title" className="text-sm font-semibold">
             {measure === "cost" ? "Cost per day" : "AI calls per day"}
           </h3>
           <DailyBars daily={data.daily} measure={measure} />
         </section>
 
-        <section aria-labelledby="usage-limits-title" className="rounded-2xl border bg-background p-4 sm:p-5">
+        <section
+          aria-labelledby="usage-limits-title"
+          className="rounded-2xl border bg-background p-4 sm:p-5"
+        >
           <h3 id="usage-limits-title" className="text-sm font-semibold">
             Available right now
           </h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">Limits refill continuously, so bursts recover on their own.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Limits refill continuously, so bursts recover on their own.
+          </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {data.limits.map((limit) => (
               <LimitMeter key={limit.name} {...limit} />
@@ -103,7 +147,10 @@ export function UsageView() {
           </div>
         </section>
 
-        <section aria-labelledby="usage-breakdown-title" className="rounded-2xl border bg-background p-4 sm:p-5">
+        <section
+          aria-labelledby="usage-breakdown-title"
+          className="rounded-2xl border bg-background p-4 sm:p-5"
+        >
           <h3 id="usage-breakdown-title" className="text-sm font-semibold">
             Breakdown
           </h3>
@@ -111,13 +158,22 @@ export function UsageView() {
             <p className="mt-3 text-sm text-muted-foreground">No AI calls in this range yet.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
-              <BreakdownTable title="What for" rows={kinds.map(([k, b]) => [KIND_LABELS[k] ?? k, b])} />
-              <BreakdownTable title="Model" rows={models.map(([m, b]) => [m, b])} mono className="mt-5" />
+              <BreakdownTable
+                title="What for"
+                rows={kinds.map(([k, b]) => [KIND_LABELS[k] ?? k, b])}
+              />
+              <BreakdownTable
+                title="Model"
+                rows={models.map(([m, b]) => [m, b])}
+                mono
+                className="mt-5"
+              />
             </div>
           )}
           {(data.estimated || data.truncated) && (
             <p className="mt-4 text-xs text-muted-foreground">
-              {data.estimated && "Some costs weren't reported by the provider and are estimated from list prices. "}
+              {data.estimated &&
+                "Some costs weren't reported by the provider and are estimated from list prices. "}
               {data.truncated && "Only the most recent calls in this range are counted."}
             </p>
           )}
@@ -127,19 +183,23 @@ export function UsageView() {
   );
 }
 
-function Segmented({
+function Segmented<T extends string | number>({
   label,
   value,
   options,
   onChange,
 }: {
   label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-xl border bg-background p-0.5">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="inline-flex rounded-xl border bg-background p-0.5"
+    >
       {options.map((o) => (
         <button
           key={o.value}
@@ -163,7 +223,9 @@ function Stat({ label, value, detail }: { label: string; value: string; detail: 
   return (
     <div className="rounded-2xl border bg-background p-4">
       <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="mt-1 font-display text-2xl font-semibold tabular-nums tracking-[-0.02em]">{value}</div>
+      <div className="mt-1 font-display text-2xl font-semibold tabular-nums tracking-[-0.02em]">
+        {value}
+      </div>
       <div className="mt-0.5 text-xs text-muted-foreground">{detail}</div>
     </div>
   );
@@ -189,10 +251,13 @@ function DailyBars({ daily, measure }: { daily: Day[]; measure: Measure }) {
           <span>0</span>
         </div>
         <div className="relative h-40 min-w-0 flex-1" onMouseLeave={() => setActive(null)}>
-          <div className="absolute inset-x-0 top-0 border-t border-dashed border-border/70" aria-hidden />
+          <div
+            className="absolute inset-x-0 top-0 border-t border-dashed border-border/70"
+            aria-hidden
+          />
           <div className="absolute inset-0 flex items-end gap-[2px] border-b border-border">
             {daily.map((d, i) => {
-              const value = values[i]!;
+              const value = values[i];
               const pct = max > 0 ? (value / max) * 100 : 0;
               return (
                 <button
@@ -234,8 +299,8 @@ function DailyBars({ daily, measure }: { daily: Day[]; measure: Measure }) {
         </div>
       </div>
       <div className="mt-1.5 flex justify-between pl-14 text-[0.7rem] text-muted-foreground">
-        <span>{dayLabel(daily[0]!.day)}</span>
-        {daily.length > 2 && <span>{dayLabel(daily[mid]!.day)}</span>}
+        <span>{dayLabel(daily[0].day)}</span>
+        {daily.length > 2 && <span>{dayLabel(daily[mid].day)}</span>}
         <span>Today</span>
       </div>
     </div>
@@ -278,10 +343,16 @@ function LimitMeter({
         aria-valuenow={whole}
         className="mt-1.5 h-2 overflow-hidden rounded-full bg-secondary"
       >
-        <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${(available / capacity) * 100}%` }} />
+        <div
+          className="h-full rounded-full bg-primary transition-[width]"
+          style={{ width: `${(available / capacity) * 100}%` }}
+        />
       </div>
       <div className="mt-1 text-xs text-muted-foreground">
-        Refills {perMinute >= 1 ? `${Math.round(perMinute * 10) / 10} a minute` : `one every ${Math.round(1 / perMinute)} minutes`}
+        Refills{" "}
+        {perMinute >= 1
+          ? `${Math.round(perMinute * 10) / 10} a minute`
+          : `one every ${Math.round(1 / perMinute)} minutes`}
       </div>
     </div>
   );

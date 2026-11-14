@@ -46,7 +46,8 @@ export async function insertNote(
     pinned: false,
     updatedAt: now,
   });
-  if (args.title?.trim() || args.body?.trim() || args.tags?.length) await scheduleNoteEmbedding(ctx, id, now);
+  if (args.title?.trim() || args.body?.trim() || args.tags?.length)
+    await scheduleNoteEmbedding(ctx, id, now);
   return id;
 }
 

@@ -12,6 +12,8 @@ const STATUSES = ["reading", "planned", "on_hold", "completed", "dropped"] as co
 
 function userOf(ctx: ToolCtx): Id<"users"> {
   if (!ctx.userId) throw new Error("This conversation has no owner.");
+  // The agent component stores user ids as plain strings; ours are always Id<"users"> (set in chat.send).
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   return ctx.userId as Id<"users">;
 }
 
@@ -19,11 +21,14 @@ const search = createTool({
   description:
     "Search the user's notes and Library by meaning (not just keywords). Use it to find a series before changing its chapter, to answer questions about notes, or when the user describes something vaguely.",
   inputSchema: z.object({
-    query: z.string().describe("What to look for, in natural language. Include alternative names if known."),
+    query: z
+      .string()
+      .describe("What to look for, in natural language. Include alternative names if known."),
   }),
   execute: async (ctx, { query }) => {
     const hits = await searchByMeaningFor(ctx, userOf(ctx), query, 8);
-    if (!hits.length) return { results: [], hint: "Nothing matched. Try listLibrary, or other wording." };
+    if (!hits.length)
+      return { results: [], hint: "Nothing matched. Try listLibrary, or other wording." };
     return {
       results: hits.map((h) =>
         h.kind === "note"
@@ -35,7 +40,11 @@ const search = createTool({
               excerpt: h.note.body.slice(0, 600),
               score: Number(h.score.toFixed(3)),
             }
-          : { type: "series" as const, ...seriesSummary(h.series), score: Number(h.score.toFixed(3)) },
+          : {
+              type: "series" as const,
+              ...seriesSummary(h.series),
+              score: Number(h.score.toFixed(3)),
+            },
       ),
     };
   },
@@ -63,11 +72,21 @@ const updateChapter = createTool({
     "Set the chapter the user has read up to for a series, or change it by a delta (e.g. +1). Find the series id with search or listLibrary first.",
   inputSchema: z.object({
     seriesId: z.string(),
-    chapter: z.number().min(0).optional().describe("New chapter number; decimals allowed (e.g. 120.5)."),
-    delta: z.number().optional().describe("Relative change instead of a chapter number, e.g. 1 or -2."),
+    chapter: z
+      .number()
+      .min(0)
+      .optional()
+      .describe("New chapter number; decimals allowed (e.g. 120.5)."),
+    delta: z
+      .number()
+      .optional()
+      .describe("Relative change instead of a chapter number, e.g. 1 or -2."),
   }),
   execute: async (ctx, args): Promise<unknown> => {
-    return await ctx.runMutation(internal.assistantData.updateChapter, { userId: userOf(ctx), ...args });
+    return await ctx.runMutation(internal.assistantData.updateChapter, {
+      userId: userOf(ctx),
+      ...args,
+    });
   },
 });
 
@@ -82,7 +101,10 @@ const addSeries = createTool({
     altNames: z.array(z.string()).optional().describe("Short forms and other titles, e.g. BTTH."),
   }),
   execute: async (ctx, args): Promise<unknown> => {
-    return await ctx.runMutation(internal.assistantData.addSeries, { userId: userOf(ctx), ...args });
+    return await ctx.runMutation(internal.assistantData.addSeries, {
+      userId: userOf(ctx),
+      ...args,
+    });
   },
 });
 
@@ -94,7 +116,10 @@ const createNote = createTool({
     tags: z.array(z.string()).optional(),
   }),
   execute: async (ctx, args): Promise<unknown> => {
-    return await ctx.runMutation(internal.assistantData.createNote, { userId: userOf(ctx), ...args });
+    return await ctx.runMutation(internal.assistantData.createNote, {
+      userId: userOf(ctx),
+      ...args,
+    });
   },
 });
 
@@ -102,7 +127,10 @@ const appendToNote = createTool({
   description: "Add text to the end of an existing note, e.g. a new item on a list.",
   inputSchema: z.object({ noteId: z.string(), text: z.string() }),
   execute: async (ctx, args): Promise<unknown> => {
-    return await ctx.runMutation(internal.assistantData.appendToNote, { userId: userOf(ctx), ...args });
+    return await ctx.runMutation(internal.assistantData.appendToNote, {
+      userId: userOf(ctx),
+      ...args,
+    });
   },
 });
 
@@ -112,12 +140,18 @@ const updateNote = createTool({
   inputSchema: z.object({
     noteId: z.string(),
     title: z.string().optional(),
-    tags: z.array(z.string()).optional().describe("The complete new tag list (replaces the old one)."),
+    tags: z
+      .array(z.string())
+      .optional()
+      .describe("The complete new tag list (replaces the old one)."),
     pinned: z.boolean().optional(),
     body: z.string().optional().describe("The complete new note text."),
   }),
   execute: async (ctx, args): Promise<unknown> => {
-    return await ctx.runMutation(internal.assistantData.updateNote, { userId: userOf(ctx), ...args });
+    return await ctx.runMutation(internal.assistantData.updateNote, {
+      userId: userOf(ctx),
+      ...args,
+    });
   },
 });
 
@@ -126,11 +160,17 @@ const updateSeries = createTool({
   inputSchema: z.object({
     seriesId: z.string(),
     status: z.enum(STATUSES).optional(),
-    altNames: z.array(z.string()).optional().describe("The complete new list of alternative names."),
+    altNames: z
+      .array(z.string())
+      .optional()
+      .describe("The complete new list of alternative names."),
     totalChapters: z.number().min(0).optional(),
   }),
   execute: async (ctx, args): Promise<unknown> => {
-    return await ctx.runMutation(internal.assistantData.updateSeries, { userId: userOf(ctx), ...args });
+    return await ctx.runMutation(internal.assistantData.updateSeries, {
+      userId: userOf(ctx),
+      ...args,
+    });
   },
 });
 
@@ -169,6 +209,8 @@ export const assistant = new Agent(components.agent, {
     const cost = reportedCost(providerMetadata);
     try {
       await ctx.runMutation(internal.usage.record, {
+        // Same as userOf(): the component hands back our Id<"users"> as a string.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion
         userId: userId as Id<"users">,
         kind: "chat",
         model,

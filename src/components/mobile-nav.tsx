@@ -4,11 +4,31 @@ import { useState, type ReactNode } from "react";
 import { useAiPanel } from "#/components/ask/ai-panel";
 import { cn } from "#/lib/utils";
 
-type Tab = { to: "/" | "/ask" | "/library"; label: string; icon: ReactNode; match: (path: string) => boolean };
+type Tab = {
+  to: "/" | "/ask" | "/library";
+  label: string;
+  icon: ReactNode;
+  match: (path: string) => boolean;
+};
 
-const NOTES: Tab = { to: "/", label: "Notes", icon: <FileText />, match: (p) => p === "/" || p.startsWith("/notes") };
-const ASK: Tab = { to: "/ask", label: "Ask", icon: <MessageCircle />, match: (p) => p.startsWith("/ask") };
-const LIBRARY: Tab = { to: "/library", label: "Library", icon: <Library />, match: (p) => p.startsWith("/library") };
+const NOTES: Tab = {
+  to: "/",
+  label: "Notes",
+  icon: <FileText />,
+  match: (p) => p === "/" || p.startsWith("/notes"),
+};
+const ASK: Tab = {
+  to: "/ask",
+  label: "Ask",
+  icon: <MessageCircle />,
+  match: (p) => p.startsWith("/ask"),
+};
+const LIBRARY: Tab = {
+  to: "/library",
+  label: "Library",
+  icon: <Library />,
+  match: (p) => p.startsWith("/library"),
+};
 
 /**
  * Phone navigation: a floating glass bar whose lit lens slides to the current
@@ -29,7 +49,11 @@ export function MobileNav({ showAsk, onSearch }: { showAsk: boolean; onSearch: (
   // (Adjusting state during render on a prop change; React re-renders right away.)
   const [lens, setLens] = useState({ at: active, from: active, moves: 0 });
   if (lens.at !== active) {
-    setLens({ at: active, from: lens.at, moves: lens.moves + (active >= 0 && lens.at >= 0 ? 1 : 0) });
+    setLens({
+      at: active,
+      from: lens.at,
+      moves: lens.moves + (active >= 0 && lens.at >= 0 ? 1 : 0),
+    });
   }
   const direction = active > lens.from ? "right" : "left";
   const moves = { current: lens.moves };
@@ -61,7 +85,8 @@ export function MobileNav({ showAsk, onSearch }: { showAsk: boolean; onSearch: (
                   data-direction={direction}
                   className={cn(
                     "glass-active block size-full rounded-full",
-                    moves.current > 0 && "animate-[lens-stretch_320ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:animate-none",
+                    moves.current > 0 &&
+                      "animate-[lens-stretch_320ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:animate-none",
                     "data-[direction=left]:origin-right data-[direction=right]:origin-left",
                   )}
                 />

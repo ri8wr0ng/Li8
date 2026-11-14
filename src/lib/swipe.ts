@@ -22,13 +22,7 @@ export function vibrate(pattern: number | number[]) {
  *
  * Writes styles directly instead of re-rendering on every move.
  */
-export function useSwipeRight({
-  onCommit,
-  enabled,
-}: {
-  onCommit: () => void;
-  enabled: boolean;
-}) {
+export function useSwipeRight({ onCommit, enabled }: { onCommit: () => void; enabled: boolean }) {
   const surface = useRef<HTMLElement | null>(null);
   const reveal = useRef<HTMLElement | null>(null);
   const gesture = useRef<{
@@ -80,7 +74,15 @@ export function useSwipeRight({
     onPointerDown(e: React.PointerEvent<HTMLElement>) {
       suppressClick.current = false;
       if (!enabled || e.pointerType === "mouse" || !e.isPrimary) return;
-      gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, state: "pending", armed: false, dx: 0, tracker: new VelocityTracker() };
+      gesture.current = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        state: "pending",
+        armed: false,
+        dx: 0,
+        tracker: new VelocityTracker(),
+      };
     },
     onPointerMove(e: React.PointerEvent<HTMLElement>) {
       const g = gesture.current;
@@ -122,5 +124,12 @@ export function useSwipeRight({
     },
   };
 
-  return { surface, reveal, handlers };
+  const attachSurface = useCallback((el: HTMLElement | null) => {
+    surface.current = el;
+  }, []);
+  const attachReveal = useCallback((el: HTMLElement | null) => {
+    reveal.current = el;
+  }, []);
+
+  return { attachSurface, attachReveal, handlers };
 }

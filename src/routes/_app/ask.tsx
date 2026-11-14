@@ -21,7 +21,9 @@ import { api } from "../../../convex/_generated/api";
 
 export const Route = createFileRoute("/_app/ask")({
   validateSearch: (search: Record<string, unknown>): { threadId?: string; tab?: "usage" } => ({
-    ...(typeof search.threadId === "string" && search.threadId ? { threadId: search.threadId } : {}),
+    ...(typeof search.threadId === "string" && search.threadId
+      ? { threadId: search.threadId }
+      : {}),
     ...(search.tab === "usage" ? { tab: "usage" as const } : {}),
   }),
   component: AskPage,
@@ -52,7 +54,9 @@ function AskPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-8">
         <h1 className="font-display text-3xl font-semibold">Ask</h1>
-        <p className="mt-3 text-sm text-muted-foreground">The assistant isn't available right now.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          The assistant isn't available right now.
+        </p>
       </div>
     );
   }
@@ -62,17 +66,31 @@ function AskPage() {
       <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
           <h1 className="font-display text-3xl font-semibold tracking-[-0.02em]">Ask</h1>
-          <div role="tablist" aria-label="Ask" className="inline-flex rounded-xl border bg-card p-0.5">
-            <TabButton active={tab !== "usage"} onClick={() => void navigate({ search: threadId ? { threadId } : {} })}>
+          <div
+            role="tablist"
+            aria-label="Ask"
+            className="inline-flex rounded-xl border bg-card p-0.5"
+          >
+            <TabButton
+              active={tab !== "usage"}
+              onClick={() => void navigate({ search: threadId ? { threadId } : {} })}
+            >
               <MessageCircle /> Chats
             </TabButton>
-            <TabButton active={tab === "usage"} onClick={() => void navigate({ search: { tab: "usage" } })}>
+            <TabButton
+              active={tab === "usage"}
+              onClick={() => void navigate({ search: { tab: "usage" } })}
+            >
               <ChartColumn /> Usage
             </TabButton>
           </div>
         </div>
         {tab !== "usage" && (
-          <Button variant="outline" className="rounded-xl" onClick={() => void navigate({ search: {} })}>
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => void navigate({ search: {} })}
+          >
             <Plus /> <span className="hidden sm:inline">New chat</span>
             <span className="sm:hidden">New</span>
           </Button>
@@ -80,26 +98,37 @@ function AskPage() {
       </div>
 
       {tab === "usage" ? (
-        <div role="tabpanel" aria-label="Usage" className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card">
+        <div
+          role="tabpanel"
+          aria-label="Usage"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card"
+        >
           <UsageView />
         </div>
       ) : (
-      <div role="tabpanel" aria-label="Chats" className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card sm:flex-row">
-        <ThreadList
-          threads={threads ?? []}
-          activeThreadId={threadId}
-          onSelect={(id) => void navigate({ search: { threadId: id } })}
-          onDelete={setDeletingThread}
-        />
-        <Conversation
-          key={threadId ?? "new"}
-          threadId={threadId}
-          onThread={(id) => void navigate({ search: { threadId: id } })}
-        />
-      </div>
+        <div
+          role="tabpanel"
+          aria-label="Chats"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-card sm:flex-row"
+        >
+          <ThreadList
+            threads={threads ?? []}
+            activeThreadId={threadId}
+            onSelect={(id) => void navigate({ search: { threadId: id } })}
+            onDelete={setDeletingThread}
+          />
+          <Conversation
+            key={threadId ?? "new"}
+            threadId={threadId}
+            onThread={(id) => void navigate({ search: { threadId: id } })}
+          />
+        </div>
       )}
 
-      <AlertDialog open={deletingThread !== null} onOpenChange={(open) => !open && setDeletingThread(null)}>
+      <AlertDialog
+        open={deletingThread !== null}
+        onOpenChange={(open) => !open && setDeletingThread(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
@@ -149,7 +178,9 @@ function ThreadList({
             aria-current={activeThreadId === thread.id ? "page" : undefined}
             title={thread.title}
             className={`flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 text-left text-sm transition-colors hover:bg-accent sm:w-full ${
-              activeThreadId === thread.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground"
+              activeThreadId === thread.id
+                ? "bg-accent font-medium text-foreground"
+                : "text-muted-foreground"
             }`}
           >
             <MessageCircle className="size-4 shrink-0" />
@@ -165,12 +196,22 @@ function ThreadList({
           </button>
         </div>
       ))}
-      {threads.length === 0 && <p className="px-2.5 py-2 text-xs text-muted-foreground">Your chats will show here.</p>}
+      {threads.length === 0 && (
+        <p className="px-2.5 py-2 text-xs text-muted-foreground">Your chats will show here.</p>
+      )}
     </aside>
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
     <button
       type="button"
