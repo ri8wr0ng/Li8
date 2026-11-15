@@ -304,13 +304,10 @@ export async function searchByMeaningFor(
   return await ctx.runQuery(internal.embeddings.hydrate, { userId, hits });
 }
 
-/** Ids and scores only; the client already has the documents. */
+/** Include owned documents so semantic matches don't depend on keyword results. */
 export const search = action({
   args: { query: v.string() },
-  handler: async (
-    ctx,
-    { query },
-  ): Promise<{ kind: "note" | "series"; id: string; score: number }[]> => {
+  handler: async (ctx, { query }): Promise<MeaningHit[]> => {
     requireAi();
     const { userId, allowed } = await ctx.runQuery(internal.embeddings.viewer, {});
     if (userId === null) throw new Error("Not signed in");
@@ -318,11 +315,6 @@ export const search = action({
     const q = query.trim().slice(0, 500);
     if (!q) return [];
     await limitAi(ctx, "search", userId);
-    const hits = await searchByMeaningFor(ctx, userId, q, 12);
-    return hits.map((h) =>
-      h.kind === "note"
-        ? { kind: h.kind, id: h.note._id, score: h.score }
-        : { kind: h.kind, id: h.series._id, score: h.score },
-    );
+    return await searchByMeaningFor(ctx, userId, q, 12);
   },
 });

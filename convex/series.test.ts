@@ -1,11 +1,40 @@
 /// <reference types="vite/client" />
 import { registerCore, sessionIdentity } from "@convex-dev/auth/test";
 import { convexTest } from "convex-test";
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 import { api, components } from "./_generated/api";
 import schema from "./schema";
 
 const modules = import.meta.glob("./**/*.ts");
+
+test("label deletion cleans references across multiple batches", async () => {
+  vi.useFakeTimers();
+  try {
+    const { t, reader, id, userId } = await setup();
+    const labelId = await reader.mutation(api.labels.create, { name: "Temporary" });
+    await t.run(async (ctx) => {
+      const original = await ctx.db.get("series", id);
+      if (!original) throw new Error("Missing series");
+      const { _id, _creationTime, ...fields } = original;
+      for (let i = 0; i < 205; i++) {
+        await ctx.db.insert("series", { ...fields, title: `Show ${i}`, labelIds: [labelId] });
+      }
+    });
+    await reader.mutation(api.labels.remove, { id: labelId });
+    expect(await reader.query(api.labels.list, {})).toEqual([]);
+    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+    const remaining = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("series")
+        .withIndex("by_user_updated", (q) => q.eq("userId", userId))
+        .collect();
+      return rows.filter((row) => row.labelIds?.includes(labelId));
+    });
+    expect(remaining).toEqual([]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
 
 async function setup(chapter = 348) {
   const t = convexTest(schema, modules);

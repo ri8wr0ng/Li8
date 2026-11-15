@@ -11,7 +11,7 @@ import schema from "./schema";
 /** Personal-scale cap; the client indexes these for instant search. */
 const MAX_NOTES = 2000;
 
-function makeSearchText(title: string, body: string, tags: string[]) {
+export function makeSearchText(title: string, body: string, tags: string[]) {
   return [title, body, tags.join(" ")].join(" ");
 }
 

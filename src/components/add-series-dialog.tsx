@@ -80,7 +80,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
   // After a pick the title is AniList's, so don't read "Kaiju No. 8" as chapter 8.
   const linked = fill !== null && title === fill.title ? fill : null;
   // Typing "Battle Through The Heavens 348" fills both fields.
-  const parsed = !chapter && !linked ? parseChapterCommand(title) : null;
+  const parsed = kind !== "movie" && !chapter && !linked ? parseChapterCommand(title) : null;
   const finalTitle = parsed && parsed.chapter !== undefined ? parsed.name : title.trim();
   const finalChapter = chapter ? Number(chapter) : (parsed?.chapter ?? 0);
 

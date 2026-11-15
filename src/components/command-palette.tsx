@@ -136,7 +136,9 @@ function SearchSheet({
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
-type MeaningResult = { kind: "note" | "series"; id: string; score: number };
+type MeaningResult =
+  | { kind: "note"; note: Doc<"notes">; score: number }
+  | { kind: "series"; series: Doc<"series">; score: number };
 type MeaningState = { status: "idle" | "loading" | "done" | "error"; results: MeaningResult[] };
 type MeaningItem = { kind: "note"; doc: Doc<"notes"> } | { kind: "series"; doc: Doc<"series"> };
 
@@ -251,30 +253,25 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
     return () => clearTimeout(timer);
   }, [q, aiEnabled, searchByMeaning]);
 
-  // Map embedding ids back to the docs already loaded for keyword search,
-  // dropping ids we don't know and anything already in the keyword results.
+  // Semantic results carry their owned documents, including non-keyword matches.
   const meaningItems = useMemo<MeaningItem[]>(() => {
     if (meaning.results.length === 0) return [];
-    const noteById = new Map<string, Doc<"notes">>((noteResults ?? []).map((n) => [n._id, n]));
-    const seriesById = new Map<string, Doc<"series">>((seriesResults ?? []).map((s) => [s._id, s]));
     const shown = new Set(hits.map((h) => `${h.type}:${h.doc._id}`));
     const out: MeaningItem[] = [];
     const seen = new Set<string>();
     for (const r of meaning.results) {
-      const key = `${r.kind}:${r.id}`;
+      const key = `${r.kind}:${r.kind === "note" ? r.note._id : r.series._id}`;
       if (shown.has(key) || seen.has(key)) continue;
       seen.add(key);
       if (r.kind === "note") {
-        const doc = noteById.get(r.id);
-        if (doc) out.push({ kind: "note", doc });
+        out.push({ kind: "note", doc: r.note });
       } else {
-        const doc = seriesById.get(r.id);
-        if (doc) out.push({ kind: "series", doc });
+        out.push({ kind: "series", doc: r.series });
       }
       if (out.length >= 6) break;
     }
     return out;
-  }, [meaning.results, noteResults, seriesResults, hits]);
+  }, [meaning.results, hits]);
 
   const command = useMemo(() => {
     if (!parsedCommand || !seriesResults) return null;

@@ -7,7 +7,7 @@ import type { Doc } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { scheduleNoteEmbedding, scheduleSeriesEmbedding } from "./embeddings";
 import { cleanList } from "./lib";
-import { insertNote } from "./notes";
+import { insertNote, makeSearchText } from "./notes";
 import { assertChapter, computeSearchText, insertSeries, recordChapter } from "./series";
 import { vPageRef, vSeriesKind, vSeriesStatus } from "./validators";
 
@@ -129,7 +129,11 @@ export const appendToNote = internalMutation({
     if (!note || note.userId !== userId) return { error: "No note with that id." };
     const body = note.body.trimEnd() ? `${note.body.trimEnd()}\n${text}` : text;
     const now = Date.now();
-    await ctx.db.patch("notes", note._id, { body, updatedAt: now });
+    await ctx.db.patch("notes", note._id, {
+      body,
+      updatedAt: now,
+      searchText: makeSearchText(note.title, body, note.tags),
+    });
     await scheduleNoteEmbedding(ctx, note._id, now);
     return { id: note._id, title: note.title || "Untitled" };
   },
@@ -186,7 +190,15 @@ export const updateNote = internalMutation({
     };
     if (!Object.keys(patch).length) return { error: "Nothing to change." };
     const now = Date.now();
-    await ctx.db.patch("notes", note._id, { ...patch, updatedAt: now });
+    await ctx.db.patch("notes", note._id, {
+      ...patch,
+      updatedAt: now,
+      searchText: makeSearchText(
+        patch.title ?? note.title,
+        patch.body ?? note.body,
+        patch.tags ?? note.tags,
+      ),
+    });
     await scheduleNoteEmbedding(ctx, note._id, now);
     return {
       id: note._id,

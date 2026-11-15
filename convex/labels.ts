@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib";
 
 export const list = query({
@@ -65,9 +66,23 @@ export const remove = mutation({
     const label = await ctx.db.get("labels", id);
     if (!label || label.userId !== userId) throw new Error("Label not found");
 
-    for await (const s of ctx.db
+    await ctx.db.delete("labels", id);
+    await ctx.runMutation(internal.labels.cleanupReferences, {
+      userId,
+      id,
+      cursor: null,
+    });
+  },
+});
+
+export const cleanupReferences = internalMutation({
+  args: { userId: v.id("users"), id: v.id("labels"), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { userId, id, cursor }) => {
+    const batch = await ctx.db
       .query("series")
-      .withIndex("by_user_updated", (q) => q.eq("userId", userId))) {
+      .withIndex("by_user_updated", (q) => q.eq("userId", userId))
+      .paginate({ numItems: 100, cursor });
+    for (const s of batch.page) {
       if (s.labelIds && s.labelIds.includes(id)) {
         await ctx.db.patch("series", s._id, {
           labelIds: s.labelIds.filter((lid) => lid !== id),
@@ -75,6 +90,12 @@ export const remove = mutation({
       }
     }
 
-    await ctx.db.delete("labels", id);
+    if (!batch.isDone) {
+      await ctx.scheduler.runAfter(0, internal.labels.cleanupReferences, {
+        userId,
+        id,
+        cursor: batch.continueCursor,
+      });
+    }
   },
 });
