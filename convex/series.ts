@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v, type Infer } from "convex/values";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { deleteEmbedding, scheduleSeriesEmbedding } from "./embeddings";
 import { cleanList, requireUserId } from "./lib";
@@ -59,6 +60,43 @@ async function ownSeries(ctx: MutationCtx, id: Id<"series">) {
   return series;
 }
 
+async function validateLabelIds(ctx: MutationCtx, userId: Id<"users">, labelIds?: Id<"labels">[]) {
+  if (!labelIds || labelIds.length === 0) return [];
+  const uniqueIds = Array.from(new Set(labelIds));
+  for (const labelId of uniqueIds) {
+    const label = await ctx.db.get("labels", labelId);
+    if (!label || label.userId !== userId) {
+      throw new Error("Label not found or not owned by user");
+    }
+  }
+  return uniqueIds;
+}
+
+/** First letter of each word: "Battle Through The Heavens" -> "btth". */
+export function acronym(title: string) {
+  const words = title.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return words.length > 1
+    ? words
+        .map((w) => w[0])
+        .join("")
+        .toLowerCase()
+    : "";
+}
+
+export function computeSearchText(item: {
+  title: string;
+  altNames?: string[];
+  genres?: string[];
+  kind: string;
+}) {
+  const altNames = item.altNames ?? [];
+  const acronyms = [item.title, ...altNames].map(acronym).filter(Boolean);
+  const parts = [item.title, ...altNames, ...acronyms, ...(item.genres ?? []), item.kind].filter(
+    Boolean,
+  );
+  return parts.join(" ");
+}
+
 /** Set the chapter and log it. Shared with the AI assistant's tools. */
 export async function recordChapter(ctx: MutationCtx, series: Doc<"series">, chapter: number) {
   const now = Date.now();
@@ -67,12 +105,17 @@ export async function recordChapter(ctx: MutationCtx, series: Doc<"series">, cha
     .withIndex("by_series_at", (q) => q.eq("seriesId", series._id))
     .order("desc")
     .first();
-  if (last && now - last.at < HISTORY_MERGE_MS) {
-    await ctx.db.patch("chapterHistory", last._id, { chapter, at: now });
+  if (last && now - last.at < HISTORY_MERGE_MS && last.season === series.season) {
+    await ctx.db.patch("chapterHistory", last._id, {
+      chapter,
+      at: now,
+      ...(series.season !== undefined ? { season: series.season } : {}),
+    });
   } else {
     await ctx.db.insert("chapterHistory", {
       userId: series.userId,
       seriesId: series._id,
+      season: series.season,
       chapter,
       at: now,
     });
@@ -83,6 +126,9 @@ export async function recordChapter(ctx: MutationCtx, series: Doc<"series">, cha
 const vCreateArgs = v.object({
   title: v.string(),
   chapter: v.optional(v.number()),
+  season: v.optional(v.number()),
+  totalSeasons: v.optional(v.number()),
+  labelIds: v.optional(v.array(v.id("labels"))),
   altNames: v.optional(v.array(v.string())),
   kind: v.optional(vSeriesKind),
   status: v.optional(vSeriesStatus),
@@ -106,34 +152,49 @@ export async function insertSeries(
   userId: Id<"users">,
   args: Infer<typeof vCreateArgs>,
 ) {
-  {
-    const title = args.title.trim();
-    if (!title) throw new Error("Title is required");
-    const chapter = args.chapter ?? 0;
-    assertChapter(chapter);
-    const now = Date.now();
-    const id = await ctx.db.insert("series", {
+  const title = args.title.trim();
+  if (!title) throw new Error("Title is required");
+  const chapter = args.chapter ?? 0;
+  assertChapter(chapter);
+  const validLabelIds = args.labelIds
+    ? await validateLabelIds(ctx, userId, args.labelIds)
+    : undefined;
+  const now = Date.now();
+  const kind = args.kind ?? "manhua";
+  const altNames = cleanList(args.altNames ?? []);
+  const genres = cleanList(args.genres ?? []);
+  const searchText = computeSearchText({ title, altNames, genres, kind });
+  const id = await ctx.db.insert("series", {
+    userId,
+    title,
+    altNames,
+    kind,
+    status: args.status ?? "reading",
+    chapter,
+    description: args.description?.trim() ?? "",
+    genres,
+    ...(args.totalChapters && args.totalChapters > 0 ? { totalChapters: args.totalChapters } : {}),
+    ...(args.season !== undefined ? { season: args.season } : {}),
+    ...(args.totalSeasons !== undefined && args.totalSeasons > 0
+      ? { totalSeasons: args.totalSeasons }
+      : {}),
+    ...(validLabelIds && validLabelIds.length > 0 ? { labelIds: validLabelIds } : {}),
+    searchText,
+    ...(args.anilistId !== undefined ? { anilistId: args.anilistId } : {}),
+    lastReadAt: now,
+    updatedAt: now,
+  });
+  if (chapter > 0 || (args.season !== undefined && args.season > 1)) {
+    await ctx.db.insert("chapterHistory", {
       userId,
-      title,
-      altNames: cleanList(args.altNames ?? []),
-      kind: args.kind ?? "manhua",
-      status: args.status ?? "reading",
+      seriesId: id,
+      season: args.season,
       chapter,
-      description: args.description?.trim() ?? "",
-      genres: cleanList(args.genres ?? []),
-      ...(args.totalChapters && args.totalChapters > 0
-        ? { totalChapters: args.totalChapters }
-        : {}),
-      ...(args.anilistId !== undefined ? { anilistId: args.anilistId } : {}),
-      lastReadAt: now,
-      updatedAt: now,
+      at: now,
     });
-    if (chapter > 0) {
-      await ctx.db.insert("chapterHistory", { userId, seriesId: id, chapter, at: now });
-    }
-    await scheduleSeriesEmbedding(ctx, id);
-    return id;
   }
+  await scheduleSeriesEmbedding(ctx, id);
+  return id;
 }
 
 export const update = mutation({
@@ -144,6 +205,9 @@ export const update = mutation({
     kind: v.optional(vSeriesKind),
     status: v.optional(vSeriesStatus),
     totalChapters: v.optional(v.union(v.number(), v.null())),
+    season: v.optional(v.union(v.number(), v.null())),
+    totalSeasons: v.optional(v.union(v.number(), v.null())),
+    labelIds: v.optional(v.array(v.id("labels"))),
     description: v.optional(v.string()),
     genres: v.optional(v.array(v.string())),
     readUrlTemplate: v.optional(v.union(v.string(), v.null())),
@@ -151,23 +215,74 @@ export const update = mutation({
   },
   handler: async (
     ctx,
-    { id, altNames, genres, totalChapters, readUrlTemplate, anilistId, title, ...rest },
+    {
+      id,
+      altNames,
+      genres,
+      totalChapters,
+      season,
+      totalSeasons,
+      labelIds,
+      readUrlTemplate,
+      anilistId,
+      title,
+      ...rest
+    },
   ) => {
-    await ownSeries(ctx, id);
+    const series = await ownSeries(ctx, id);
     if (title !== undefined && !title.trim()) throw new Error("Title is required");
+    const validLabelIds =
+      labelIds !== undefined ? await validateLabelIds(ctx, series.userId, labelIds) : undefined;
+    const nextTitle = title !== undefined ? title.trim() : series.title;
+    const nextAltNames = altNames !== undefined ? cleanList(altNames) : series.altNames;
+    const nextGenres = genres !== undefined ? cleanList(genres) : series.genres;
+    const nextKind = rest.kind !== undefined ? rest.kind : series.kind;
+    const searchText = computeSearchText({
+      title: nextTitle,
+      altNames: nextAltNames,
+      genres: nextGenres,
+      kind: nextKind,
+    });
     await ctx.db.patch("series", id, {
       ...rest,
       ...(title !== undefined ? { title: title.trim() } : {}),
       ...(altNames ? { altNames: cleanList(altNames) } : {}),
       ...(genres ? { genres: cleanList(genres) } : {}),
       ...(totalChapters !== undefined ? { totalChapters: totalChapters ?? undefined } : {}),
+      ...(season !== undefined ? { season: season ?? undefined } : {}),
+      ...(totalSeasons !== undefined ? { totalSeasons: totalSeasons ?? undefined } : {}),
+      ...(validLabelIds !== undefined ? { labelIds: validLabelIds } : {}),
       ...(readUrlTemplate !== undefined
         ? { readUrlTemplate: readUrlTemplate?.trim() || undefined }
         : {}),
       ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
+      searchText,
       updatedAt: Date.now(),
     });
     await scheduleSeriesEmbedding(ctx, id);
+  },
+});
+
+export const nextSeason = mutation({
+  args: { id: v.id("series") },
+  handler: async (ctx, { id }) => {
+    const series = await ownSeries(ctx, id);
+    const nextSeasonNumber = (series.season ?? 1) + 1;
+    const now = Date.now();
+    await ctx.db.insert("chapterHistory", {
+      userId: series.userId,
+      seriesId: id,
+      season: nextSeasonNumber,
+      chapter: 0,
+      at: now,
+    });
+    await ctx.db.patch("series", id, {
+      season: nextSeasonNumber,
+      chapter: 0,
+      lastReadAt: now,
+      updatedAt: now,
+    });
+    return { season: nextSeasonNumber, chapter: 0 };
   },
 });
 
@@ -203,5 +318,25 @@ export const remove = mutation({
     }
     await deleteEmbedding(ctx, { seriesId: id });
     await ctx.db.delete("series", id);
+  },
+});
+
+export const backfillSearchText = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, args) => {
+    const res = await ctx.db
+      .query("series")
+      .paginate({ cursor: args.cursor ?? null, numItems: 200 });
+    for (const item of res.page) {
+      const searchText = computeSearchText(item);
+      if (item.searchText !== searchText) {
+        await ctx.db.patch("series", item._id, { searchText });
+      }
+    }
+    if (!res.isDone) {
+      await ctx.scheduler.runAfter(0, internal.series.backfillSearchText, {
+        cursor: res.continueCursor,
+      });
+    }
   },
 });

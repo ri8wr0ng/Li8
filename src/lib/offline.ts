@@ -1,5 +1,6 @@
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReference, FunctionReturnType } from "convex/server";
+import type { PaginatedQueryArgs, PaginatedQueryReference } from "convex/react";
 import { useEffect, useSyncExternalStore } from "react";
 
 /**
@@ -128,6 +129,52 @@ export function useCachedQuery<
     if (live !== undefined) write(key, live);
   }, [key, live]);
   return live ?? cached;
+}
+
+/**
+ * A saved list written by `writeCachedList` / `useCachedPaginatedQuery`. The
+ * caller names the element type; the cache only ever holds what was written
+ * under that name.
+ */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters
+export function useCachedList<T>(name: string): readonly T[] | undefined {
+  const key = cacheKey(name);
+  return useSyncExternalStore(
+    subscribe,
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+    () => memory.get(key) as readonly T[] | undefined,
+    () => undefined,
+  );
+}
+
+export function writeCachedList(name: string, results: readonly unknown[]) {
+  write(cacheKey(name), results);
+}
+
+export function useCachedPaginatedQuery<Query extends PaginatedQueryReference>(
+  query: Query,
+  args: PaginatedQueryArgs<Query> | "skip",
+  name: string,
+  options: { initialNumItems: number },
+) {
+  const { isAuthenticated } = useConvexAuth();
+  const live = usePaginatedQuery(query, isAuthenticated ? args : "skip", options);
+  const key = cacheKey(name);
+  const cached = useCachedList<(typeof live.results)[number]>(name);
+  const hasLiveResults = isAuthenticated && live.status !== "LoadingFirstPage";
+  useEffect(() => {
+    if (hasLiveResults) write(key, live.results);
+  }, [hasLiveResults, key, live.results]);
+
+  if (!hasLiveResults) {
+    return {
+      results: cached ?? live.results,
+      status: "Exhausted" as const,
+      loadMore: (_numItems: number) => {},
+      isLoading: cached === undefined && (!isAuthenticated || live.isLoading),
+    };
+  }
+  return live;
 }
 
 // ---------------------------------------------------------------------------

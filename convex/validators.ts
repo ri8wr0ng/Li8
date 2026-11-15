@@ -7,6 +7,10 @@ export const vSeriesKind = v.union(
   v.literal("webtoon"),
   v.literal("novel"),
   v.literal("other"),
+  v.literal("movie"),
+  v.literal("tv"),
+  v.literal("anime"),
+  v.literal("reality"),
 );
 export type SeriesKind = Infer<typeof vSeriesKind>;
 

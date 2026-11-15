@@ -36,7 +36,7 @@ import {
 } from "#/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#/components/ui/tooltip";
 import { findAll } from "#/lib/highlight";
-import { useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
+import { useCachedList, useOnline, useReadOnly } from "#/lib/offline";
 import { relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
@@ -57,7 +57,7 @@ function NotePage() {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const live = useQuery(api.notes.get, isAuthenticated ? { id: noteId as Id<"notes"> } : "skip");
   // Until the live copy arrives (or with no connection), show the saved one.
-  const list = useCachedQuery(api.notes.list, "notes");
+  const list = useCachedList<Doc<"notes">>("notes");
   const cached = list?.find((n) => n._id === noteId);
   const note = live !== undefined ? live : (cached ?? (list && !online ? null : undefined));
   if (note === undefined) return null;

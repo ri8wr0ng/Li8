@@ -39,6 +39,14 @@
   --input: #dcd5c7;
   --ring: color-mix(in oklab, var(--hanko) 55%, transparent);
   --radius: 0.75rem;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -58,6 +66,14 @@
   --destructive: #e5533f;
   --border: #2c2a26;
   --input: #36332e;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @theme inline {
@@ -93,6 +109,14 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
 }
 
 @layer base {
@@ -104,9 +128,9 @@
     -webkit-tap-highlight-color: transparent;
   }
   /*
-   * No pull-to-refresh or page rubber-band: it's an app with a fixed header and
-   * tab bar, and Convex data is live, so there's nothing to refresh. Inner
-   * scrollers (dialogs, menus, result lists) use overscroll-behavior: contain.
+   * Disable browser-native pull-to-refresh and rubber-band overscroll so custom
+   * touch pull-to-refresh works smoothly on mobile. Inner scrollers (dialogs, menus,
+   * result lists) use overscroll-behavior: contain.
    */
   html,
   body {

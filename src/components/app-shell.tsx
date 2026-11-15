@@ -1,5 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import {
   Download,
@@ -22,7 +22,6 @@ import { Wordmark } from "#/components/brand";
 import { useCommandPalette } from "#/components/command-palette";
 import { InstallBanner, IosInstallHelp } from "#/components/install-prompt";
 import { MobileNav } from "#/components/mobile-nav";
-import { Button } from "#/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,13 +32,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+} from "#/components/ui/sidebar";
 import { useInstall } from "#/lib/install";
 import { clearCache, useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
 import { useTheme } from "#/lib/theme";
-import { cn } from "#/lib/utils";
 import { api } from "../../convex/_generated/api";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const modKey = isMac ? "⌘" : "Ctrl";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -52,103 +67,147 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const { openPalette } = useCommandPalette();
   const panel = useAiPanel();
-  const notes = useCachedQuery(api.notes.list, "notes");
-  const series = useCachedQuery(api.series.list, "series");
   const chatStatus = useQuery(api.chat.status, {});
-  const reading = series?.filter((s) => s.status === "reading").length;
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const newNote = useNewNote();
 
   return (
-    <div
-      className={cn(
-        "min-h-dvh lg:grid",
-        panel.open
-          ? "lg:grid-cols-[16rem_minmax(0,1fr)_24rem] xl:grid-cols-[16rem_minmax(0,1fr)_28rem]"
-          : "lg:grid-cols-[16rem_1fr]",
-      )}
-    >
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r px-4 py-6 lg:flex">
-        <div className="flex items-center justify-between gap-2 px-2">
-          <Link to="/">
-            <Wordmark />
+    <SidebarProvider>
+      <Sidebar collapsible="icon" variant="sidebar">
+        <SidebarHeader className="flex-row items-center justify-between gap-2 p-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+          <Link to="/" aria-label="Inkmark home" className="flex min-w-0 items-center">
+            <Wordmark className="group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
           </Link>
-          <OfflinePill />
-        </div>
-
-        <button
-          type="button"
-          onClick={openPalette}
-          className="flex h-10 items-center gap-2.5 rounded-xl border bg-card px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:border-input hover:text-foreground"
-        >
-          <Search className="size-4" />
-          Search or jump…
-          <kbd className="ml-auto rounded border bg-background px-1.5 font-mono text-[0.7rem]">
-            {isMac ? "⌘" : "Ctrl"} K
-          </kbd>
-        </button>
-
-        {panel.available && (
-          <button
-            type="button"
-            onClick={panel.toggle}
-            aria-pressed={panel.open}
-            className="-mt-4 flex h-10 items-center gap-2.5 rounded-xl border bg-card px-3 text-sm text-muted-foreground shadow-xs transition-colors hover:border-input hover:text-foreground aria-pressed:border-input aria-pressed:text-foreground"
-          >
-            <Sparkles className="size-4" />
-            Ask AI
-            <kbd className="ml-auto rounded border bg-background px-1.5 font-mono text-[0.7rem]">
-              {isMac ? "⌘" : "Ctrl"} J
-            </kbd>
-          </button>
-        )}
-
-        <nav className="flex flex-col gap-0.5">
-          <SideLink to="/" icon={<FileText />} label="Notes" count={notes?.length} />
-          <SideLink
-            to="/library"
-            icon={<Library />}
-            label="Library"
-            count={reading}
-            countLabel="reading"
-          />
-          {chatStatus?.enabled && <SideLink to="/ask" icon={<MessageCircle />} label="Ask" />}
-        </nav>
-
-        <Button variant="hanko" className="h-10 rounded-xl" onClick={newNote}>
-          <PenLine /> New note
-        </Button>
-
-        <div className="mt-auto grid gap-3">
-          <InstallBanner />
-          <UserMenu align="start" />
-        </div>
-      </aside>
-
-      {/* Mobile top bar */}
-      <header className="pt-safe sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md lg:hidden">
-        <div className="flex h-14 items-center justify-between pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
-          <Link to="/">
-            <Wordmark />
-          </Link>
-          <div className="flex items-center gap-2">
+          <span className="group-data-[collapsible=icon]:hidden">
             <OfflinePill />
-            {/* Ask AI lives in the bottom nav on phones, next to search. */}
-            <UserMenu align="end" compact />
+          </span>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={openPalette} tooltip="Search">
+                    <Search />
+                    <span>Search</span>
+                    <kbd className="ml-auto rounded border bg-background px-1.5 font-mono text-[0.7rem] group-data-[collapsible=icon]:hidden">
+                      {modKey} K
+                    </kbd>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {panel.available && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={panel.toggle}
+                      tooltip="Ask AI"
+                      aria-pressed={panel.open}
+                    >
+                      <Sparkles />
+                      <span>Ask AI</span>
+                      <kbd className="ml-auto rounded border bg-background px-1.5 font-mono text-[0.7rem] group-data-[collapsible=icon]:hidden">
+                        {modKey} J
+                      </kbd>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={newNote}
+                    tooltip="New note"
+                    className="bg-hanko font-medium text-hanko-foreground hover:bg-hanko/90 hover:text-hanko-foreground active:bg-hanko/90 data-[active=true]:bg-hanko data-[active=true]:text-hanko-foreground"
+                  >
+                    <PenLine />
+                    <span>New note</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+
+              <SidebarSeparator />
+
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/" || pathname.startsWith("/notes")}
+                    tooltip="Notes"
+                  >
+                    <Link to="/">
+                      <FileText />
+                      <span>Notes</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith("/library")}
+                    tooltip="Library"
+                  >
+                    <Link to="/library">
+                      <Library />
+                      <span>Library</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {chatStatus?.enabled && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname.startsWith("/ask")} tooltip="Ask">
+                      <Link to="/ask">
+                        <MessageCircle />
+                        <span>Ask</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <InstallBanner />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <UserMenu align="start" />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+
+      <div className="flex min-w-0 flex-1">
+        <SidebarInset className="min-w-0">
+          {/* Mobile top bar */}
+          <header className="pt-safe sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md lg:hidden">
+            <div className="flex h-14 items-center gap-1 pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
+              <SidebarTrigger className="-ml-1 size-9" />
+              <Link to="/">
+                <Wordmark />
+              </Link>
+              <div className="ml-auto flex items-center gap-2">
+                <OfflinePill />
+                {/* Ask AI lives in the bottom nav on phones, next to search. */}
+                <UserMenu align="end" compact />
+              </div>
+            </div>
+          </header>
+
+          <div className="min-w-0 flex-1 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
+            {children}
           </div>
-        </div>
-      </header>
+        </SidebarInset>
 
-      <main className="min-w-0 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
-        {children}
-      </main>
-
-      <AiPanel notes={notes} series={series} />
+        <AiPanel />
+      </div>
 
       <InstallBanner className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-30 mx-auto max-w-md lg:hidden" />
 
       <MobileNav showAsk={chatStatus?.enabled === true} onSearch={openPalette} />
-    </div>
+    </SidebarProvider>
   );
 }
 
@@ -164,36 +223,6 @@ export function useNewNote() {
     const id = await createNote({});
     await navigate({ to: "/notes/$noteId", params: { noteId: id } });
   };
-}
-
-function SideLink({
-  to,
-  icon,
-  label,
-  count,
-  countLabel,
-}: {
-  to: "/" | "/library" | "/ask";
-  icon: ReactNode;
-  label: string;
-  count?: number;
-  countLabel?: string;
-}) {
-  return (
-    <Link
-      to={to}
-      activeOptions={{ exact: to === "/", includeSearch: false }}
-      className="group flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground data-[status=active]:bg-accent data-[status=active]:font-medium data-[status=active]:text-foreground [&>svg]:size-4"
-    >
-      {icon}
-      {label}
-      {count !== undefined && (
-        <span className="ml-auto font-mono text-xs tabular-nums" title={countLabel}>
-          {count}
-        </span>
-      )}
-    </Link>
-  );
 }
 
 /** Shown only without a connection. Says whether you're looking at the saved copy or edits will sync later. */
@@ -229,27 +258,31 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase())
     .join("");
+  const avatar = (
+    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary font-display text-sm font-semibold">
+      {initials || "·"}
+    </span>
+  );
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          "flex items-center gap-2.5 rounded-xl text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-          compact ? "p-0.5" : "w-full p-1.5 hover:bg-accent",
-        )}
-      >
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary font-display text-sm font-semibold">
-          {initials || "·"}
-        </span>
-        {!compact && (
-          <span className="min-w-0">
-            <span className="block truncate font-medium">{me?.name ?? "Signed in"}</span>
-            {me?.email && (
-              <span className="block truncate text-xs text-muted-foreground">{me.email}</span>
-            )}
-          </span>
-        )}
-      </DropdownMenuTrigger>
+      {compact ? (
+        <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-xl p-0.5 text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+          {avatar}
+        </DropdownMenuTrigger>
+      ) : (
+        <DropdownMenuTrigger asChild>
+          <SidebarMenuButton size="lg">
+            {avatar}
+            <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+              <span className="block truncate text-sm font-medium">{me?.name ?? "Signed in"}</span>
+              {me?.email && (
+                <span className="block truncate text-xs text-muted-foreground">{me.email}</span>
+              )}
+            </span>
+          </SidebarMenuButton>
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align={align} className="w-56">
         <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
           {me?.email ?? name}

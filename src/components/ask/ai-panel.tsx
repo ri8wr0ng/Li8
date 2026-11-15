@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { ChartColumn, History, Maximize2, MessageCircle, Plus, Sparkles, X } from "lucide-react";
 import {
   createContext,
@@ -23,7 +23,7 @@ import {
 import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 const OPEN_KEY = "inkmark:ai-panel:open";
 const THREAD_KEY = "inkmark:ai-panel:thread";
@@ -103,41 +103,36 @@ export function AiPanelProvider({ children }: { children: ReactNode }) {
 }
 
 /** The note or series open in the main view, if any. */
-function useCurrentPage(
-  notes: Doc<"notes">[] | undefined,
-  series: Doc<"series">[] | undefined,
-): CurrentPage | null {
+function useCurrentPage(): CurrentPage | null {
   // The deepest match has the page's own params (noteId / seriesId).
   const params = useRouterState({
     select: (s) => (s.matches.at(-1)?.params ?? {}) as { noteId?: string; seriesId?: string },
     structuralSharing: true,
   });
+  const { isAuthenticated } = useConvexAuth();
+  // Route params are plain strings; the queries validate the id with v.id().
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const noteId = params.noteId as Id<"notes"> | undefined;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+  const seriesId = params.seriesId as Id<"series"> | undefined;
+  const note = useQuery(api.notes.get, isAuthenticated && noteId ? { id: noteId } : "skip");
+  const series = useQuery(api.series.get, isAuthenticated && seriesId ? { id: seriesId } : "skip");
   return useMemo(() => {
-    if (params.noteId) {
-      const note = notes?.find((n) => n._id === params.noteId);
-      return note ? { kind: "note", id: note._id, title: note.title } : null;
-    }
-    if (params.seriesId) {
-      const s = series?.find((x) => x._id === params.seriesId);
-      return s ? { kind: "series", id: s._id, title: s.title } : null;
+    if (note) return { kind: "note" as const, id: note._id, title: note.title || "Untitled" };
+    if (series) {
+      return { kind: "series" as const, id: series._id, title: series.title || "Untitled" };
     }
     return null;
-  }, [params.noteId, params.seriesId, notes, series]);
+  }, [note, series]);
 }
 
 /**
  * Chat with the assistant beside any page. On desktop it's a column next to
  * the content; on phones a floating sheet above the nav.
  */
-export function AiPanel({
-  notes,
-  series,
-}: {
-  notes: Doc<"notes">[] | undefined;
-  series: Doc<"series">[] | undefined;
-}) {
+export function AiPanel() {
   const { open, setOpen } = useAiPanel();
-  const page = useCurrentPage(notes, series);
+  const page = useCurrentPage();
   const threads = useQuery(api.chat.threads, open ? {} : "skip");
   const [threadId, setThreadIdState] = useState<string | undefined>(
     () => readStorage(THREAD_KEY) ?? undefined,
@@ -224,7 +219,7 @@ export function AiPanel({
           "data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-[0.97] data-[state=closed]:slide-out-to-bottom-6 data-[state=closed]:duration-150 data-[state=closed]:ease-out data-[state=closed]:fill-mode-forwards",
           "motion-reduce:data-[state=open]:zoom-in-100 motion-reduce:data-[state=open]:slide-in-from-bottom-0 motion-reduce:data-[state=closed]:zoom-out-100 motion-reduce:data-[state=closed]:slide-out-to-bottom-0",
           // Desktop: a column beside the content.
-          "lg:sticky lg:inset-auto lg:top-0 lg:z-auto lg:h-dvh lg:rounded-none lg:border-0 lg:border-l lg:bg-background lg:shadow-none lg:backdrop-blur-none lg:data-[state=open]:zoom-in-100 lg:data-[state=open]:slide-in-from-bottom-0",
+          "lg:sticky lg:inset-auto lg:top-0 lg:z-auto lg:h-dvh lg:w-96 lg:shrink-0 lg:rounded-none lg:border-0 lg:border-l lg:bg-background lg:shadow-none lg:backdrop-blur-none lg:data-[state=open]:zoom-in-100 lg:data-[state=open]:slide-in-from-bottom-0 xl:w-[28rem]",
         )}
       >
         <header

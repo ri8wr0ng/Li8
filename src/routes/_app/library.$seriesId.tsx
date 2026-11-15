@@ -1,6 +1,16 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { ArrowLeft, BookX, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  BookX,
+  ExternalLink,
+  FastForward,
+  Minus,
+  Pencil,
+  Plus,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AniListControls } from "#/components/anilist-link";
@@ -18,25 +28,40 @@ import {
   AlertDialogTrigger,
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "#/components/ui/dialog";
+import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
 import {
   KIND_LABEL,
-  KIND_ORDER,
-  STATUS_LABEL,
+  READ_KINDS,
   STATUS_ORDER,
+  WATCH_KINDS,
   formatChapter,
-  readUrl,
+  isEpisodic,
   isSeriesKind,
   isSeriesStatus,
+  isWatchKind,
+  progressLabel,
+  readUrl,
+  statusLabel,
 } from "#/lib/series";
-import { useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
+import { useCachedList, useOnline, useReadOnly } from "#/lib/offline";
 import { fullDate, relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
@@ -58,9 +83,9 @@ function SeriesPage() {
     isAuthenticated ? { id: seriesId as Id<"series"> } : "skip",
   );
   // Until the live copy arrives (or with no connection), show the saved one.
-  const list = useCachedQuery(api.series.list, "series");
-  const cached = list?.find((s) => s._id === seriesId);
-  const series = live !== undefined ? live : (cached ?? (list && !online ? null : undefined));
+  const cachedList = useCachedList<Doc<"series">>("series");
+  const cached = cachedList?.find((s) => s._id === seriesId);
+  const series = live !== undefined ? live : (cached ?? (cachedList && !online ? null : undefined));
   if (series === undefined) return null;
   if (series === null) return <Missing />;
   return <SeriesDetail key={series._id} series={series} />;
@@ -83,11 +108,15 @@ function Missing() {
 function SeriesDetail({ series }: { series: Doc<"series"> }) {
   const update = useMutation(api.series.update);
   const setChapter = useMutation(api.series.setChapter);
+  const nextSeason = useMutation(api.series.nextSeason);
   const bump = useMutation(api.series.bump);
   const remove = useMutation(api.series.remove);
   const history = useQuery(api.series.history, { seriesId: series._id });
+  const allLabels = useQuery(api.labels.list) ?? [];
   const navigate = useNavigate();
   const readOnly = useReadOnly();
+  const episodic = isEpisodic(series.kind);
+  const isMovie = series.kind === "movie";
 
   const save = (patch: Omit<Parameters<typeof update>[0], "id">) =>
     update({ id: series._id, ...patch }).catch((err: unknown) => {
@@ -133,84 +162,295 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
           />
         </div>
 
-        {/* Chapter */}
-        <section className="mt-8 rounded-2xl border bg-card p-5 sm:p-6">
-          <div className="flex flex-wrap items-end justify-between gap-5">
-            <div>
-              <Label
-                htmlFor="chapter"
-                className="text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase"
-              >
-                Last chapter read
-              </Label>
-              <div className="mt-1 flex items-baseline gap-2">
-                <ChapterInput
-                  id="chapter"
-                  value={series.chapter}
-                  onCommit={(chapter) => void setChapter({ id: series._id, chapter })}
-                />
-                <span className="font-mono text-lg text-muted-foreground">
-                  /{" "}
-                  <BlurField
-                    value={series.totalChapters ? formatChapter(series.totalChapters) : ""}
-                    placeholder="?"
-                    inputMode="decimal"
-                    aria-label="Total chapters"
-                    onCommit={(v) => {
-                      const n = Number(v);
-                      void save({
-                        totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
-                      });
-                    }}
-                    className="w-20 bg-transparent font-mono tabular-nums outline-none placeholder:text-muted-foreground/60"
-                  />
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Updated {relativeTime(series.lastReadAt)}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
+        {/* Labels */}
+        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+          {allLabels.map((l) => {
+            const isAttached = series.labelIds?.includes(l._id);
+            return (
               <button
+                key={l._id}
                 type="button"
-                aria-label="One chapter back"
-                disabled={series.chapter <= 0}
-                onClick={() => void bump({ id: series._id, delta: -1 })}
-                className="grid size-12 place-items-center rounded-full border bg-background text-muted-foreground hover:text-foreground active:scale-95 disabled:opacity-40"
-              >
-                <Minus className="size-5" />
-              </button>
-              <button
-                type="button"
-                aria-label="One chapter forward"
-                onClick={() => void bump({ id: series._id, delta: 1 })}
-                className="grid size-14 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm hover:bg-hanko/90 active:scale-90"
-              >
-                <Plus className="size-6" />
-              </button>
-            </div>
-          </div>
-
-          {series.totalChapters ? (
-            <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-secondary">
-              <div
-                className="h-full rounded-full bg-hanko transition-[width]"
-                style={{
-                  width: `${Math.min(100, (series.chapter / series.totalChapters) * 100)}%`,
+                disabled={readOnly}
+                onClick={() => {
+                  const current = series.labelIds ?? [];
+                  const next = isAttached
+                    ? current.filter((id) => id !== l._id)
+                    : [...current, l._id];
+                  void save({ labelIds: next });
                 }}
-              />
-            </div>
-          ) : null}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-medium border transition-colors",
+                  isAttached
+                    ? "bg-hanko text-hanko-foreground border-transparent"
+                    : "bg-secondary text-secondary-foreground hover:bg-accent border-transparent",
+                )}
+              >
+                {l.name}
+              </button>
+            );
+          })}
+          <ManageLabelsDialog disabled={readOnly} />
+        </div>
 
-          {nextUrl && (
-            <Button asChild variant="secondary" className="mt-5 w-full rounded-xl sm:w-auto">
-              <a href={nextUrl} target="_blank" rel="noopener noreferrer">
-                Read Ch. {formatChapter(series.chapter + 1)} <ExternalLink />
-              </a>
-            </Button>
-          )}
-        </section>
+        {/* Progress / Chapter Section */}
+        {isMovie ? (
+          <section className="mt-8 rounded-2xl border bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <Label className="text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase">
+                  Movie Status
+                </Label>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="font-display text-2xl font-semibold">
+                    {statusLabel(series.status, series.kind)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Updated {relativeTime(series.lastReadAt)}
+                </p>
+              </div>
+              {series.status !== "completed" ? (
+                <Button
+                  type="button"
+                  variant="hanko"
+                  disabled={readOnly}
+                  onClick={() => void save({ status: "completed" })}
+                  className="rounded-xl"
+                >
+                  Mark watched
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={readOnly}
+                  onClick={() => void save({ status: "reading" })}
+                  className="rounded-xl"
+                >
+                  Mark unwatched
+                </Button>
+              )}
+            </div>
+          </section>
+        ) : episodic ? (
+          <section className="mt-8 rounded-2xl border bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Label
+                    htmlFor="chapter"
+                    className="text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase"
+                  >
+                    Episode progress
+                  </Label>
+                  <span className="text-xs font-mono text-muted-foreground">
+                    (Season {series.season ?? 1}
+                    {series.totalSeasons ? ` of ${series.totalSeasons}` : ""})
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="font-mono text-lg font-semibold text-muted-foreground tabular-nums">
+                    S{series.season ?? 1}
+                  </span>
+                  <span className="-mr-2 font-mono text-3xl font-semibold text-muted-foreground">
+                    E
+                  </span>
+                  <ChapterInput
+                    id="chapter"
+                    value={series.chapter}
+                    onCommit={(chapter) => void setChapter({ id: series._id, chapter })}
+                  />
+                  <span className="font-mono text-lg text-muted-foreground">
+                    /{" "}
+                    <BlurField
+                      value={series.totalChapters ? formatChapter(series.totalChapters) : ""}
+                      placeholder="?"
+                      inputMode="decimal"
+                      aria-label="Total episodes this season"
+                      onCommit={(v) => {
+                        const n = Number(v);
+                        void save({
+                          totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
+                        });
+                      }}
+                      className="w-20 bg-transparent font-mono tabular-nums outline-none placeholder:text-muted-foreground/60"
+                    />
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Updated {relativeTime(series.lastReadAt)}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={readOnly}
+                  onClick={() => {
+                    void nextSeason({ id: series._id }).then(() =>
+                      toast.success("Started next season"),
+                    );
+                  }}
+                  className="rounded-xl gap-1.5"
+                >
+                  <FastForward className="size-4" /> Next season
+                </Button>
+                <button
+                  type="button"
+                  aria-label="One episode back"
+                  disabled={series.chapter <= 0}
+                  onClick={() => void bump({ id: series._id, delta: -1 })}
+                  className="grid size-12 place-items-center rounded-full border bg-background text-muted-foreground hover:text-foreground active:scale-95 disabled:opacity-40"
+                >
+                  <Minus className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="One episode forward"
+                  onClick={() => void bump({ id: series._id, delta: 1 })}
+                  className="grid size-14 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm hover:bg-hanko/90 active:scale-90"
+                >
+                  <Plus className="size-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-4 border-t pt-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span>Current season:</span>
+                <BlurField
+                  value={String(series.season ?? 1)}
+                  placeholder="1"
+                  inputMode="numeric"
+                  aria-label="Current season"
+                  onCommit={(v) => {
+                    const n = Number(v);
+                    if (v.trim() && Number.isFinite(n) && n >= 1) {
+                      void save({ season: n });
+                    }
+                  }}
+                  className="w-12 rounded border bg-background px-1.5 py-0.5 text-center font-mono text-foreground"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span>Total seasons:</span>
+                <BlurField
+                  value={series.totalSeasons ? String(series.totalSeasons) : ""}
+                  placeholder="—"
+                  inputMode="numeric"
+                  aria-label="Total seasons"
+                  onCommit={(v) => {
+                    const n = Number(v);
+                    void save({
+                      totalSeasons: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
+                    });
+                  }}
+                  className="w-12 rounded border bg-background px-1.5 py-0.5 text-center font-mono text-foreground"
+                />
+              </div>
+            </div>
+
+            {series.totalChapters ? (
+              <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-hanko transition-[width]"
+                  style={{
+                    width: `${Math.min(100, (series.chapter / series.totalChapters) * 100)}%`,
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {nextUrl && (
+              <Button asChild variant="secondary" className="mt-5 w-full rounded-xl sm:w-auto">
+                <a href={nextUrl} target="_blank" rel="noopener noreferrer">
+                  Watch S{series.season ?? 1} · E{formatChapter(series.chapter + 1)}{" "}
+                  <ExternalLink />
+                </a>
+              </Button>
+            )}
+          </section>
+        ) : (
+          <section className="mt-8 rounded-2xl border bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-5">
+              <div>
+                <Label
+                  htmlFor="chapter"
+                  className="text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase"
+                >
+                  Last chapter read
+                </Label>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <ChapterInput
+                    id="chapter"
+                    value={series.chapter}
+                    onCommit={(chapter) => void setChapter({ id: series._id, chapter })}
+                  />
+                  <span className="font-mono text-lg text-muted-foreground">
+                    /{" "}
+                    <BlurField
+                      value={series.totalChapters ? formatChapter(series.totalChapters) : ""}
+                      placeholder="?"
+                      inputMode="decimal"
+                      aria-label="Total chapters"
+                      onCommit={(v) => {
+                        const n = Number(v);
+                        void save({
+                          totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
+                        });
+                      }}
+                      className="w-20 bg-transparent font-mono tabular-nums outline-none placeholder:text-muted-foreground/60"
+                    />
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Updated {relativeTime(series.lastReadAt)}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="One chapter back"
+                  disabled={series.chapter <= 0}
+                  onClick={() => void bump({ id: series._id, delta: -1 })}
+                  className="grid size-12 place-items-center rounded-full border bg-background text-muted-foreground hover:text-foreground active:scale-95 disabled:opacity-40"
+                >
+                  <Minus className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="One chapter forward"
+                  onClick={() => void bump({ id: series._id, delta: 1 })}
+                  className="grid size-14 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm hover:bg-hanko/90 active:scale-90"
+                >
+                  <Plus className="size-6" />
+                </button>
+              </div>
+            </div>
+
+            {series.totalChapters ? (
+              <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-hanko transition-[width]"
+                  style={{
+                    width: `${Math.min(100, (series.chapter / series.totalChapters) * 100)}%`,
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {nextUrl && (
+              <Button asChild variant="secondary" className="mt-5 w-full rounded-xl sm:w-auto">
+                <a href={nextUrl} target="_blank" rel="noopener noreferrer">
+                  Read Ch. {formatChapter(series.chapter + 1)} <ExternalLink />
+                </a>
+              </Button>
+            )}
+          </section>
+        )}
 
         {/* Details */}
         <section className="mt-8 grid gap-6">
@@ -225,11 +465,22 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {KIND_ORDER.map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {KIND_LABEL[k]}
-                    </SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Read</SelectLabel>
+                    {READ_KINDS.map((k) => (
+                      <SelectItem key={k} value={k}>
+                        {KIND_LABEL[k]}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Watch</SelectLabel>
+                    {WATCH_KINDS.map((k) => (
+                      <SelectItem key={k} value={k}>
+                        {KIND_LABEL[k]}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </Field>
@@ -244,7 +495,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                 <SelectContent>
                   {STATUS_ORDER.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {STATUS_LABEL[s]}
+                      {statusLabel(s, series.kind)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -271,11 +522,12 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
           </Field>
 
           <Field
-            label="Reading link"
+            label={isWatchKind(series.kind) ? "Watching link" : "Reading link"}
             hint={
               <>
-                Paste a chapter URL and replace the number with{" "}
-                <code className="font-mono">{"{n}"}</code>. You'll get a “Read next” button.
+                Paste a chapter/episode URL and replace the number with{" "}
+                <code className="font-mono">{"{n}"}</code>. You'll get a “
+                {isWatchKind(series.kind) ? "Watch next" : "Read next"}” button.
               </>
             }
           >
@@ -299,25 +551,29 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
           </h2>
           {history && history.length > 0 ? (
             <ol className="relative ml-1.5 space-y-3 border-l pl-5">
-              {history.map((h, i) => (
-                <li key={h._id} className="relative text-sm">
-                  <span
-                    className={cn(
-                      "absolute top-1.5 -left-[1.6rem] size-2.5 rounded-full border-2 border-background",
-                      i === 0 ? "bg-hanko" : "bg-border",
-                    )}
-                  />
-                  <span className="font-mono font-medium tabular-nums">
-                    Ch. {formatChapter(h.chapter)}
-                  </span>
-                  <span className="ml-2 text-muted-foreground" title={fullDate(h.at)}>
-                    {relativeTime(h.at)}
-                  </span>
-                </li>
-              ))}
+              {history.map((h, i) => {
+                const label =
+                  h.season !== undefined && h.season > 0
+                    ? `S${h.season} · E${formatChapter(h.chapter)}`
+                    : `${progressLabel(series.kind) === "Episode" ? "Ep." : "Ch."} ${formatChapter(h.chapter)}`;
+                return (
+                  <li key={h._id} className="relative text-sm">
+                    <span
+                      className={cn(
+                        "absolute top-1.5 -left-[1.6rem] size-2.5 rounded-full border-2 border-background",
+                        i === 0 ? "bg-hanko" : "bg-border",
+                      )}
+                    />
+                    <span className="font-mono font-medium tabular-nums">{label}</span>
+                    <span className="ml-2 text-muted-foreground" title={fullDate(h.at)}>
+                      {relativeTime(h.at)}
+                    </span>
+                  </li>
+                );
+              })}
             </ol>
           ) : (
-            <p className="text-sm text-muted-foreground">Chapter changes will show up here.</p>
+            <p className="text-sm text-muted-foreground">Changes will show up here.</p>
           )}
         </section>
 
@@ -335,7 +591,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Remove {series.title}?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Its chapter history goes too. This can't be undone.
+                  Its history goes too. This can't be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -356,6 +612,160 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
         </div>
       </fieldset>
     </div>
+  );
+}
+
+function ManageLabelsDialog({ disabled }: { disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const labels = useQuery(api.labels.list) ?? [];
+  const createLabel = useMutation(api.labels.create);
+  const renameLabel = useMutation(api.labels.rename);
+  const removeLabel = useMutation(api.labels.remove);
+  const [newName, setNewName] = useState("");
+  const [editingId, setEditingId] = useState<Id<"labels"> | null>(null);
+  const [editName, setEditName] = useState("");
+
+  async function handleCreate() {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    try {
+      await createLabel({ name: trimmed });
+      setNewName("");
+      toast.success(`Created label “${trimmed}”`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't create label.");
+    }
+  }
+
+  async function handleRename(id: Id<"labels">) {
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      await renameLabel({ id, name: trimmed });
+      setEditingId(null);
+      toast.success("Renamed label");
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't rename label.");
+    }
+  }
+
+  async function handleRemove(id: Id<"labels">, name: string) {
+    try {
+      await removeLabel({ id });
+      toast.success(`Deleted label “${name}”`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't delete label.");
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className="flex items-center gap-1 rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+        >
+          <Settings2 className="size-3" /> Manage labels
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>Manage labels</DialogTitle>
+          <DialogDescription>Create, rename, or delete your custom labels.</DialogDescription>
+        </DialogHeader>
+
+        <div className="flex items-center gap-2 mt-2">
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleCreate();
+              }
+            }}
+            placeholder="New label name…"
+            className="rounded-xl text-sm"
+          />
+          <Button type="button" onClick={() => void handleCreate()} className="rounded-xl">
+            Add
+          </Button>
+        </div>
+
+        <div className="mt-4 max-h-60 overflow-y-auto space-y-2">
+          {labels.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-2">No labels yet.</p>
+          ) : (
+            labels.map((l) => (
+              <div
+                key={l._id}
+                className="flex items-center justify-between rounded-xl border bg-card px-3 py-2 text-sm"
+              >
+                {editingId === l._id ? (
+                  <div className="flex items-center gap-2 flex-1 mr-2">
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void handleRename(l._id);
+                        } else if (e.key === "Escape") {
+                          setEditingId(null);
+                        }
+                      }}
+                      className="h-8 rounded-lg text-sm"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => void handleRename(l._id)}
+                      className="h-8 rounded-lg"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="font-medium text-foreground">{l.name}</span>
+                )}
+                <div className="flex items-center gap-1">
+                  {editingId !== l._id && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(l._id);
+                        setEditName(l.name);
+                      }}
+                      className="p-1 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                      title="Rename"
+                      aria-label="Rename label"
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleRemove(l._id, l.name)}
+                    className="p-1 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    title="Delete"
+                    aria-label="Delete label"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -470,11 +880,11 @@ function ChapterInput({
       onCommit={(v) => {
         const n = Number(v);
         if (v.trim() && Number.isFinite(n) && n >= 0) return onCommit(n);
-        toast.error("Enter a chapter number, like 348 or 348.5");
+        toast.error("Enter a number, like 12 or 12.5");
         return false;
       }}
       style={{ width: `${Math.max(2, formatChapter(value).length) + 0.5}ch` }}
-      className="bg-transparent font-mono text-6xl leading-none font-semibold tabular-nums outline-none"
+      className="bg-transparent font-mono text-5xl sm:text-6xl leading-none font-semibold tabular-nums outline-none"
     />
   );
 }

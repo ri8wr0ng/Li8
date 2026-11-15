@@ -8,7 +8,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { scheduleNoteEmbedding, scheduleSeriesEmbedding } from "./embeddings";
 import { cleanList } from "./lib";
 import { insertNote } from "./notes";
-import { assertChapter, insertSeries, recordChapter } from "./series";
+import { assertChapter, computeSearchText, insertSeries, recordChapter } from "./series";
 import { vPageRef, vSeriesKind, vSeriesStatus } from "./validators";
 
 const MAX_LIST = 300;
@@ -23,6 +23,8 @@ export function seriesSummary(s: Doc<"series">) {
     status: s.status,
     chapter: s.chapter,
     totalChapters: s.totalChapters ?? null,
+    season: s.season ?? null,
+    totalSeasons: s.totalSeasons ?? null,
     genres: s.genres,
     lastReadAt: new Date(s.lastReadAt).toISOString().slice(0, 10),
   };
@@ -85,6 +87,8 @@ export const addSeries = internalMutation({
     userId: v.id("users"),
     title: v.string(),
     chapter: v.optional(v.number()),
+    season: v.optional(v.number()),
+    totalSeasons: v.optional(v.number()),
     kind: v.optional(vSeriesKind),
     status: v.optional(vSeriesStatus),
     altNames: v.optional(v.array(v.string())),
@@ -95,7 +99,12 @@ export const addSeries = internalMutation({
       return { error: "Chapter must be 0 or more." };
     }
     const id = await insertSeries(ctx, userId, args);
-    return { id, title: args.title.trim(), chapter: args.chapter ?? 0 };
+    return {
+      id,
+      title: args.title.trim(),
+      chapter: args.chapter ?? 0,
+      season: args.season ?? null,
+    };
   },
 });
 
@@ -191,24 +200,42 @@ export const updateSeries = internalMutation({
   args: {
     userId: v.id("users"),
     seriesId: v.string(),
+    kind: v.optional(vSeriesKind),
     status: v.optional(vSeriesStatus),
     altNames: v.optional(v.array(v.string())),
+    season: v.optional(v.number()),
+    totalSeasons: v.optional(v.number()),
     totalChapters: v.optional(v.number()),
   },
-  handler: async (ctx, { userId, seriesId, status, altNames, totalChapters }) => {
+  handler: async (
+    ctx,
+    { userId, seriesId, kind, status, altNames, season, totalSeasons, totalChapters },
+  ) => {
     const id = ctx.db.normalizeId("series", seriesId);
     const series = id && (await ctx.db.get("series", id));
     if (!series || series.userId !== userId) return { error: "No series with that id." };
     if (totalChapters !== undefined && (!Number.isFinite(totalChapters) || totalChapters < 0)) {
       return { error: "Total chapters must be 0 or more." };
     }
+    const nextKind = kind ?? series.kind;
+    const nextAltNames = altNames ? cleanList(altNames) : series.altNames;
+    const searchText = computeSearchText({
+      title: series.title,
+      altNames: nextAltNames,
+      genres: series.genres,
+      kind: nextKind,
+    });
     await ctx.db.patch("series", series._id, {
+      ...(kind ? { kind } : {}),
       ...(status ? { status } : {}),
-      ...(altNames ? { altNames: cleanList(altNames) } : {}),
+      ...(season !== undefined ? { season } : {}),
+      ...(totalSeasons !== undefined ? { totalSeasons } : {}),
+      ...(altNames ? { altNames: nextAltNames } : {}),
       ...(totalChapters !== undefined ? { totalChapters } : {}),
+      searchText,
       updatedAt: Date.now(),
     });
-    if (altNames) await scheduleSeriesEmbedding(ctx, series._id);
+    if (altNames || kind) await scheduleSeriesEmbedding(ctx, series._id);
     return { id: series._id, title: series.title, status: status ?? series.status };
   },
 });
