@@ -1,18 +1,22 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import {
+  ChevronsUpDown,
+  CircleHelp,
   Download,
   FileText,
   Library,
   LogOut,
   MessageCircle,
-  Monitor,
   Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
   PenLine,
   Search,
+  Settings,
   Sparkles,
-  Sun,
+  UserRound,
   WifiOff,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -20,15 +24,17 @@ import { toast } from "sonner";
 import { AiPanel, AiPanelProvider, useAiPanel } from "#/components/ask/ai-panel";
 import { Wordmark } from "#/components/brand";
 import { useCommandPalette } from "#/components/command-palette";
+import { HelpDialog } from "#/components/help-dialog";
 import { InstallBanner, IosInstallHelp } from "#/components/install-prompt";
 import { MobileNav } from "#/components/mobile-nav";
+import { Button } from "#/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "#/components/ui/tooltip";
+import { UserAvatar } from "#/components/user-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
@@ -38,6 +44,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -45,8 +52,8 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
   SidebarTrigger,
+  useSidebar,
 } from "#/components/ui/sidebar";
 import { useInstall } from "#/lib/install";
 import { clearCache, useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
@@ -59,7 +66,9 @@ const modKey = isMac ? "⌘" : "Ctrl";
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AiPanelProvider>
-      <Shell>{children}</Shell>
+      <SidebarProvider>
+        <Shell>{children}</Shell>
+      </SidebarProvider>
     </AiPanelProvider>
   );
 }
@@ -67,28 +76,46 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const { openPalette } = useCommandPalette();
   const panel = useAiPanel();
-  const chatStatus = useQuery(api.chat.status, {});
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const newNote = useNewNote();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // On phones the sidebar is a sheet over the page: every entry in it closes the
+  // sheet as it's tapped, so you land on the page (or palette) straight away.
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+  const closeThen = (action: () => void) => () => {
+    closeMobile();
+    action();
+  };
 
   return (
-    <SidebarProvider>
+    <>
       <Sidebar collapsible="icon" variant="sidebar">
-        <SidebarHeader className="flex-row items-center justify-between gap-2 p-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-          <Link to="/" aria-label="Inkmark home" className="flex min-w-0 items-center">
+        <SidebarHeader className="flex-row items-center justify-between gap-2 p-3 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+          <Link
+            to="/"
+            onClick={closeMobile}
+            aria-label="Inkmark home"
+            className="flex min-w-0 items-center"
+          >
             <Wordmark className="group-data-[collapsible=icon]:[&>span:last-child]:hidden" />
           </Link>
-          <span className="group-data-[collapsible=icon]:hidden">
+          <span className="ml-auto group-data-[collapsible=icon]:hidden">
             <OfflinePill />
           </span>
+          {/* Desktop only: on phones the sidebar is a sheet with its own close gesture. */}
+          {!isMobile && <CollapseButton />}
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupContent>
+            {/* Three clusters (find, create, go), separated by space rather than rules. */}
+            <SidebarGroupContent className="flex flex-col gap-4">
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={openPalette} tooltip="Search">
+                  <SidebarMenuButton onClick={closeThen(openPalette)} tooltip="Search">
                     <Search />
                     <span>Search</span>
                     <kbd className="ml-auto rounded border bg-background px-1.5 font-mono text-[0.7rem] group-data-[collapsible=icon]:hidden">
@@ -99,7 +126,7 @@ function Shell({ children }: { children: ReactNode }) {
                 {panel.available && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      onClick={panel.toggle}
+                      onClick={closeThen(panel.toggle)}
                       tooltip="Ask AI"
                       aria-pressed={panel.open}
                     >
@@ -111,12 +138,9 @@ function Shell({ children }: { children: ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )}
-              </SidebarMenu>
-
-              <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={newNote}
+                    onClick={closeThen(() => void newNote())}
                     tooltip="New note"
                     className="bg-hanko font-medium text-hanko-foreground hover:bg-hanko/90 hover:text-hanko-foreground active:bg-hanko/90 data-[active=true]:bg-hanko data-[active=true]:text-hanko-foreground"
                   >
@@ -126,8 +150,6 @@ function Shell({ children }: { children: ReactNode }) {
                 </SidebarMenuItem>
               </SidebarMenu>
 
-              <SidebarSeparator />
-
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -135,7 +157,7 @@ function Shell({ children }: { children: ReactNode }) {
                     isActive={pathname === "/" || pathname.startsWith("/notes")}
                     tooltip="Notes"
                   >
-                    <Link to="/">
+                    <Link onClick={closeMobile} to="/">
                       <FileText />
                       <span>Notes</span>
                     </Link>
@@ -147,16 +169,16 @@ function Shell({ children }: { children: ReactNode }) {
                     isActive={pathname.startsWith("/library")}
                     tooltip="Library"
                   >
-                    <Link to="/library">
+                    <Link onClick={closeMobile} to="/library">
                       <Library />
                       <span>Library</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {chatStatus?.enabled && (
+                {panel.available && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={pathname.startsWith("/ask")} tooltip="Ask">
-                      <Link to="/ask">
+                      <Link onClick={closeMobile} to="/ask">
                         <MessageCircle />
                         <span>Ask</span>
                       </Link>
@@ -170,6 +192,7 @@ function Shell({ children }: { children: ReactNode }) {
 
         <SidebarFooter>
           <InstallBanner />
+          <SystemGroup onNavigate={closeMobile} />
           <SidebarMenu>
             <SidebarMenuItem>
               <UserMenu align="start" />
@@ -206,8 +229,90 @@ function Shell({ children }: { children: ReactNode }) {
 
       <InstallBanner className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-30 mx-auto max-w-md lg:hidden" />
 
-      <MobileNav showAsk={chatStatus?.enabled === true} onSearch={openPalette} />
-    </SidebarProvider>
+      <MobileNav showAsk={panel.available} onSearch={openPalette} />
+    </>
+  );
+}
+
+/** Collapses the sidebar to icons and back (also ⌘B / Ctrl+B). */
+function CollapseButton() {
+  const { state, toggleSidebar } = useSidebar();
+  const collapsed = state === "collapsed";
+  const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          aria-label={label}
+          aria-expanded={!collapsed}
+          className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+        >
+          {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        {label} <span className="ml-1 opacity-70">{modKey} B</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** Theme, settings and help: the things you reach for rarely, kept at the foot of the sidebar. */
+function SystemGroup({ onNavigate }: { onNavigate: () => void }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [help, setHelp] = useState(false);
+  const dark = resolvedTheme === "dark";
+
+  return (
+    <SidebarGroup className="p-0">
+      <SidebarGroupLabel>System</SidebarGroupLabel>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => setTheme(dark ? "light" : "dark")}
+            tooltip={dark ? "Light mode" : "Dark mode"}
+            role="switch"
+            aria-checked={dark}
+          >
+            <Moon />
+            <span>Dark mode</span>
+            {/* Visual only: the whole row is the switch. */}
+            <span
+              aria-hidden
+              data-state={dark ? "checked" : "unchecked"}
+              className="ml-auto inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full bg-input p-px transition-colors data-[state=checked]:bg-primary group-data-[collapsible=icon]:hidden"
+            >
+              <span className="block size-4 rounded-full bg-background shadow-xs transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] in-data-[state=checked]:translate-x-3.5 motion-reduce:transition-none" />
+            </span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild isActive={pathname.startsWith("/settings")} tooltip="Settings">
+            <Link to="/settings" onClick={onNavigate}>
+              <Settings />
+              <span>Settings</span>
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => {
+              onNavigate();
+              setHelp(true);
+            }}
+            tooltip="Help and shortcuts"
+          >
+            <CircleHelp />
+            <span>Help & shortcuts</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+      <HelpDialog open={help} onOpenChange={setHelp} />
+    </SidebarGroup>
   );
 }
 
@@ -249,60 +354,60 @@ function OfflinePill() {
 function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolean }) {
   const me = useCachedQuery(api.users.me, "me");
   const { signOut } = useAuthActions();
-  const { theme, setTheme } = useTheme();
   const install = useInstall();
+  const { isMobile, setOpenMobile } = useSidebar();
   const [iosHelp, setIosHelp] = useState(false);
-  const name = me?.name ?? me?.email ?? "You";
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("");
-  const avatar = (
-    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary font-display text-sm font-semibold">
-      {initials || "·"}
-    </span>
-  );
+  const close = () => isMobile && setOpenMobile(false);
+  const avatar = <UserAvatar user={me} />;
 
   return (
     <DropdownMenu>
       {compact ? (
-        <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-xl p-0.5 text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        <DropdownMenuTrigger
+          aria-label="Account"
+          className="flex items-center gap-2.5 rounded-full p-0.5 text-left text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
           {avatar}
         </DropdownMenuTrigger>
       ) : (
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton size="lg">
+          <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
             {avatar}
-            <span className="min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <span className="block truncate text-sm font-medium">{me?.name ?? "Signed in"}</span>
               {me?.email && (
                 <span className="block truncate text-xs text-muted-foreground">{me.email}</span>
               )}
             </span>
+            <ChevronsUpDown className="ml-auto text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
       )}
-      <DropdownMenuContent align={align} className="w-56">
-        <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
-          {me?.email ?? name}
+      <DropdownMenuContent
+        align={align}
+        side={compact ? "bottom" : "top"}
+        className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+      >
+        <DropdownMenuLabel className="flex items-center gap-2.5 font-normal">
+          <UserAvatar user={me} />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium">{me?.name ?? "Signed in"}</span>
+            {me?.email && (
+              <span className="block truncate text-xs text-muted-foreground">{me.email}</span>
+            )}
+          </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-          Theme
-        </DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light">
-            <Sun /> Light
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">
-            <Moon /> Dark
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">
-            <Monitor /> System
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/profile" onClick={close}>
+            <UserRound /> Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/settings" onClick={close}>
+            <Settings /> Settings
+          </Link>
+        </DropdownMenuItem>
         {install.kind !== "none" && (
           <DropdownMenuItem
             onSelect={() => (install.kind === "ios" ? setIosHelp(true) : void install.install())}
@@ -310,6 +415,7 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
             <Download /> Install app
           </DropdownMenuItem>
         )}
+        <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void signOut().then(clearCache)}>
           <LogOut /> Sign out
         </DropdownMenuItem>

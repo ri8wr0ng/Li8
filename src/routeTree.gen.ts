@@ -13,6 +13,8 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
+import { Route as AppProfileRouteImport } from './routes/_app/profile'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppLibraryIndexRouteImport } from './routes/_app/library.index'
 import { Route as AppLibrarySeriesIdRouteImport } from './routes/_app/library.$seriesId'
 import { Route as AppNotesNoteIdRouteImport } from './routes/_app/notes.$noteId'
@@ -36,6 +38,16 @@ const AppAskRoute = AppAskRouteImport.update({
   path: '/ask',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLibraryIndexRoute = AppLibraryIndexRouteImport.update({
   id: '/library/',
   path: '/library/',
@@ -56,6 +68,8 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/ask': typeof AppAskRoute
+  '/profile': typeof AppProfileRoute
+  '/settings': typeof AppSettingsRoute
   '/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
   '/library/': typeof AppLibraryIndexRoute
@@ -63,6 +77,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/ask': typeof AppAskRoute
+  '/profile': typeof AppProfileRoute
+  '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
   '/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -73,6 +89,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/ask': typeof AppAskRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -84,6 +102,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/ask'
+    | '/profile'
+    | '/settings'
     | '/library/$seriesId'
     | '/notes/$noteId'
     | '/library/'
@@ -91,6 +111,8 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/ask'
+    | '/profile'
+    | '/settings'
     | '/'
     | '/library/$seriesId'
     | '/notes/$noteId'
@@ -100,6 +122,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/_app/ask'
+    | '/_app/profile'
+    | '/_app/settings'
     | '/_app/'
     | '/_app/library/$seriesId'
     | '/_app/notes/$noteId'
@@ -141,6 +165,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAskRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/library/': {
       id: '/_app/library/'
       path: '/library'
@@ -167,6 +205,8 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAskRoute: typeof AppAskRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppLibrarySeriesIdRoute: typeof AppLibrarySeriesIdRoute
   AppNotesNoteIdRoute: typeof AppNotesNoteIdRoute
@@ -175,6 +215,8 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAskRoute: AppAskRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppLibrarySeriesIdRoute: AppLibrarySeriesIdRoute,
   AppNotesNoteIdRoute: AppNotesNoteIdRoute,

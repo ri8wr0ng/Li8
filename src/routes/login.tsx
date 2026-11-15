@@ -1,11 +1,12 @@
 import { useOauth, useSignInWithGoogle } from "@convex-dev/auth/methods/google/react";
 import { Navigate, createFileRoute } from "@tanstack/react-router";
 import { useConvexAuth } from "convex/react";
-import { Loader2, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Loader2, Search } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Splash, Wordmark } from "#/components/brand";
 import { Button } from "#/components/ui/button";
 import { clearCache } from "#/lib/offline";
+import { cn } from "#/lib/utils";
 import { HOME_TITLE, SITE_URL, absoluteUrl } from "#/lib/seo";
 import { api } from "../../convex/_generated/api";
 
@@ -67,23 +68,26 @@ function SignedOut() {
   }
 
   return (
-    <main className="pt-safe pb-safe grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
-      <section className="flex flex-col justify-between gap-12 px-6 py-8 sm:px-12 lg:py-12">
+    <main className="pt-safe pb-safe flex min-h-dvh flex-col">
+      {/* Same column as the content below, so the logo lines up with the headline. */}
+      <header className="mx-auto w-full max-w-6xl px-6 pt-6 sm:px-10 sm:pt-8">
         <Wordmark />
+      </header>
 
-        <div className="max-w-md">
-          <h1 className="font-display text-[2.6rem] leading-[1.05] font-semibold tracking-[-0.03em] text-balance sm:text-6xl">
-            Notes, and where you <span className="text-hanko italic">left off.</span>
+      <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 py-10 sm:px-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16 lg:py-16">
+        <section className="max-w-xl">
+          <h1 className="font-display text-[2.75rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-[4.25rem]">
+            Remember where you left off.
           </h1>
-          <p className="mt-5 text-lg text-muted-foreground text-pretty">
-            Write things down, find them in a keystroke, and never lose your place in a series
-            again. Type <Kbd>btth 349</Kbd> and you're done.
+          <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-muted-foreground text-pretty">
+            Inkmark is a notebook and a reading tracker in one. Type a title and a chapter, and it
+            keeps your place in every manga, novel and show you follow.
           </p>
 
           <Button
             size="lg"
             variant="outline"
-            className="mt-9 h-12 w-full gap-3 rounded-xl text-[0.95rem] sm:w-auto sm:px-6"
+            className="mt-9 h-12 w-full gap-3 rounded-xl bg-card text-[0.95rem] sm:w-auto sm:px-6"
             onClick={start}
             disabled={pending}
           >
@@ -95,19 +99,36 @@ function SignedOut() {
               {error}
             </p>
           )}
-        </div>
 
-        <p className="text-xs text-muted-foreground">
-          Your notes sync across every device you sign in on.
-        </p>
-      </section>
+          <ul className="mt-12 grid gap-4 sm:grid-cols-3 sm:gap-6">
+            <Point title="Notes that save as you type">
+              No save button, no folders to file into.
+            </Point>
+            <Point title="One search for everything">
+              <Kbd>{isMac ? "⌘" : "Ctrl"} K</Kbd> finds notes and series by title or meaning.
+            </Point>
+            <Point title="Works offline">Installs like an app and syncs when you reconnect.</Point>
+          </ul>
+        </section>
 
-      <Showcase />
+        <LiveDemo />
+      </div>
     </main>
   );
 }
 
-function Kbd({ children }: { children: string }) {
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+
+function Point({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <li>
+      <p className="font-display font-semibold tracking-[-0.01em]">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{children}</p>
+    </li>
+  );
+}
+
+function Kbd({ children }: { children: ReactNode }) {
   return (
     <kbd className="rounded-md border bg-card px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">
       {children}
@@ -115,44 +136,167 @@ function Kbd({ children }: { children: string }) {
   );
 }
 
-/** A static preview of the product, not interactive. */
-function Showcase() {
-  return (
-    <section
-      aria-hidden
-      className="relative hidden overflow-hidden border-l bg-secondary/60 lg:flex lg:items-center lg:justify-center"
-    >
-      <div className="w-[min(26rem,80%)] space-y-4">
-        <div className="rotate-[-1.5deg] rounded-2xl border bg-card p-5 shadow-[0_1px_0_rgba(0,0,0,0.04),0_12px_32px_-12px_rgba(28,26,23,0.25)]">
-          <div className="flex items-center gap-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            Manhua <span className="size-1 rounded-full bg-border" /> Reading
-          </div>
-          <div className="mt-2 font-display text-xl font-semibold tracking-tight">
-            Battle Through The Heavens
-          </div>
-          <div className="text-sm text-muted-foreground">BTTH · 斗破苍穹</div>
-          <div className="mt-5 flex items-end justify-between">
-            <div>
-              <div className="text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase">
-                Chapter
-              </div>
-              <div className="font-mono text-5xl leading-none font-semibold tabular-nums">348</div>
-            </div>
-            <span className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground">
-              <Plus className="size-6" />
-            </span>
-          </div>
-        </div>
+type Example = { command: string; title: string; meta: string; unit: string; from: number };
 
-        <div className="translate-x-8 rotate-[1deg] rounded-2xl border bg-card p-5 shadow-[0_12px_32px_-16px_rgba(28,26,23,0.25)]">
-          <div className="font-display text-lg font-semibold tracking-tight">Japan trip</div>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Book the ryokan in Kyoto before March. Rail pass covers the <mark>Shinkansen</mark>, not
-            the Nozomi trains…
+const EXAMPLES: Example[] = [
+  {
+    command: "btth 349",
+    title: "Battle Through The Heavens",
+    meta: "Manhua, in progress",
+    unit: "Chapter",
+    from: 348,
+  },
+  {
+    command: "frieren 12",
+    title: "Frieren: Beyond Journey's End",
+    meta: "Anime, season 2",
+    unit: "Episode",
+    from: 11,
+  },
+  {
+    command: "orv 201",
+    title: "Omniscient Reader's Viewpoint",
+    meta: "Manhwa, in progress",
+    unit: "Chapter",
+    from: 200,
+  },
+];
+
+type Phase = "typing" | "stamped";
+
+/**
+ * The product's one trick, played out: a quick-add command types itself, the
+ * chapter rolls over and a hanko seal marks the card. Decorative, so hidden
+ * from assistive tech; reduced motion shows the finished state and holds.
+ */
+function LiveDemo() {
+  const reduced = useReducedMotion();
+  const [index, setIndex] = useState(0);
+  const [typed, setTyped] = useState(0);
+  const [phase, setPhase] = useState<Phase>("typing");
+  const example = EXAMPLES[index];
+
+  useEffect(() => {
+    if (reduced) return undefined;
+    const timer =
+      phase === "typing"
+        ? typed < example.command.length
+          ? setTimeout(() => setTyped((n) => n + 1), typed === 0 ? 700 : 85)
+          : setTimeout(() => setPhase("stamped"), 450)
+        : setTimeout(() => {
+            setIndex((i) => (i + 1) % EXAMPLES.length);
+            setTyped(0);
+            setPhase("typing");
+          }, 2800);
+    return () => clearTimeout(timer);
+  }, [reduced, phase, typed, example.command.length]);
+
+  const stamped = reduced || phase === "stamped";
+  const shown = reduced ? example.command : example.command.slice(0, typed);
+  const to = example.from + 1;
+
+  return (
+    <section aria-hidden className="relative mx-auto w-full max-w-[30rem] select-none lg:mx-0">
+      {/* The search bar the command is typed into. */}
+      <div className="flex h-14 items-center gap-3 rounded-2xl border bg-card px-4 shadow-[0_1px_0_rgb(28_26_23/0.04),0_18px_40px_-24px_rgb(28_26_23/0.35)]">
+        <Search className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate font-mono text-[0.95rem]">
+          {shown}
+          {!stamped && (
+            <span className="ml-px inline-block h-[1.1em] w-[2px] translate-y-[0.15em] animate-pulse bg-hanko" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "rounded-md border px-1.5 py-0.5 font-mono text-[0.7rem] text-muted-foreground transition-opacity duration-200",
+            shown.length === example.command.length ? "opacity-100" : "opacity-0",
+          )}
+        >
+          Enter
+        </span>
+      </div>
+
+      {/* The series card it updates. */}
+      <div className="relative mt-4 overflow-hidden rounded-[1.25rem] border bg-card p-6 sm:p-7">
+        <p className="text-sm text-muted-foreground">{example.meta}</p>
+        <p className="mt-1 max-w-[16rem] font-display text-2xl leading-tight font-semibold tracking-[-0.025em] text-balance sm:max-w-[18rem]">
+          {example.title}
+        </p>
+
+        <div className="mt-8 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">{example.unit}</p>
+            <div className="relative mt-1 h-[3.75rem] overflow-hidden font-mono text-[3.75rem] leading-none font-semibold tracking-[-0.04em] tabular-nums">
+              {!(stamped && reduced) && (
+                <span
+                  key={`${index}-from-${String(stamped)}`}
+                  className={cn(
+                    "absolute inset-0",
+                    stamped && "animate-[roll-out_380ms_cubic-bezier(0.32,0.72,0,1)_forwards]",
+                  )}
+                >
+                  {example.from}
+                </span>
+              )}
+              {stamped && (
+                <span
+                  key={`${index}-to`}
+                  className={cn(
+                    "absolute inset-0",
+                    !reduced && "animate-[roll-in_380ms_cubic-bezier(0.32,0.72,0,1)_both]",
+                  )}
+                >
+                  {to}
+                </span>
+              )}
+              {/* Reserves the width of the wider number. */}
+              <span className="invisible">{to}</span>
+            </div>
+          </div>
+          <p className="pb-1 text-right text-sm text-muted-foreground">
+            {stamped ? "Saved just now" : "Last read yesterday"}
           </p>
         </div>
+
+        {/* The seal. */}
+        {stamped && (
+          <span
+            key={`${index}-seal`}
+            className={cn(
+              "absolute top-5 right-5 grid size-[4.5rem] -rotate-8 place-items-center rounded-full border-[3px] border-hanko text-hanko",
+              !reduced && "animate-[stamp-press_420ms_cubic-bezier(0.2,0.9,0.3,1.2)_both]",
+            )}
+          >
+            <span className="text-center leading-none">
+              <span className="block font-mono text-lg font-bold tabular-nums">{to}</span>
+              <span className="mt-0.5 block text-[0.6rem] font-semibold">saved</span>
+            </span>
+          </span>
+        )}
+      </div>
+
+      {/* A note: the other half of the app, kept quieter. */}
+      <div className="mt-4 ml-8 rounded-[1.25rem] border bg-card/70 p-5">
+        <p className="font-display font-semibold tracking-[-0.01em]">Japan trip</p>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Book the ryokan in Kyoto before March. Rail pass covers the{" "}
+          <mark className="rounded-sm bg-marker px-0.5 text-marker-foreground">Shinkansen</mark>,
+          not the Nozomi…
+        </p>
       </div>
     </section>
+  );
+}
+
+function useReducedMotion() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
   );
 }
 

@@ -6,6 +6,9 @@ export default defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
+    // Generated avatar: a DiceBear style and the seed it's drawn from. Unset means the defaults.
+    avatarStyle: v.optional(v.string()),
+    avatarSeed: v.optional(v.string()),
   }),
 
   notes: defineTable({
@@ -63,7 +66,9 @@ export default defineSchema({
     season: v.optional(v.number()),
     chapter: v.number(),
     at: v.number(),
-  }).index("by_series_at", ["seriesId", "at"]),
+  })
+    .index("by_series_at", ["seriesId", "at"])
+    .index("by_user_at", ["userId", "at"]),
 
   // One row per AI model call, for the Usage tab. Cost is in US dollars.
   aiUsage: defineTable({
