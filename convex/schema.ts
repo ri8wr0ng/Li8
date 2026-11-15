@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { vSeriesKind, vSeriesStatus, vUsageKind } from "./validators";
+import { vSeriesKind, vSeriesLink, vSeriesStatus, vUsageKind } from "./validators";
 
 export default defineSchema({
   users: defineTable({
@@ -46,8 +46,10 @@ export default defineSchema({
     searchText: v.optional(v.string()),
     description: v.string(),
     genres: v.array(v.string()),
-    // e.g. "https://example.com/read/btth/chapter-{n}"
+    // Legacy single reading link; superseded by `links` (cleared once links are saved).
     readUrlTemplate: v.optional(v.string()),
+    // Reading links ("https://example.com/btth/chapter-{n}") and website links, in order.
+    links: v.optional(v.array(vSeriesLink)),
     // AniList media id, when the series was filled in from AniList. No cover art is stored.
     anilistId: v.optional(v.number()),
     lastReadAt: v.number(),

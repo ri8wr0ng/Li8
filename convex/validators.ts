@@ -33,3 +33,10 @@ export type PageRef = Infer<typeof vPageRef>;
 /** What an AI call was for: an Ask reply, indexing notes/series, or a search. */
 export const vUsageKind = v.union(v.literal("chat"), v.literal("index"), v.literal("search"));
 export type UsageKind = Infer<typeof vUsageKind>;
+
+/**
+ * A link saved on a series. A URL containing `{n}` is a reading/watching link
+ * (the next chapter or episode number is filled in); anything else is a plain website link.
+ */
+export const vSeriesLink = v.object({ url: v.string(), label: v.optional(v.string()) });
+export type SeriesLink = Infer<typeof vSeriesLink>;
