@@ -156,3 +156,8 @@ export function parseChapterCommand(
   if (set) return { name: set[1].trim(), chapter: Number(set[2]) };
   return null;
 }
+
+/** Every kind for pickers, grouped Read / Watch. */
+export const KIND_OPTIONS: { value: SeriesKind; label: string; group: string }[] = KIND_ORDER.map(
+  (k) => ({ value: k, label: KIND_LABEL[k], group: isWatchKind(k) ? "Watch" : "Read" }),
+);

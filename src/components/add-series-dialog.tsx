@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AniListResults, handleListKey, useAniListSearch } from "#/components/anilist-results";
 import { Button } from "#/components/ui/button";
+import { Combobox } from "#/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -19,20 +20,16 @@ import { Label } from "#/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
 import { type AniListFill, type AniListMedia, fillFrom } from "#/lib/anilist";
 import { useOnline, useReadOnly } from "#/lib/offline";
 import {
-  KIND_LABEL,
-  READ_KINDS,
+  KIND_OPTIONS,
   STATUS_LABEL,
   STATUS_ORDER,
-  WATCH_KINDS,
   isEpisodic,
   isSeriesKind,
   isSeriesStatus,
@@ -68,8 +65,6 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
   const [season, setSeason] = useState("1");
   const [totalSeasons, setTotalSeasons] = useState("");
   const [selectedLabelIds, setSelectedLabelIds] = useState<Id<"labels">[]>([]);
-  const [newLabelName, setNewLabelName] = useState("");
-  const [isCreatingLabel, setIsCreatingLabel] = useState(false);
   const [altNames, setAltNames] = useState("");
   const [kind, setKind] = useState<SeriesKind>("manhua");
   const [status, setStatus] = useState<SeriesStatus>("reading");
@@ -102,29 +97,6 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
   function unlink() {
     setFill(null);
     setAltNames("");
-  }
-
-  function toggleLabel(id: Id<"labels">) {
-    setSelectedLabelIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
-    );
-  }
-
-  async function handleCreateLabel() {
-    const trimmed = newLabelName.trim();
-    if (!trimmed) {
-      setIsCreatingLabel(false);
-      return;
-    }
-    try {
-      const id = await createLabel({ name: trimmed });
-      setSelectedLabelIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-      setNewLabelName("");
-      setIsCreatingLabel(false);
-    } catch (err) {
-      console.error(err);
-      toast.error("Couldn't create label.");
-    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -234,29 +206,15 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
         )}
         <div className={cn("grid gap-2", kind === "movie" && "col-span-2")}>
           <Label>Type</Label>
-          <Select value={kind} onValueChange={(v) => isSeriesKind(v) && setKind(v)}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Read</SelectLabel>
-                {READ_KINDS.map((k) => (
-                  <SelectItem key={k} value={k}>
-                    {KIND_LABEL[k]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-              <SelectGroup>
-                <SelectLabel>Watch</SelectLabel>
-                {WATCH_KINDS.map((k) => (
-                  <SelectItem key={k} value={k}>
-                    {KIND_LABEL[k]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          <Combobox
+            aria-label="Type"
+            options={KIND_OPTIONS}
+            value={kind}
+            onChange={(v) => isSeriesKind(v) && setKind(v)}
+            placeholder="Type"
+            searchPlaceholder="Search types…"
+            className="w-full"
+          />
         </div>
       </div>
 
@@ -294,63 +252,28 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
       {/* Label picker */}
       <div className="grid gap-2">
         <Label>Labels</Label>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {labels.map((l) => {
-            const selected = selectedLabelIds.includes(l._id);
-            return (
-              <button
-                key={l._id}
-                type="button"
-                onClick={() => toggleLabel(l._id)}
-                className={cn(
-                  "rounded-full px-2.5 py-1 text-xs font-medium border transition-colors",
-                  selected
-                    ? "bg-hanko text-hanko-foreground border-transparent"
-                    : "bg-secondary text-secondary-foreground hover:bg-accent border-transparent",
-                )}
-              >
-                {l.name}
-              </button>
-            );
-          })}
-          {isCreatingLabel ? (
-            <div className="flex items-center gap-1">
-              <Input
-                value={newLabelName}
-                onChange={(e) => setNewLabelName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void handleCreateLabel();
-                  } else if (e.key === "Escape") {
-                    setIsCreatingLabel(false);
-                    setNewLabelName("");
-                  }
-                }}
-                placeholder="New label…"
-                className="h-7 w-28 rounded-full text-xs"
-                autoFocus
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void handleCreateLabel()}
-                className="h-7 px-2 text-xs"
-              >
-                Save
-              </Button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsCreatingLabel(true)}
-              className="rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
-            >
-              + Create label…
-            </button>
-          )}
-        </div>
+        <Combobox
+          multiple
+          aria-label="Labels"
+          options={labels.map((l) => ({ value: l._id, label: l.name }))}
+          value={selectedLabelIds}
+          // Values are label ids, or the id of a label just created below.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+          onChange={(next) => setSelectedLabelIds(next as Id<"labels">[])}
+          onCreate={async (name) => {
+            try {
+              return await createLabel({ name });
+            } catch (err) {
+              console.error(err);
+              toast.error("Couldn't create label.");
+              return undefined;
+            }
+          }}
+          placeholder="No labels"
+          searchPlaceholder="Search or create a label…"
+          emptyText="Type to create a label."
+          className="w-full"
+        />
       </div>
 
       <div className="grid gap-2">

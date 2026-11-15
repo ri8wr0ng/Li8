@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { Splash } from "#/components/brand";
 import { Providers } from "#/components/providers";
+import { DESCRIPTION, HOME_TITLE, SITE_NAME, SITE_URL, TAGLINE, absoluteUrl } from "#/lib/seo";
 import { THEME_INIT_SCRIPT } from "#/lib/theme";
 
 import appCss from "../styles.css?url";
@@ -22,8 +23,38 @@ export const Route = createRootRoute({
         content:
           "width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
       },
-      { title: "Inkmark" },
-      { name: "description", content: "Notes, and where you left off." },
+      { title: HOME_TITLE },
+      { name: "description", content: DESCRIPTION },
+      { name: "application-name", content: SITE_NAME },
+      // Social cards. Crawlers read the prerendered shell, so these cover every URL.
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: SITE_NAME },
+      { property: "og:title", content: `${SITE_NAME}: ${TAGLINE}` },
+      { property: "og:description", content: DESCRIPTION },
+      { property: "og:image", content: absoluteUrl("/og-image.png") },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: `${SITE_NAME}: ${TAGLINE}` },
+      { property: "og:locale", content: "en_US" },
+      ...(SITE_URL ? [{ property: "og:url", content: SITE_URL }] : []),
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: `${SITE_NAME}: ${TAGLINE}` },
+      { name: "twitter:description", content: DESCRIPTION },
+      { name: "twitter:image", content: absoluteUrl("/og-image.png") },
+      {
+        "script:ld+json": {
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: SITE_NAME,
+          description: DESCRIPTION,
+          applicationCategory: "ProductivityApplication",
+          operatingSystem: "Any",
+          browserRequirements: "Requires JavaScript",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          image: absoluteUrl("/og-image.png"),
+          ...(SITE_URL ? { url: SITE_URL } : {}),
+        },
+      },
       // Set before first paint by THEME_INIT_SCRIPT, then kept in sync by useTheme().
       { name: "theme-color", content: "#F7F4EE" },
       { name: "color-scheme", content: "light dark" },

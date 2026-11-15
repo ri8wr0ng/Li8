@@ -37,11 +37,11 @@ The marker colors exist only for search highlighting. A highlighted word should 
 
 ## Type
 
-| Role                                                       | Font                          | Notes                                                 |
-| ---------------------------------------------------------- | ----------------------------- | ----------------------------------------------------- |
-| Display: page titles, note titles, series titles, wordmark | **Fraunces** (variable serif) | Semibold, tracking −0.02em                            |
-| UI and body text                                           | **Geist**                     | 15–17px body; note text is 17px with 1.75 line height |
-| Numbers: chapters, counts, shortcuts                       | **Geist Mono**                | Always `tabular-nums`                                 |
+| Role                                                       | Font           | Notes                                                 |
+| ---------------------------------------------------------- | -------------- | ----------------------------------------------------- |
+| Display: page titles, note titles, series titles, wordmark | **Geist**      | Semibold, tracking −0.02em                            |
+| UI and body text                                           | **Roboto**     | 15–17px body; note text is 17px with 1.75 line height |
+| Numbers: chapters, counts, shortcuts                       | **Geist Mono** | Always `tabular-nums`                                 |
 
 All fonts are self-hosted through `@fontsource-variable`, so they work offline and in the installed app.
 
