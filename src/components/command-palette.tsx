@@ -11,7 +11,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { useCachedQuery, useReadOnly } from "#/lib/offline";
+import { useReadOnly } from "#/lib/offline";
 import { useTheme } from "#/lib/theme";
 import {
   createContext,
@@ -29,7 +29,6 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "#/compone
 import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
 import { Highlight, snippet } from "#/lib/highlight";
-import { useSearch } from "#/lib/search";
 import { acronym, formatChapter, parseChapterCommand } from "#/lib/series";
 import { api } from "../../convex/_generated/api";
 import type { Doc } from "../../convex/_generated/dataModel";
@@ -137,52 +136,79 @@ function SearchSheet({
 
 const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
-type MeaningResult = { kind: "note" | "series"; id: string; score: number };
+type MeaningResult =
+  | { kind: "note"; note: Doc<"notes">; score: number }
+  | { kind: "series"; series: Doc<"series">; score: number };
 type MeaningState = { status: "idle" | "loading" | "done" | "error"; results: MeaningResult[] };
 type MeaningItem = { kind: "note"; doc: Doc<"notes"> } | { kind: "series"; doc: Doc<"series"> };
 
 const MEANING_MIN_CHARS = 3;
 const MEANING_DEBOUNCE_MS = 400;
+const KEYWORD_DEBOUNCE_MS = 200;
 const REINDEX_KEY = "inkmark:reindexed:v1";
 /** Users already reindexed this browser session (localStorage covers later sessions). */
 const reindexed = new Set<string>();
 
-function findSeries(
-  name: string,
-  series: Doc<"series">[],
-  searchSeries: (q: string) => Doc<"series">[],
-) {
+type KeywordHit =
+  | { type: "note"; doc: Doc<"notes">; terms: string[] }
+  | { type: "series"; doc: Doc<"series">; terms: string[] };
+
+function findSeries(name: string, series: Doc<"series">[]) {
   const n = norm(name);
   const exact = series.find(
-    (s) => norm(s.title) === n || s.altNames.some((a) => norm(a) === n) || acronym(s.title) === n,
+    (s) =>
+      norm(s.title) === n ||
+      s.altNames.some((a) => norm(a) === n) ||
+      acronym(s.title) === n ||
+      s.altNames.some((a) => acronym(a) === n),
   );
-  return exact ?? searchSeries(name)[0] ?? null;
+  return exact ?? series[0] ?? null;
 }
 
 function Palette({ close, variant = "dialog" }: { close: () => void; variant?: Variant }) {
   const navigate = useNavigate();
   const { resolvedTheme, setTheme } = useTheme();
-  const notes = useCachedQuery(api.notes.list, "notes");
-  const series = useCachedQuery(api.series.list, "series");
   const createNote = useMutation(api.notes.create);
   const createSeries = useMutation(api.series.create);
   const setChapter = useMutation(api.series.setChapter);
   const bump = useMutation(api.series.bump);
-  const { search } = useSearch(notes, series);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), KEYWORD_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
 
   const q = query.trim();
-  const hits = useMemo(() => search(q).slice(0, 8), [search, q]);
+  const parsedCommand = parseChapterCommand(debouncedQuery);
+  const seriesQuery = parsedCommand?.name ?? debouncedQuery;
+  const noteResults = useQuery(
+    api.notes.search,
+    debouncedQuery ? { query: debouncedQuery, limit: 8 } : "skip",
+  );
+  const seriesResults: Doc<"series">[] | undefined = useQuery(
+    api.library.search,
+    seriesQuery ? { query: seriesQuery, limit: 8 } : "skip",
+  );
+  const terms = useMemo(() => debouncedQuery.split(/\s+/).filter(Boolean), [debouncedQuery]);
+  const hits = useMemo<KeywordHit[]>(() => {
+    if (q !== debouncedQuery) return [];
+    return [
+      ...(noteResults ?? []).map((doc) => ({ type: "note" as const, doc, terms })),
+      ...(seriesResults ?? []).map((doc) => ({ type: "series" as const, doc, terms })),
+    ].slice(0, 8);
+  }, [q, debouncedQuery, noteResults, seriesResults, terms]);
 
   const { isAuthenticated } = useConvexAuth();
   const readOnly = useReadOnly();
+  const me = useQuery(api.users.me, isAuthenticated ? {} : "skip");
   const aiStatus = useQuery(api.chat.status, isAuthenticated ? {} : "skip");
   const aiEnabled = aiStatus?.enabled === true;
   const searchByMeaning = useAction(api.embeddings.search);
   const reindexMine = useMutation(api.embeddings.reindexMine);
 
   // Backfill embeddings for existing notes/series once per browser per user.
-  const userId = notes?.[0]?.userId ?? series?.[0]?.userId;
+  const userId = me?.id;
   useEffect(() => {
     if (!aiEnabled || !userId || readOnly) return;
     const key = `${REINDEX_KEY}:${userId}`;
@@ -227,39 +253,30 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
     return () => clearTimeout(timer);
   }, [q, aiEnabled, searchByMeaning]);
 
-  // Map embedding ids back to the docs already loaded for keyword search,
-  // dropping ids we don't know and anything already in the keyword results.
+  // Semantic results carry their owned documents, including non-keyword matches.
   const meaningItems = useMemo<MeaningItem[]>(() => {
     if (meaning.results.length === 0) return [];
-    const noteById = new Map<string, Doc<"notes">>((notes ?? []).map((n) => [n._id, n]));
-    const seriesById = new Map<string, Doc<"series">>((series ?? []).map((s) => [s._id, s]));
     const shown = new Set(hits.map((h) => `${h.type}:${h.doc._id}`));
     const out: MeaningItem[] = [];
     const seen = new Set<string>();
     for (const r of meaning.results) {
-      const key = `${r.kind}:${r.id}`;
+      const key = `${r.kind}:${r.kind === "note" ? r.note._id : r.series._id}`;
       if (shown.has(key) || seen.has(key)) continue;
       seen.add(key);
       if (r.kind === "note") {
-        const doc = noteById.get(r.id);
-        if (doc) out.push({ kind: "note", doc });
+        out.push({ kind: "note", doc: r.note });
       } else {
-        const doc = seriesById.get(r.id);
-        if (doc) out.push({ kind: "series", doc });
+        out.push({ kind: "series", doc: r.series });
       }
       if (out.length >= 6) break;
     }
     return out;
-  }, [meaning.results, notes, series, hits]);
+  }, [meaning.results, hits]);
 
   const command = useMemo(() => {
-    const parsed = parseChapterCommand(q);
-    if (!parsed || !series) return null;
-    const target = findSeries(parsed.name, series, (name) =>
-      search(name, "series", true).flatMap((h) => (h.type === "series" ? [h.doc] : [])),
-    );
-    return { ...parsed, target };
-  }, [q, series, search]);
+    if (!parsedCommand || !seriesResults) return null;
+    return { ...parsedCommand, target: findSeries(parsedCommand.name, seriesResults) };
+  }, [parsedCommand, seriesResults]);
 
   const run = useCallback(
     (fn: () => Promise<unknown>) => {

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Sparkles, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -19,7 +19,9 @@ import { Label } from "#/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
@@ -27,14 +29,19 @@ import { type AniListFill, type AniListMedia, fillFrom } from "#/lib/anilist";
 import { useOnline, useReadOnly } from "#/lib/offline";
 import {
   KIND_LABEL,
-  KIND_ORDER,
+  READ_KINDS,
   STATUS_LABEL,
   STATUS_ORDER,
-  parseChapterCommand,
+  WATCH_KINDS,
+  isEpisodic,
   isSeriesKind,
   isSeriesStatus,
+  parseChapterCommand,
+  progressLabel,
 } from "#/lib/series";
+import { cn } from "#/lib/utils";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import type { SeriesKind, SeriesStatus } from "../../convex/validators";
 
 export function AddSeriesDialog({ children }: { children: ReactNode }) {
@@ -51,11 +58,18 @@ export function AddSeriesDialog({ children }: { children: ReactNode }) {
 
 function AddSeriesForm({ onDone }: { onDone: () => void }) {
   const create = useMutation(api.series.create);
+  const labels = useQuery(api.labels.list) ?? [];
+  const createLabel = useMutation(api.labels.create);
   const navigate = useNavigate();
   const readOnly = useReadOnly();
   const online = useOnline();
   const [title, setTitle] = useState("");
   const [chapter, setChapter] = useState("");
+  const [season, setSeason] = useState("1");
+  const [totalSeasons, setTotalSeasons] = useState("");
+  const [selectedLabelIds, setSelectedLabelIds] = useState<Id<"labels">[]>([]);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [isCreatingLabel, setIsCreatingLabel] = useState(false);
   const [altNames, setAltNames] = useState("");
   const [kind, setKind] = useState<SeriesKind>("manhua");
   const [status, setStatus] = useState<SeriesStatus>("reading");
@@ -66,7 +80,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
   // After a pick the title is AniList's, so don't read "Kaiju No. 8" as chapter 8.
   const linked = fill !== null && title === fill.title ? fill : null;
   // Typing "Battle Through The Heavens 348" fills both fields.
-  const parsed = !chapter && !linked ? parseChapterCommand(title) : null;
+  const parsed = kind !== "movie" && !chapter && !linked ? parseChapterCommand(title) : null;
   const finalTitle = parsed && parsed.chapter !== undefined ? parsed.name : title.trim();
   const finalChapter = chapter ? Number(chapter) : (parsed?.chapter ?? 0);
 
@@ -90,6 +104,29 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
     setAltNames("");
   }
 
+  function toggleLabel(id: Id<"labels">) {
+    setSelectedLabelIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  }
+
+  async function handleCreateLabel() {
+    const trimmed = newLabelName.trim();
+    if (!trimmed) {
+      setIsCreatingLabel(false);
+      return;
+    }
+    try {
+      const id = await createLabel({ name: trimmed });
+      setSelectedLabelIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      setNewLabelName("");
+      setIsCreatingLabel(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't create label.");
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!finalTitle) return;
@@ -97,10 +134,13 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
     try {
       const id = await create({
         title: finalTitle,
-        chapter: finalChapter,
+        chapter: kind === "movie" ? 0 : finalChapter,
         kind,
         status,
         altNames: altNames.split(","),
+        season: isEpisodic(kind) && season ? Number(season) : undefined,
+        totalSeasons: isEpisodic(kind) && totalSeasons ? Number(totalSeasons) : undefined,
+        labelIds: selectedLabelIds.length > 0 ? selectedLabelIds : undefined,
         ...(linked
           ? {
               anilistId: linked.anilistId,
@@ -119,7 +159,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
       });
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't add that series.");
+      toast.error("Couldn't add that item.");
       setPending(false);
     }
   }
@@ -174,34 +214,142 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-2">
-          <Label htmlFor="series-chapter">Last chapter read</Label>
-          <Input
-            id="series-chapter"
-            inputMode="decimal"
-            type="number"
-            min={0}
-            step="any"
-            value={chapter}
-            onChange={(e) => setChapter(e.target.value)}
-            placeholder={parsed?.chapter !== undefined ? String(parsed.chapter) : "0"}
-            className="font-mono"
-          />
-        </div>
-        <div className="grid gap-2">
+        {kind !== "movie" && (
+          <div className="grid gap-2">
+            <Label htmlFor="series-chapter">
+              {progressLabel(kind) === "Episode" ? "Last episode watched" : "Last chapter read"}
+            </Label>
+            <Input
+              id="series-chapter"
+              inputMode="decimal"
+              type="number"
+              min={0}
+              step="any"
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              placeholder={parsed?.chapter !== undefined ? String(parsed.chapter) : "0"}
+              className="font-mono"
+            />
+          </div>
+        )}
+        <div className={cn("grid gap-2", kind === "movie" && "col-span-2")}>
           <Label>Type</Label>
           <Select value={kind} onValueChange={(v) => isSeriesKind(v) && setKind(v)}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {KIND_ORDER.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {KIND_LABEL[k]}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Read</SelectLabel>
+                {READ_KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {KIND_LABEL[k]}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Watch</SelectLabel>
+                {WATCH_KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {KIND_LABEL[k]}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {isEpisodic(kind) && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-2">
+            <Label htmlFor="series-season">Season</Label>
+            <Input
+              id="series-season"
+              inputMode="numeric"
+              type="number"
+              min={1}
+              value={season}
+              onChange={(e) => setSeason(e.target.value)}
+              placeholder="1"
+              className="font-mono"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="series-total-seasons">Total seasons</Label>
+            <Input
+              id="series-total-seasons"
+              inputMode="numeric"
+              type="number"
+              min={1}
+              value={totalSeasons}
+              onChange={(e) => setTotalSeasons(e.target.value)}
+              placeholder="Optional"
+              className="font-mono"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Label picker */}
+      <div className="grid gap-2">
+        <Label>Labels</Label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {labels.map((l) => {
+            const selected = selectedLabelIds.includes(l._id);
+            return (
+              <button
+                key={l._id}
+                type="button"
+                onClick={() => toggleLabel(l._id)}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-medium border transition-colors",
+                  selected
+                    ? "bg-hanko text-hanko-foreground border-transparent"
+                    : "bg-secondary text-secondary-foreground hover:bg-accent border-transparent",
+                )}
+              >
+                {l.name}
+              </button>
+            );
+          })}
+          {isCreatingLabel ? (
+            <div className="flex items-center gap-1">
+              <Input
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleCreateLabel();
+                  } else if (e.key === "Escape") {
+                    setIsCreatingLabel(false);
+                    setNewLabelName("");
+                  }
+                }}
+                placeholder="New label…"
+                className="h-7 w-28 rounded-full text-xs"
+                autoFocus
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => void handleCreateLabel()}
+                className="h-7 px-2 text-xs"
+              >
+                Save
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsCreatingLabel(true)}
+              className="rounded-full border border-dashed px-2.5 py-1 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
+            >
+              + Create label…
+            </button>
+          )}
         </div>
       </div>
 
@@ -247,7 +395,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
           className="rounded-xl"
           disabled={!finalTitle || pending || readOnly}
         >
-          Add series
+          Add to library
         </Button>
       </DialogFooter>
     </form>

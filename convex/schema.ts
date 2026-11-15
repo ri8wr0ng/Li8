@@ -15,7 +15,19 @@ export default defineSchema({
     tags: v.array(v.string()),
     pinned: v.boolean(),
     updatedAt: v.number(),
-  }).index("by_user_updated", ["userId", "updatedAt"]),
+    searchText: v.optional(v.string()),
+  })
+    .index("by_user_updated", ["userId", "updatedAt"])
+    .index("by_user_pinned_updated", ["userId", "pinned", "updatedAt"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["userId"],
+    }),
+
+  labels: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+  }).index("by_user_name", ["userId", "name"]),
 
   series: defineTable({
     userId: v.id("users"),
@@ -25,6 +37,10 @@ export default defineSchema({
     status: vSeriesStatus,
     chapter: v.number(),
     totalChapters: v.optional(v.number()),
+    season: v.optional(v.number()),
+    totalSeasons: v.optional(v.number()),
+    labelIds: v.optional(v.array(v.id("labels"))),
+    searchText: v.optional(v.string()),
     description: v.string(),
     genres: v.array(v.string()),
     // e.g. "https://example.com/read/btth/chapter-{n}"
@@ -33,11 +49,18 @@ export default defineSchema({
     anilistId: v.optional(v.number()),
     lastReadAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_user_updated", ["userId", "updatedAt"]),
+  })
+    .index("by_user_updated", ["userId", "updatedAt"])
+    .index("by_user_status_updated", ["userId", "status", "updatedAt"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["userId"],
+    }),
 
   chapterHistory: defineTable({
     userId: v.id("users"),
     seriesId: v.id("series"),
+    season: v.optional(v.number()),
     chapter: v.number(),
     at: v.number(),
   }).index("by_series_at", ["seriesId", "at"]),

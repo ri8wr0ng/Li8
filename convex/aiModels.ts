@@ -64,11 +64,19 @@ export function noteText(note: Pick<Doc<"notes">, "title" | "body" | "tags">) {
 }
 
 export function seriesText(
-  series: Pick<Doc<"series">, "title" | "altNames" | "kind" | "genres" | "description">,
+  series: Pick<Doc<"series">, "title" | "altNames" | "kind" | "genres" | "description"> & {
+    season?: number;
+    totalSeasons?: number;
+  },
 ) {
+  const seasonInfo =
+    series.season !== undefined
+      ? `Season ${series.season}${series.totalSeasons ? ` of ${series.totalSeasons}` : ""}`
+      : "";
   return [
     series.title,
     series.altNames.length ? `Also known as: ${series.altNames.join(", ")}` : "",
+    seasonInfo,
     [series.kind, ...series.genres].join(", "),
     series.description.trim(),
   ]

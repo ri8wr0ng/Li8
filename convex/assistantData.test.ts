@@ -14,6 +14,69 @@ async function setup() {
 }
 
 describe("assistantData internal functions", () => {
+  it("refreshes indexed note text after assistant appends and replacements", async () => {
+    const { t, userA } = await setup();
+    const note = await t.mutation(internal.assistantData.createNote, {
+      userId: userA,
+      title: "Original",
+      body: "Oldbody",
+      tags: ["Oldtag"],
+    });
+    await t.mutation(internal.assistantData.appendToNote, {
+      userId: userA,
+      noteId: note.id,
+      text: "Appendedword",
+    });
+    expect((await t.run((ctx) => ctx.db.get("notes", note.id)))?.searchText).toContain(
+      "Appendedword",
+    );
+    await t.mutation(internal.assistantData.updateNote, {
+      userId: userA,
+      noteId: note.id,
+      title: "Replacement",
+      body: "Newbody",
+      tags: [" Newtag "],
+    });
+    expect((await t.run((ctx) => ctx.db.get("notes", note.id)))?.searchText).toBe(
+      "Replacement Newbody Newtag",
+    );
+  });
+
+  it("hydrates semantic-only matches and excludes documents owned by another user", async () => {
+    const { t, userA, userB } = await setup();
+    const own = await t.mutation(internal.assistantData.createNote, {
+      userId: userA,
+      title: "Astronomy",
+      body: "Galaxies",
+    });
+    const other = await t.mutation(internal.assistantData.createNote, {
+      userId: userB,
+      title: "Private",
+      body: "Secret",
+    });
+    const hits = await t.run(async (ctx) => {
+      const ownId = await ctx.db.insert("embeddings", {
+        userId: userA,
+        noteId: own.id,
+        hash: "own",
+        embedding: [],
+      });
+      const otherId = await ctx.db.insert("embeddings", {
+        userId: userB,
+        noteId: other.id,
+        hash: "other",
+        embedding: [],
+      });
+      return [
+        { id: ownId, score: 0.9 },
+        { id: otherId, score: 0.8 },
+      ];
+    });
+    const result = await t.query(internal.embeddings.hydrate, { userId: userA, hits });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ kind: "note", note: { _id: own.id, title: "Astronomy" } });
+  });
+
   describe("updateChapter", () => {
     it("updates chapter directly, writes chapterHistory, and returns {from, to}", async () => {
       const { t, userA } = await setup();

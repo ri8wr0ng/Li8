@@ -1,8 +1,8 @@
 import type { SeriesKind, SeriesStatus } from "../../convex/validators";
 
 export const STATUS_LABEL: Record<SeriesStatus, string> = {
-  reading: "Reading",
-  planned: "Plan to read",
+  reading: "In progress",
+  planned: "Planned",
   on_hold: "On hold",
   completed: "Completed",
   dropped: "Dropped",
@@ -15,6 +15,18 @@ export const STATUS_ORDER: SeriesStatus[] = [
   "dropped",
 ];
 
+export const READ_KINDS: SeriesKind[] = ["manga", "manhwa", "manhua", "webtoon", "novel", "other"];
+
+export const WATCH_KINDS: SeriesKind[] = ["movie", "tv", "anime", "reality"];
+
+export function isWatchKind(kind: SeriesKind): boolean {
+  return (WATCH_KINDS as readonly string[]).includes(kind);
+}
+
+export function isEpisodic(kind: SeriesKind): boolean {
+  return kind === "tv" || kind === "anime" || kind === "reality";
+}
+
 export const KIND_LABEL: Record<SeriesKind, string> = {
   manga: "Manga",
   manhwa: "Manhwa",
@@ -22,8 +34,47 @@ export const KIND_LABEL: Record<SeriesKind, string> = {
   webtoon: "Webtoon",
   novel: "Novel",
   other: "Other",
+  movie: "Movie",
+  tv: "TV series",
+  anime: "Anime",
+  reality: "Reality show",
 };
-export const KIND_ORDER: SeriesKind[] = ["manhua", "manhwa", "manga", "webtoon", "novel", "other"];
+export const KIND_ORDER: SeriesKind[] = [
+  "manhua",
+  "manhwa",
+  "manga",
+  "webtoon",
+  "novel",
+  "other",
+  "anime",
+  "tv",
+  "movie",
+  "reality",
+];
+
+export function progressLabel(kind: SeriesKind): string {
+  return isWatchKind(kind) ? "Episode" : "Chapter";
+}
+
+const WATCH_STATUS_LABEL: Record<SeriesStatus, string> = {
+  reading: "Watching",
+  planned: "Plan to watch",
+  on_hold: "On hold",
+  completed: "Completed",
+  dropped: "Dropped",
+};
+const READ_STATUS_LABEL: Record<SeriesStatus, string> = {
+  reading: "Reading",
+  planned: "Plan to read",
+  on_hold: "On hold",
+  completed: "Completed",
+  dropped: "Dropped",
+};
+
+/** "Watching" / "Plan to watch" for shows and movies, "Reading" / "Plan to read" otherwise. */
+export function statusLabel(status: SeriesStatus, kind?: SeriesKind): string {
+  return (kind && isWatchKind(kind) ? WATCH_STATUS_LABEL : READ_STATUS_LABEL)[status];
+}
 
 export const isSeriesStatus = (v: unknown): v is SeriesStatus => STATUS_ORDER.some((s) => s === v);
 export const isSeriesKind = (v: unknown): v is SeriesKind => KIND_ORDER.some((k) => k === v);
