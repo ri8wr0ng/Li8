@@ -15,9 +15,11 @@ import {
   AlertDialogTitle,
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import { pageTitle } from "#/lib/seo";
 import { api } from "../../../convex/_generated/api";
 
 export const Route = createFileRoute("/_app/ask")({
+  head: () => ({ meta: [{ title: pageTitle("Ask") }] }),
   validateSearch: (search: Record<string, unknown>): { threadId?: string; tab?: "usage" } => ({
     ...(typeof search.threadId === "string" && search.threadId
       ? { threadId: search.threadId }

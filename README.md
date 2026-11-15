@@ -76,6 +76,8 @@ PRs also receive a size label based on added + deleted lines, excluding lockfile
 
 `pnpm build` produces a static app in `dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy`.
 
+Set `VITE_SITE_URL` (for example `https://inkmark.app`) at build time so link previews get absolute image URLs and the build writes `sitemap.xml` and a canonical link for the sign-in page. On Vercel it defaults to the project's production domain. `robots.txt` is always written and keeps crawlers out of the signed-in pages. The social card is `public/og-image.png`, rendered from `assets/og-image.html` (the command is in that file).
+
 On Vercel, `vercel.json` selects the static output and configures the route fallback and cache headers. The TanStack Start server preset is disabled because this app uses SPA mode.
 
 ## Layout

@@ -19,6 +19,7 @@ import {
   STATUS_LABEL,
   WATCH_KINDS,
 } from "#/lib/series";
+import { pageTitle } from "#/lib/seo";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -59,6 +60,7 @@ const KIND_PRESETS = [
 ];
 
 export const Route = createFileRoute("/_app/library/")({
+  head: () => ({ meta: [{ title: pageTitle("Library") }] }),
   validateSearch: (search: Record<string, unknown>): LibrarySearch => {
     const s = search.status;
     return {
