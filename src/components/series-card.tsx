@@ -17,7 +17,7 @@ import {
   isEpisodic,
   isWatchKind,
   progressLabel,
-  readUrl,
+  nextReadUrl,
   statusLabel,
 } from "#/lib/series";
 import { useReadOnly } from "#/lib/offline";
@@ -43,7 +43,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
   const setChapter = useMutation(api.series.setChapter);
   const allLabels = useQuery(api.labels.list);
   const next = series.chapter + 1;
-  const nextUrl = readUrl(series.readUrlTemplate, next);
+  const nextUrl = nextReadUrl(series, next);
   const progress = series.totalChapters ? Math.min(1, series.chapter / series.totalChapters) : null;
   const readOnly = useReadOnly();
   const episodic = isEpisodic(series.kind);

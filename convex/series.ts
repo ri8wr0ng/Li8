@@ -5,7 +5,25 @@ import { internalMutation, mutation, query, type MutationCtx } from "./_generate
 import type { Doc, Id } from "./_generated/dataModel";
 import { deleteEmbedding, scheduleSeriesEmbedding } from "./embeddings";
 import { cleanList, requireUserId } from "./lib";
-import { vSeriesKind, vSeriesStatus } from "./validators";
+import { vSeriesKind, vSeriesLink, vSeriesStatus, type SeriesLink } from "./validators";
+
+const MAX_LINKS = 20;
+
+/** Trim, drop empty or duplicate URLs, and reject anything that isn't http(s). */
+function cleanLinks(links: SeriesLink[]): SeriesLink[] {
+  const seen = new Set<string>();
+  const out: SeriesLink[] = [];
+  for (const link of links) {
+    const url = link.url.trim();
+    if (!url || seen.has(url)) continue;
+    if (!/^https?:\/\//i.test(url)) throw new Error("Links must start with http:// or https://");
+    seen.add(url);
+    const label = link.label?.trim();
+    out.push(label ? { url, label } : { url });
+  }
+  if (out.length > MAX_LINKS) throw new Error(`At most ${MAX_LINKS} links`);
+  return out;
+}
 
 /** Rapid edits (+1, +1, +1) within this window collapse into one history entry. */
 const HISTORY_MERGE_MS = 10 * 60 * 1000;
@@ -211,6 +229,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     genres: v.optional(v.array(v.string())),
     readUrlTemplate: v.optional(v.union(v.string(), v.null())),
+    links: v.optional(v.array(vSeriesLink)),
     anilistId: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (
@@ -224,6 +243,7 @@ export const update = mutation({
       totalSeasons,
       labelIds,
       readUrlTemplate,
+      links,
       anilistId,
       title,
       ...rest
@@ -255,6 +275,8 @@ export const update = mutation({
       ...(readUrlTemplate !== undefined
         ? { readUrlTemplate: readUrlTemplate?.trim() || undefined }
         : {}),
+      // Saving links replaces the legacy single reading link.
+      ...(links !== undefined ? { links: cleanLinks(links), readUrlTemplate: undefined } : {}),
       ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
       searchText,
       updatedAt: Date.now(),

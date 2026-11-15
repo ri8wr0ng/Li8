@@ -1,4 +1,4 @@
-import type { SeriesKind, SeriesStatus } from "../../convex/validators";
+import type { SeriesKind, SeriesLink, SeriesStatus } from "../../convex/validators";
 
 export const STATUS_LABEL: Record<SeriesStatus, string> = {
   reading: "In progress",
@@ -89,6 +89,43 @@ export function readUrl(template: string | undefined, chapter: number) {
   if (!template) return null;
   const url = template.replaceAll("{n}", formatChapter(chapter));
   return /^https?:\/\//i.test(url) ? url : null;
+}
+
+/** A reading/watching link has `{n}` where the chapter or episode number goes. */
+export function isReadingLink(url: string) {
+  return url.includes("{n}");
+}
+
+export function isHttpUrl(url: string) {
+  return /^https?:\/\/\S+$/i.test(url.trim());
+}
+
+/** The series' links, falling back to the legacy single reading link. */
+export function seriesLinks(series: {
+  links?: SeriesLink[];
+  readUrlTemplate?: string;
+}): SeriesLink[] {
+  if (series.links) return series.links;
+  return series.readUrlTemplate ? [{ url: series.readUrlTemplate }] : [];
+}
+
+/** URL for the next chapter/episode from the first reading link, if any. */
+export function nextReadUrl(
+  series: { links?: SeriesLink[]; readUrlTemplate?: string },
+  chapter: number,
+) {
+  const link = seriesLinks(series).find((l) => isReadingLink(l.url));
+  return link ? readUrl(link.url, chapter) : null;
+}
+
+/** Label to show for a link: its own label, else the site's host name. */
+export function linkName(link: SeriesLink) {
+  if (link.label) return link.label;
+  try {
+    return new URL(link.url.replaceAll("{n}", "1")).hostname.replace(/^www\./, "");
+  } catch {
+    return link.url;
+  }
 }
 
 /** First letter of each word: "Battle Through The Heavens" -> "btth". */

@@ -5,6 +5,7 @@ import {
   BookX,
   ExternalLink,
   FastForward,
+  Globe,
   Minus,
   Pencil,
   Plus,
@@ -56,9 +57,13 @@ import {
   isEpisodic,
   isSeriesKind,
   isSeriesStatus,
+  isHttpUrl,
+  isReadingLink,
   isWatchKind,
+  linkName,
   progressLabel,
   readUrl,
+  seriesLinks,
   statusLabel,
 } from "#/lib/series";
 import { useCachedList, useOnline, useReadOnly } from "#/lib/offline";
@@ -66,6 +71,7 @@ import { fullDate, relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import type { SeriesLink } from "../../../convex/validators";
 
 export const Route = createFileRoute("/_app/library/$seriesId")({
   component: SeriesPage,
@@ -124,7 +130,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
       toast.error("Couldn't save. Please try again.");
     });
 
-  const nextUrl = readUrl(series.readUrlTemplate, series.chapter + 1);
+  const links = seriesLinks(series);
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-8">
@@ -231,6 +237,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                 </Button>
               )}
             </div>
+            <LinkButtons links={links} />
           </section>
         ) : episodic ? (
           <section className="mt-8 rounded-2xl border bg-card p-5 sm:p-6">
@@ -363,14 +370,11 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
               </div>
             ) : null}
 
-            {nextUrl && (
-              <Button asChild variant="secondary" className="mt-5 w-full rounded-xl sm:w-auto">
-                <a href={nextUrl} target="_blank" rel="noopener noreferrer">
-                  Watch S{series.season ?? 1} · E{formatChapter(series.chapter + 1)}{" "}
-                  <ExternalLink />
-                </a>
-              </Button>
-            )}
+            <LinkButtons
+              links={links}
+              chapter={series.chapter + 1}
+              nextLabel={`Watch S${series.season ?? 1} · E${formatChapter(series.chapter + 1)}`}
+            />
           </section>
         ) : (
           <section className="mt-8 rounded-2xl border bg-card p-5 sm:p-6">
@@ -442,13 +446,11 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
               </div>
             ) : null}
 
-            {nextUrl && (
-              <Button asChild variant="secondary" className="mt-5 w-full rounded-xl sm:w-auto">
-                <a href={nextUrl} target="_blank" rel="noopener noreferrer">
-                  Read Ch. {formatChapter(series.chapter + 1)} <ExternalLink />
-                </a>
-              </Button>
-            )}
+            <LinkButtons
+              links={links}
+              chapter={series.chapter + 1}
+              nextLabel={`${isWatchKind(series.kind) ? "Watch Ep." : "Read Ch."} ${formatChapter(series.chapter + 1)}`}
+            />
           </section>
         )}
 
@@ -522,25 +524,18 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
           </Field>
 
           <Field
-            label={isWatchKind(series.kind) ? "Watching link" : "Reading link"}
+            label="Links"
             hint={
               <>
-                Paste a chapter/episode URL and replace the number with{" "}
-                <code className="font-mono">{"{n}"}</code>. You'll get a “
-                {isWatchKind(series.kind) ? "Watch next" : "Read next"}” button.
+                Add as many as you like. For a {isWatchKind(series.kind) ? "watching" : "reading"}{" "}
+                link, paste a {isWatchKind(series.kind) ? "episode" : "chapter"} URL and replace the
+                number with <code className="font-mono">{"{n}"}</code> to get a “
+                {isWatchKind(series.kind) ? "Watch next" : "Read next"}” button. Any other URL is
+                saved as a website link.
               </>
             }
           >
-            <BlurField
-              value={series.readUrlTemplate ?? ""}
-              onCommit={(v) => void save({ readUrlTemplate: v.trim() || null })}
-              placeholder="https://example.com/series/chapter-{n}"
-              inputMode="url"
-              className="h-10 w-full rounded-xl border bg-card px-3 font-mono text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30"
-            />
-            {series.readUrlTemplate && !nextUrl && (
-              <p className="text-xs text-destructive">That doesn't look like an http(s) link.</p>
-            )}
+            <LinksEditor links={links} onChange={(next) => void save({ links: next })} />
           </Field>
         </section>
 
@@ -766,6 +761,178 @@ function ManageLabelsDialog({ disabled }: { disabled?: boolean }) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** A "Read next" button per reading link, plus a button per website link. */
+function LinkButtons({
+  links,
+  chapter,
+  nextLabel,
+}: {
+  links: SeriesLink[];
+  chapter?: number;
+  nextLabel?: string;
+}) {
+  const readButtons =
+    chapter === undefined
+      ? []
+      : links.flatMap((link) => {
+          const url = isReadingLink(link.url) ? readUrl(link.url, chapter) : null;
+          return url ? [{ link, url }] : [];
+        });
+  const websites = links.filter((l) => !isReadingLink(l.url) && isHttpUrl(l.url));
+  if (readButtons.length === 0 && websites.length === 0) return null;
+  return (
+    <div className="mt-5 flex flex-wrap gap-2">
+      {readButtons.map(({ link, url }, i) => (
+        <Button
+          key={link.url}
+          asChild
+          variant={i === 0 ? "secondary" : "outline"}
+          className="w-full rounded-xl sm:w-auto"
+        >
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            {nextLabel}
+            {readButtons.length > 1 && (
+              <span className="text-muted-foreground">· {linkName(link)}</span>
+            )}
+            <ExternalLink />
+          </a>
+        </Button>
+      ))}
+      {websites.map((link) => (
+        <Button key={link.url} asChild variant="outline" className="rounded-xl">
+          <a href={link.url} target="_blank" rel="noopener noreferrer">
+            <Globe /> {linkName(link)}
+          </a>
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+const LINK_INPUT =
+  "h-10 min-w-0 rounded-xl border bg-card px-3 text-sm outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/30";
+
+function LinksEditor({
+  links,
+  onChange,
+}: {
+  links: SeriesLink[];
+  onChange: (links: SeriesLink[]) => void;
+}) {
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("");
+
+  function add() {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (!isHttpUrl(trimmed)) {
+      toast.error("Links must start with http:// or https://");
+      return;
+    }
+    if (links.some((l) => l.url === trimmed)) {
+      toast.error("That link is already saved.");
+      return;
+    }
+    const name = label.trim();
+    onChange([...links, name ? { url: trimmed, label: name } : { url: trimmed }]);
+    setUrl("");
+    setLabel("");
+  }
+
+  function replace(index: number, next: SeriesLink) {
+    onChange(links.map((l, i) => (i === index ? next : l)));
+  }
+
+  const onEnter = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      add();
+    }
+  };
+
+  return (
+    <div className="grid gap-2">
+      {links.map((link, i) => {
+        const reading = isReadingLink(link.url);
+        return (
+          <div key={`${i}:${link.url}`} className="grid gap-1.5 rounded-xl border bg-card/50 p-2">
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "shrink-0 rounded-md px-1.5 py-0.5 text-[0.65rem] font-medium tracking-wide uppercase",
+                  reading ? "bg-hanko/15 text-hanko" : "bg-secondary text-muted-foreground",
+                )}
+              >
+                {reading ? "Reading" : "Website"}
+              </span>
+              <BlurField
+                value={link.label ?? ""}
+                placeholder={linkName({ url: link.url })}
+                aria-label="Link name"
+                onCommit={(v) =>
+                  replace(i, v.trim() ? { url: link.url, label: v.trim() } : { url: link.url })
+                }
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-muted-foreground/70"
+              />
+              <button
+                type="button"
+                aria-label="Remove link"
+                onClick={() => onChange(links.filter((_, j) => j !== i))}
+                className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+            <BlurField
+              value={link.url}
+              inputMode="url"
+              aria-label="Link URL"
+              onCommit={(v) => {
+                const trimmed = v.trim();
+                if (!isHttpUrl(trimmed)) {
+                  toast.error("Links must start with http:// or https://");
+                  return false;
+                }
+                replace(i, { ...link, url: trimmed });
+                return undefined;
+              }}
+              className={cn(LINK_INPUT, "h-9 w-full font-mono text-xs")}
+            />
+          </div>
+        );
+      })}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={onEnter}
+          inputMode="url"
+          placeholder="https://example.com/series/chapter-{n}"
+          aria-label="New link URL"
+          className={cn(LINK_INPUT, "flex-1 font-mono")}
+        />
+        <input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={onEnter}
+          placeholder="Name (optional)"
+          aria-label="New link name"
+          className={cn(LINK_INPUT, "sm:w-40")}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={add}
+          disabled={!url.trim()}
+          className="h-10 rounded-xl"
+        >
+          <Plus /> Add link
+        </Button>
+      </div>
+    </div>
   );
 }
 
