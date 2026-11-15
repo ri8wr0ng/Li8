@@ -36,20 +36,26 @@ function NotesPage() {
     debouncedQuery ? { query: debouncedQuery } : "skip",
   );
 
+  // The whole page pulls, not just the list, so a pull from the header works too.
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8 sm:py-10">
-      <PageHeader
-        title="Notes"
-        actions={
-          <Button variant="hanko" className="rounded-xl lg:hidden" onClick={newNote}>
-            <PenLine /> New
-          </Button>
-        }
-      />
+    <PullToRefresh onRefresh={() => setPaginationKey((key) => key + 1)}>
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8 sm:py-10">
+        <PageHeader
+          title="Notes"
+          actions={
+            <Button variant="hanko" className="rounded-xl lg:hidden" onClick={newNote}>
+              <PenLine /> New
+            </Button>
+          }
+        />
 
-      <SearchField className="mt-6" value={query} onChange={setQuery} placeholder="Search notes…" />
+        <SearchField
+          className="mt-6"
+          value={query}
+          onChange={setQuery}
+          placeholder="Search notes…"
+        />
 
-      <PullToRefresh onRefresh={() => setPaginationKey((key) => key + 1)}>
         <div className="mt-6">
           <NotesFeed
             key={paginationKey}
@@ -59,8 +65,8 @@ function NotesPage() {
             newNote={newNote}
           />
         </div>
-      </PullToRefresh>
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }
 

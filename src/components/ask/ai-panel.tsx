@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
+import { useCachedQuery } from "#/lib/offline";
 import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
@@ -29,7 +30,7 @@ const OPEN_KEY = "inkmark:ai-panel:open";
 const THREAD_KEY = "inkmark:ai-panel:thread";
 
 type PanelState = {
-  /** AI is set up and allowed for this user, and this route can show the panel. */
+  /** AI is set up and allowed for this user. The same on every page, so nothing shifts on navigation. */
   available: boolean;
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -62,9 +63,9 @@ function writeStorage(key: string, value: string | null) {
 }
 
 export function AiPanelProvider({ children }: { children: ReactNode }) {
-  const status = useQuery(api.chat.status, {});
-  const onAskPage = useRouterState({ select: (s) => s.location.pathname.startsWith("/ask") });
-  const available = status?.enabled === true && !onAskPage;
+  // Cached so the AI entry points render on first paint instead of popping in after the query.
+  const status = useCachedQuery(api.chat.status, "chat-status");
+  const available = status?.enabled === true;
   const [open, setOpenState] = useState(false);
 
   // Reopen on desktop if it was open last time; on phones it covers the page, so start closed.
@@ -266,7 +267,7 @@ export function AiPanel() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/ask" search={{ tab: "usage" }}>
+                <Link to="/profile" hash="ai-usage">
                   <ChartColumn /> AI usage
                 </Link>
               </DropdownMenuItem>

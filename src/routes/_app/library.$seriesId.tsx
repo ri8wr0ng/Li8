@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   Settings2,
+  Tag,
   Trash2,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -28,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import { Combobox } from "#/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -41,17 +43,13 @@ import { Label } from "#/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
 import {
-  KIND_LABEL,
-  READ_KINDS,
+  KIND_OPTIONS,
   STATUS_ORDER,
-  WATCH_KINDS,
   formatChapter,
   isEpisodic,
   isSeriesKind,
@@ -113,6 +111,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
   const remove = useMutation(api.series.remove);
   const history = useQuery(api.series.history, { seriesId: series._id });
   const allLabels = useQuery(api.labels.list) ?? [];
+  const createLabel = useMutation(api.labels.create);
   const navigate = useNavigate();
   const readOnly = useReadOnly();
   const episodic = isEpisodic(series.kind);
@@ -164,31 +163,42 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
 
         {/* Labels */}
         <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          {allLabels.map((l) => {
-            const isAttached = series.labelIds?.includes(l._id);
-            return (
-              <button
+          {allLabels
+            .filter((l) => series.labelIds?.includes(l._id))
+            .map((l) => (
+              <span
                 key={l._id}
-                type="button"
-                disabled={readOnly}
-                onClick={() => {
-                  const current = series.labelIds ?? [];
-                  const next = isAttached
-                    ? current.filter((id) => id !== l._id)
-                    : [...current, l._id];
-                  void save({ labelIds: next });
-                }}
-                className={cn(
-                  "rounded-full px-2.5 py-1 text-xs font-medium border transition-colors",
-                  isAttached
-                    ? "bg-hanko text-hanko-foreground border-transparent"
-                    : "bg-secondary text-secondary-foreground hover:bg-accent border-transparent",
-                )}
+                className="rounded-full bg-hanko px-2.5 py-1 text-xs font-medium text-hanko-foreground"
               >
                 {l.name}
-              </button>
-            );
-          })}
+              </span>
+            ))}
+          <Combobox
+            multiple
+            aria-label="Labels"
+            options={allLabels.map((l) => ({ value: l._id, label: l.name }))}
+            value={series.labelIds ?? []}
+            onChange={(next) => void save({ labelIds: asLabelIds(next) })}
+            onCreate={async (name) => {
+              try {
+                return await createLabel({ name });
+              } catch (err) {
+                console.error(err);
+                toast.error("Couldn't create label.");
+                return undefined;
+              }
+            }}
+            placeholder="Labels"
+            searchPlaceholder="Search or create a label…"
+            emptyText="Type to create a label."
+            disabled={readOnly}
+            className="h-7 rounded-full border-dashed px-2.5 text-xs text-muted-foreground shadow-none"
+          >
+            <span className="flex items-center gap-1">
+              <Tag className="size-3" />
+              {series.labelIds?.length ? "Edit labels" : "Add labels"}
+            </span>
+          </Combobox>
           <ManageLabelsDialog disabled={readOnly} />
         </div>
 
@@ -457,32 +467,15 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
           <AniListControls series={series} />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Type">
-              <Select
+              <Combobox
+                aria-label="Type"
+                options={KIND_OPTIONS}
                 value={series.kind}
-                onValueChange={(kind) => isSeriesKind(kind) && void save({ kind })}
-              >
-                <SelectTrigger className="w-full rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Read</SelectLabel>
-                    {READ_KINDS.map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {KIND_LABEL[k]}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>Watch</SelectLabel>
-                    {WATCH_KINDS.map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {KIND_LABEL[k]}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                onChange={(kind) => isSeriesKind(kind) && void save({ kind })}
+                placeholder="Type"
+                searchPlaceholder="Search types…"
+                className="w-full rounded-xl"
+              />
             </Field>
             <Field label="Status">
               <Select
@@ -614,6 +607,10 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
     </div>
   );
 }
+
+// Combobox values are plain strings; these came from label ids (or a label just created).
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion
+const asLabelIds = (ids: string[]) => ids as Id<"labels">[];
 
 function ManageLabelsDialog({ disabled }: { disabled?: boolean }) {
   const [open, setOpen] = useState(false);

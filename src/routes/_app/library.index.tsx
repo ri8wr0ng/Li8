@@ -7,19 +7,18 @@ import { EmptyState, PageHeader, SearchField, SectionLabel } from "#/components/
 import { PullToRefresh } from "#/components/pull-to-refresh";
 import { SeriesCard } from "#/components/series-card";
 import { Button } from "#/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "#/components/ui/select";
+import { Combobox } from "#/components/ui/combobox";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useCachedList, useCachedPaginatedQuery, writeCachedList } from "#/lib/offline";
-import { isSeriesKind, isSeriesStatus, KIND_LABEL, KIND_ORDER, STATUS_LABEL } from "#/lib/series";
+import {
+  isSeriesKind,
+  isSeriesStatus,
+  KIND_OPTIONS,
+  KIND_ORDER,
+  READ_KINDS,
+  STATUS_LABEL,
+  WATCH_KINDS,
+} from "#/lib/series";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -27,27 +26,45 @@ import type { SeriesKind, SeriesStatus } from "../../../convex/validators";
 
 type Filter = SeriesStatus | "all";
 
-type TypeFilter = "all" | "read" | "watch" | SeriesKind;
-
 interface LibrarySearch {
   status?: Filter;
-  type?: TypeFilter;
-  label?: string;
+  /** Any of these kinds. */
+  type?: SeriesKind[];
+  /** Any of these label ids. */
+  label?: string[];
 }
 
-const isTypeFilter = (t: unknown): t is TypeFilter =>
-  t === "all" || t === "read" || t === "watch" || isSeriesKind(t);
+const asList = (x: unknown): unknown[] =>
+  Array.isArray(x) ? x : typeof x === "string" && x.length > 0 ? [x] : [];
+
+/** Also reads the old single-value links (`type=read`, `label=<id>`). */
+function parseKinds(x: unknown): SeriesKind[] | undefined {
+  const kinds = new Set<SeriesKind>();
+  for (const t of asList(x)) {
+    if (t === "read") READ_KINDS.forEach((k) => kinds.add(k));
+    else if (t === "watch") WATCH_KINDS.forEach((k) => kinds.add(k));
+    else if (isSeriesKind(t)) kinds.add(t);
+  }
+  return kinds.size ? KIND_ORDER.filter((k) => kinds.has(k)) : undefined;
+}
+
+function parseLabels(x: unknown): string[] | undefined {
+  const ids = [...new Set(asList(x).filter((l): l is string => typeof l === "string" && l !== ""))];
+  return ids.length ? ids : undefined;
+}
+
+const KIND_PRESETS = [
+  { label: "All reading", values: READ_KINDS },
+  { label: "All watching", values: WATCH_KINDS },
+];
 
 export const Route = createFileRoute("/_app/library/")({
   validateSearch: (search: Record<string, unknown>): LibrarySearch => {
     const s = search.status;
-    const t = search.type;
-    const l = search.label;
-
     return {
       status: s === "all" || isSeriesStatus(s) ? s : undefined,
-      type: isTypeFilter(t) ? t : undefined,
-      label: typeof l === "string" && l.length > 0 ? l : undefined,
+      type: parseKinds(search.type),
+      label: parseLabels(search.label),
     };
   },
   component: LibraryPage,
@@ -56,7 +73,7 @@ export const Route = createFileRoute("/_app/library/")({
 const STATUS_CHIPS: Filter[] = ["reading", "planned", "on_hold", "completed", "dropped", "all"];
 
 function LibraryPage() {
-  const { status = "reading", type = "all", label } = Route.useSearch();
+  const { status = "reading", type: kinds = [], label: labelFilter = [] } = Route.useSearch();
   const navigate = Route.useNavigate();
 
   const labels = useQuery(api.labels.list);
@@ -138,62 +155,41 @@ function LibraryPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={type}
-                onValueChange={(val) =>
+              <Combobox
+                multiple
+                aria-label="Filter by type"
+                options={KIND_OPTIONS}
+                presets={KIND_PRESETS}
+                value={kinds}
+                onChange={(next) =>
                   void navigate({
-                    search: (prev) => ({
-                      ...prev,
-                      type: val === "all" || !isTypeFilter(val) ? undefined : val,
-                    }),
+                    search: (prev) => ({ ...prev, type: parseKinds(next) }),
                     replace: true,
                   })
                 }
-              >
-                <SelectTrigger className="h-9 rounded-full border border-border bg-card px-3 text-xs sm:text-sm">
-                  <SelectValue placeholder="All types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All types</SelectItem>
-                  <SelectItem value="read">Reading</SelectItem>
-                  <SelectItem value="watch">Watching</SelectItem>
-                  <SelectSeparator />
-                  <SelectGroup>
-                    <SelectLabel>Specific kind</SelectLabel>
-                    {KIND_ORDER.map((k) => (
-                      <SelectItem key={k} value={k}>
-                        {KIND_LABEL[k]}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                placeholder="All types"
+                searchPlaceholder="Search types…"
+                align="end"
+                className="h-9 max-w-48 rounded-full bg-card px-3 text-xs shadow-none sm:text-sm"
+              />
 
-              <Select
-                value={label ?? "all"}
-                onValueChange={(val) =>
+              <Combobox
+                multiple
+                aria-label="Filter by label"
+                options={(labels ?? []).map((l) => ({ value: l._id, label: l.name }))}
+                value={labelFilter}
+                onChange={(next) =>
                   void navigate({
-                    search: (prev) => ({
-                      ...prev,
-                      label: val === "all" ? undefined : val,
-                    }),
+                    search: (prev) => ({ ...prev, label: parseLabels(next) }),
                     replace: true,
                   })
                 }
-              >
-                <SelectTrigger className="h-9 rounded-full border border-border bg-card px-3 text-xs sm:text-sm">
-                  <SelectValue placeholder="All labels" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All labels</SelectItem>
-                  {labels && labels.length > 0 && <SelectSeparator />}
-                  {labels?.map((l) => (
-                    <SelectItem key={l._id} value={l._id}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="All labels"
+                searchPlaceholder="Search labels…"
+                emptyText={labels?.length ? "No matching labels." : "No labels yet."}
+                align="end"
+                className="h-9 max-w-48 rounded-full bg-card px-3 text-xs shadow-none sm:text-sm"
+              />
             </div>
           </div>
         )}
@@ -229,12 +225,13 @@ function LibraryPage() {
                 </div>
               </EmptyState>
             )
-          ) : label && labels === undefined ? null : (
+          ) : labelFilter.length > 0 && labels === undefined ? null : (
             <LibraryList
               key={refreshKey}
               status={status}
-              type={type}
-              labelId={labels?.find((l) => l._id === label)?._id}
+              kinds={kinds}
+              // Drop ids from stale links (deleted labels) before they reach the query validator.
+              labelIds={(labels ?? []).filter((l) => labelFilter.includes(l._id)).map((l) => l._id)}
             />
           )}
         </div>
@@ -245,20 +242,25 @@ function LibraryPage() {
 
 function LibraryList({
   status,
-  type,
-  labelId,
+  kinds,
+  labelIds,
 }: {
   status: Filter;
-  type: TypeFilter;
-  labelId: Id<"labels"> | undefined;
+  kinds: SeriesKind[];
+  labelIds: Id<"labels">[];
 }) {
+  // Keyed by content, not array identity, so re-renders don't resubscribe.
+  const kindKey = kinds.join(",");
+  const labelKey = labelIds.toSorted().join(",");
   const queryArgs = useMemo(
     () => ({
       status: status === "all" ? undefined : status,
-      type: type === "all" ? undefined : type,
-      labelId,
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+      kinds: kindKey ? (kindKey.split(",") as SeriesKind[]) : undefined,
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion
+      labelIds: labelKey ? (labelKey.split(",") as Id<"labels">[]) : undefined,
     }),
-    [status, type, labelId],
+    [status, kindKey, labelKey],
   );
 
   // Each filter keeps its own saved copy, so switching filters never flashes another filter's items.
@@ -270,7 +272,7 @@ function LibraryList({
   } = useCachedPaginatedQuery(
     api.library.listPage,
     queryArgs,
-    `series:${status}:${type}:${labelId ?? ""}`,
+    `series:${status}:${kindKey}:${labelKey}`,
     { initialNumItems: 50 },
   );
 
@@ -319,7 +321,7 @@ function LibraryList({
   const seriesList = results;
 
   if (seriesList.length === 0) {
-    const isFiltered = status !== "reading" || (type && type !== "all") || labelId !== undefined;
+    const isFiltered = status !== "reading" || kinds.length > 0 || labelIds.length > 0;
     if (isFiltered) {
       const statusTitle = status === "all" ? "All" : STATUS_LABEL[status];
       return <EmptyState icon={<BookOpen />} title={`Nothing in “${statusTitle}”`} />;

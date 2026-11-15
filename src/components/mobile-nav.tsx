@@ -43,7 +43,14 @@ export function MobileNav({ showAsk, onSearch }: { showAsk: boolean; onSearch: (
   const path = useRouterState({ select: (s) => s.location.pathname });
   const ai = useAiPanel();
   const tabs = showAsk ? [NOTES, ASK, LIBRARY] : [NOTES, LIBRARY];
-  const active = tabs.findIndex((t) => t.match(path));
+  const current = tabs.findIndex((t) => t.match(path));
+
+  // The lens follows the finger, not the router: it moves on touch-down, while the
+  // next page is still rendering, so the tap feels instant. Once the route
+  // arrives (or the press is cancelled) the real location takes over again.
+  const [pressed, setPressed] = useState<{ index: number; from: string } | null>(null);
+  if (pressed && pressed.from !== path) setPressed(null);
+  const active = pressed?.index ?? current;
 
   // Remember where the lens came from, so it can stretch toward where it's going.
   // (Adjusting state during render on a prop change; React re-renders right away.)
@@ -96,7 +103,12 @@ export function MobileNav({ showAsk, onSearch }: { showAsk: boolean; onSearch: (
               <Link
                 key={tab.to}
                 to={tab.to}
-                aria-current={i === active ? "page" : undefined}
+                aria-current={i === current ? "page" : undefined}
+                onPointerDown={(e) => {
+                  if (e.button === 0 && i !== current) setPressed({ index: i, from: path });
+                }}
+                onPointerCancel={() => setPressed(null)}
+                onClick={() => i !== current && setPressed({ index: i, from: path })}
                 className={cn(
                   "relative z-10 flex size-13 flex-col items-center justify-center gap-0.5 rounded-full text-[0.625rem] font-semibold tracking-[0.01em] outline-none select-none [-webkit-touch-callout:none]",
                   "transition-[color,transform] duration-150 ease-out active:scale-[0.92] focus-visible:ring-2 focus-visible:ring-ring",

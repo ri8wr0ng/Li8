@@ -6,19 +6,17 @@ import { query } from "./_generated/server";
 import schema from "./schema";
 import { vSeriesKind, vSeriesStatus } from "./validators";
 
-const READ_KINDS = new Set<string>(["manga", "manhwa", "manhua", "webtoon", "novel", "other"]);
-
-const WATCH_KINDS = new Set<string>(["movie", "tv", "anime", "reality"]);
-
 export const listPage = query({
   args: {
     paginationOpts: paginationOptsValidator,
     status: v.optional(vSeriesStatus),
-    type: v.optional(v.union(v.literal("all"), v.literal("read"), v.literal("watch"), vSeriesKind)),
-    labelId: v.optional(v.id("labels")),
+    /** Any of these kinds. Empty or missing means every kind. */
+    kinds: v.optional(v.array(vSeriesKind)),
+    /** Has at least one of these labels. Empty or missing means no label filter. */
+    labelIds: v.optional(v.array(v.id("labels"))),
   },
   returns: paginationResultValidator(schema.doc("series")),
-  handler: async (ctx, { paginationOpts, status, type, labelId }) => {
+  handler: async (ctx, { paginationOpts, status, kinds, labelIds }) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
       return { page: [], isDone: true, continueCursor: "" };
@@ -35,21 +33,13 @@ export const listPage = query({
             .withIndex("by_user_updated", (q) => q.eq("userId", userId))
             .order("desc");
 
+    const kindSet = kinds && kinds.length > 0 ? new Set<string>(kinds) : null;
+    const labelSet = labelIds && labelIds.length > 0 ? new Set<string>(labelIds) : null;
+    if (!kindSet && !labelSet) return await baseQuery.paginate(paginationOpts);
+
     const filtered = filter(baseQuery, (doc) => {
-      if (type !== undefined && type !== "all") {
-        if (type === "read") {
-          if (!READ_KINDS.has(doc.kind)) return false;
-        } else if (type === "watch") {
-          if (!WATCH_KINDS.has(doc.kind)) return false;
-        } else if (doc.kind !== type) {
-          return false;
-        }
-      }
-      if (labelId !== undefined) {
-        if (!doc.labelIds || !doc.labelIds.includes(labelId)) {
-          return false;
-        }
-      }
+      if (kindSet && !kindSet.has(doc.kind)) return false;
+      if (labelSet && !(doc.labelIds ?? []).some((id) => labelSet.has(id))) return false;
       return true;
     });
 
