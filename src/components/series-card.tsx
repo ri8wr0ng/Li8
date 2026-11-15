@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ExternalLink, Minus, Plus } from "lucide-react";
+import { ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -104,28 +105,32 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
         className="group relative min-w-0 touch-pan-y gap-0 rounded-2xl py-4 shadow-none select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:py-5"
       >
         {/* minmax(0,1fr): the header is a grid too, so its column must be allowed to shrink for truncate to work. */}
-        <CardHeader className="grid-cols-[minmax(0,1fr)] gap-1 px-4 sm:px-5">
+        <CardHeader className="grid-cols-[minmax(0,1fr)] gap-1 px-4 has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
           <CardDescription className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider uppercase">
             {KIND_LABEL[series.kind]}
             <span className="size-1 rounded-full bg-border" />
             {statusLabel(series.status, series.kind)}
           </CardDescription>
           <CardTitle className="font-display text-lg leading-snug tracking-tight [overflow-wrap:anywhere]">
+            <Highlight text={series.title} terms={terms} />
+          </CardTitle>
+          <CardAction>
             <Link
               to="/library/$seriesId"
               params={{ seriesId: series._id }}
-              className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
+              aria-label={`Open ${series.title}`}
+              className="-mt-1 -mr-1 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
             >
-              <Highlight text={series.title} terms={terms} />
+              <ChevronRight className="size-5" />
             </Link>
-          </CardTitle>
+          </CardAction>
           {series.altNames.length > 0 && (
-            <CardDescription className="truncate">
+            <CardDescription className="col-start-1 truncate">
               <Highlight text={series.altNames.join(" · ")} terms={terms} />
             </CardDescription>
           )}
           {series.labelIds && series.labelIds.length > 0 && allLabels && (
-            <div className="relative z-10 flex flex-wrap gap-1 pt-1">
+            <div className="col-start-1 flex flex-wrap gap-1 pt-1">
               {series.labelIds.map((lid) => {
                 const label = allLabels.find((l) => l._id === lid);
                 if (!label) return null;
@@ -150,7 +155,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
                 type="button"
                 disabled={readOnly}
                 onClick={() => void update({ id: series._id, status: "completed" })}
-                className="relative z-10 flex h-9 items-center justify-center rounded-xl bg-hanko px-3.5 text-xs font-medium text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-95 disabled:opacity-40"
+                className="flex h-9 items-center justify-center rounded-xl bg-hanko px-3.5 text-xs font-medium text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-95 disabled:opacity-40"
               >
                 Mark watched
               </button>
@@ -185,7 +190,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
               </div>
             </div>
 
-            <div className="relative z-10 flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 aria-label={`One back on ${series.title}`}
@@ -217,7 +222,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
               type="button"
               onClick={readNext}
               disabled={readOnly}
-              className="relative z-10 flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
+              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
             >
               {isWatchKind(series.kind) ? "Watch" : "Read"}{" "}
               {episodic

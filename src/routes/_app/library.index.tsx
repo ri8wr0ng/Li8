@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import { BookOpen, Plus, SearchX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddSeriesDialog } from "#/components/add-series-dialog";
@@ -79,6 +80,7 @@ function LibraryPage() {
   const navigate = Route.useNavigate();
 
   const labels = useQuery(api.labels.list);
+  const createLabel = useMutation(api.labels.create);
 
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -187,8 +189,20 @@ function LibraryPage() {
                   })
                 }
                 placeholder="All labels"
-                searchPlaceholder="Search labels…"
-                emptyText={labels?.length ? "No matching labels." : "No labels yet."}
+                searchPlaceholder="Search or create a label…"
+                emptyText={
+                  labels?.length
+                    ? "No matching labels."
+                    : "No labels yet. Type a name to create one."
+                }
+                onCreate={async (name) => {
+                  try {
+                    return await createLabel({ name });
+                  } catch {
+                    toast.error("Couldn't create label.");
+                    return undefined;
+                  }
+                }}
                 align="end"
                 className="h-9 max-w-48 rounded-full bg-card px-3 text-xs shadow-none sm:text-sm"
               />
