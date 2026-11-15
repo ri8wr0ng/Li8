@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  Source for public/og-image.png (the 1200×630 social sharing card).
+  Regenerate after `pnpm install`:
+  chrome --headless --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot=public/og-image.png assets/og-image.html
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Fraunces";
+        src: url("../node_modules/@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2")
+          format("woff2");
+        font-weight: 100 900;
+      }
+      @font-face {
+        font-family: "Geist";
+        src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+          format("woff2");
+        font-weight: 100 900;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #f7f4ee;
+        color: #1c1a17;
+        font-family: "Geist", sans-serif;
+      }
+      .card {
+        box-sizing: border-box;
+        height: 100%;
+        padding: 72px 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .wordmark {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-family: "Fraunces", serif;
+        font-weight: 600;
+        font-size: 44px;
+        letter-spacing: -0.02em;
+      }
+      .wordmark svg {
+        width: 72px;
+        height: 72px;
+      }
+      h1 {
+        margin: 0;
+        font-family: "Fraunces", serif;
+        font-weight: 600;
+        font-size: 104px;
+        line-height: 1.02;
+        letter-spacing: -0.03em;
+      }
+      h1 em {
+        color: #e5412d;
+      }
+      p {
+        margin: 0;
+        font-size: 30px;
+        color: #6e675c;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="wordmark">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <rect width="64" height="64" rx="14" fill="#E5412D" />
+          <path d="M21 12h22a2 2 0 0 1 2 2v38l-13-9-13 9V14a2 2 0 0 1 2-2z" fill="#F7F4EE" />
+          <rect x="25" y="20" width="14" height="3.2" rx="1.6" fill="#1C1A17" />
+          <rect x="25" y="27" width="9" height="3.2" rx="1.6" fill="#1C1A17" />
+        </svg>
+        Inkmark
+      </div>
+      <h1>Notes, and where<br />you <em>left off.</em></h1>
+      <p>Notes and a reading tracker for manga, manhwa and manhua.</p>
+    </div>
+  </body>
+</html>

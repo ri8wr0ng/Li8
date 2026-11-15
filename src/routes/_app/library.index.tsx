@@ -20,6 +20,7 @@ import {
 import { Skeleton } from "#/components/ui/skeleton";
 import { useCachedList, useCachedPaginatedQuery, writeCachedList } from "#/lib/offline";
 import { isSeriesKind, isSeriesStatus, KIND_LABEL, KIND_ORDER, STATUS_LABEL } from "#/lib/series";
+import { pageTitle } from "#/lib/seo";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
@@ -39,6 +40,7 @@ const isTypeFilter = (t: unknown): t is TypeFilter =>
   t === "all" || t === "read" || t === "watch" || isSeriesKind(t);
 
 export const Route = createFileRoute("/_app/library/")({
+  head: () => ({ meta: [{ title: pageTitle("Library") }] }),
   validateSearch: (search: Record<string, unknown>): LibrarySearch => {
     const s = search.status;
     const t = search.type;

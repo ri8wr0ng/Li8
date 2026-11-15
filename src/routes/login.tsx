@@ -6,9 +6,16 @@ import { useEffect, useState } from "react";
 import { Splash, Wordmark } from "#/components/brand";
 import { Button } from "#/components/ui/button";
 import { clearCache } from "#/lib/offline";
+import { HOME_TITLE, SITE_URL, absoluteUrl } from "#/lib/seo";
 import { api } from "../../convex/_generated/api";
 
-export const Route = createFileRoute("/login")({ component: LoginPage });
+export const Route = createFileRoute("/login")({
+  head: () => ({
+    meta: [{ title: HOME_TITLE }],
+    links: SITE_URL ? [{ rel: "canonical", href: absoluteUrl("/login") }] : [],
+  }),
+  component: LoginPage,
+});
 
 function LoginPage() {
   const { isLoading, isAuthenticated } = useConvexAuth();

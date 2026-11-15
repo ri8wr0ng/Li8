@@ -2,6 +2,7 @@ import { defineConfig, lazyPlugins } from "vite-plus";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { seo } from "./vite/seo.ts";
 import { serviceWorker } from "./vite/service-worker.ts";
 
 const config = defineConfig({
@@ -72,6 +73,8 @@ const config = defineConfig({
     viteReact(),
     // Offline app shell: precaches the build and serves _shell.html for every route.
     serviceWorker(),
+    // robots.txt, sitemap.xml and the public origin for canonical/Open Graph URLs.
+    seo(),
   ]),
 });
 
