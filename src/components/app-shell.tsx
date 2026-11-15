@@ -1,6 +1,6 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import {
   ChevronsUpDown,
   CircleHelp,
@@ -16,6 +16,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  Tag,
   UserRound,
   WifiOff,
 } from "lucide-react";
@@ -50,6 +51,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
@@ -174,6 +178,7 @@ function Shell({ children }: { children: ReactNode }) {
                       <span>Library</span>
                     </Link>
                   </SidebarMenuButton>
+                  <LabelLinks onNavigate={closeMobile} />
                 </SidebarMenuItem>
                 {panel.available && (
                   <SidebarMenuItem>
@@ -313,6 +318,29 @@ function SystemGroup({ onNavigate }: { onNavigate: () => void }) {
       </SidebarMenu>
       <HelpDialog open={help} onOpenChange={setHelp} />
     </SidebarGroup>
+  );
+}
+
+/** Each label as a shortcut into the Library filtered by it. */
+function LabelLinks({ onNavigate }: { onNavigate: () => void }) {
+  const labels = useQuery(api.labels.list);
+  const location = useRouterState({ select: (s) => s.location });
+  if (!labels || labels.length === 0) return null;
+  const current =
+    location.pathname === "/library" ? (location.search as { label?: string[] }).label : undefined;
+  return (
+    <SidebarMenuSub>
+      {labels.map((l) => (
+        <SidebarMenuSubItem key={l._id}>
+          <SidebarMenuSubButton asChild isActive={current?.length === 1 && current[0] === l._id}>
+            <Link to="/library" search={{ label: [l._id] }} onClick={onNavigate}>
+              <Tag />
+              <span>{l.name}</span>
+            </Link>
+          </SidebarMenuSubButton>
+        </SidebarMenuSubItem>
+      ))}
+    </SidebarMenuSub>
   );
 }
 
