@@ -37,6 +37,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "#/components/ui/tooltip";
 import { findAll } from "#/lib/highlight";
 import { useCachedList, useOnline, useReadOnly } from "#/lib/offline";
+import { pageTitle, useDocumentTitle } from "#/lib/seo";
 import { relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
 import { api } from "../../../convex/_generated/api";
@@ -45,6 +46,7 @@ import type { Doc, Id } from "../../../convex/_generated/dataModel";
 export const Route = createFileRoute("/_app/notes/$noteId")({
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
     typeof search.q === "string" && search.q.trim() ? { q: search.q } : {},
+  head: () => ({ meta: [{ title: pageTitle("Note") }] }),
   component: NotePage,
   errorComponent: NotFound,
 });
@@ -60,6 +62,7 @@ function NotePage() {
   const list = useCachedList<Doc<"notes">>("notes");
   const cached = list?.find((n) => n._id === noteId);
   const note = live !== undefined ? live : (cached ?? (list && !online ? null : undefined));
+  useDocumentTitle(note ? note.title.trim() || "Untitled" : undefined);
   if (note === undefined) return null;
   if (note === null) return <NotFound />;
   return <Editor key={note._id} note={note} />;

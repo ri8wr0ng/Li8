@@ -31,7 +31,10 @@ export function serviceWorker(): Plugin {
           /-latin-wght-normal-[\w-]+\.woff2$/.test(file),
       );
       const statics = publicDir
-        ? readdirSync(publicDir).filter((f) => /\.(png|svg|webmanifest|ico)$/.test(f))
+        ? readdirSync(publicDir).filter(
+            // The social card is only fetched by link-preview crawlers, so don't precache it.
+            (f) => /\.(png|svg|webmanifest|ico)$/.test(f) && f !== "og-image.png",
+          )
         : [];
       const precache = ["/_shell.html", ...[...built, ...statics].map((f) => `/${f}`)].toSorted();
       const version = randomUUID();
