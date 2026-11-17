@@ -95,12 +95,27 @@ function LibraryPage() {
 
   const q = query.trim();
 
-  const searchResults = useQuery(
+  const freshResults = useQuery(
     api.library.search,
     debouncedQuery ? { query: debouncedQuery } : "skip",
   );
 
-  const terms = useMemo(() => debouncedQuery.split(/\s+/).filter(Boolean), [debouncedQuery]);
+  // Keep showing the previous results (and their highlight terms) while the next
+  // query is in flight, instead of flashing skeletons on every keystroke.
+  const [shown, setShown] = useState<{ results: typeof freshResults; query: string }>({
+    results: undefined,
+    query: "",
+  });
+  if (freshResults !== undefined && freshResults !== shown.results) {
+    setShown({ results: freshResults, query: debouncedQuery });
+  } else if (!q && shown.results !== undefined) {
+    setShown({ results: undefined, query: "" });
+  }
+  const searchResults = freshResults ?? shown.results;
+  const shownQuery = freshResults !== undefined ? debouncedQuery : shown.query;
+  const isSearching = q !== "" && (q !== debouncedQuery || freshResults === undefined);
+
+  const terms = useMemo(() => shownQuery.split(/\s+/).filter(Boolean), [shownQuery]);
 
   const handleRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -212,14 +227,17 @@ function LibraryPage() {
 
         <div className="mt-6">
           {q ? (
-            searchResults === undefined ? (
+            searchResults === undefined || (searchResults.length === 0 && isSearching) ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[0, 1, 2].map((i) => (
                   <Skeleton key={i} className="h-48 rounded-2xl" />
                 ))}
               </div>
             ) : searchResults.length > 0 ? (
-              <>
+              <div
+                aria-busy={isSearching}
+                className={cn("transition-opacity duration-150", isSearching && "opacity-70")}
+              >
                 <SectionLabel>
                   {searchResults.length} {searchResults.length === 1 ? "match" : "matches"}
                 </SectionLabel>
@@ -228,7 +246,7 @@ function LibraryPage() {
                     <SeriesCard key={s._id} series={s} terms={terms} />
                   ))}
                 </Grid>
-              </>
+              </div>
             ) : (
               <EmptyState icon={<SearchX />} title="Not in your library">
                 Nothing matches “{q}”.
