@@ -108,7 +108,9 @@ function LibraryPage() {
   });
   if (freshResults !== undefined && freshResults !== shown.results) {
     setShown({ results: freshResults, query: debouncedQuery });
-  } else if (!q && shown.results !== undefined) {
+  } else if (!debouncedQuery && shown.results !== undefined) {
+    // Gate on debouncedQuery, not q: while the debounce is pending, q is empty
+    // but freshResults is still defined, and the two branches would ping-pong.
     setShown({ results: undefined, query: "" });
   }
   const searchResults = freshResults ?? shown.results;
