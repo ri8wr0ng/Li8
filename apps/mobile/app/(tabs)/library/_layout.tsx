@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { ProfileButton } from "../../../src/components/profile-button";
 import { useTheme } from "../../../src/theme";
 
 export default function LibraryLayout() {
@@ -25,6 +26,7 @@ export default function LibraryLayout() {
         name="index"
         options={{
           title: "Library",
+          headerLeft: ProfileButton,
         }}
       />
       <Stack.Screen

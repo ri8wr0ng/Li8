@@ -14,19 +14,19 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
-import { useTheme } from "../../../src/theme";
-import { haptics } from "../../../src/haptics";
-import { useTabBarInset } from "../../../src/components/glass";
-import { useThemePreference, type ThemePreference } from "../../../src/theme-preference";
+import { useTheme } from "../src/theme";
+import { haptics } from "../src/haptics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useThemePreference, type ThemePreference } from "../src/theme-preference";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
   formatChapter,
   isSeriesKind,
   progressLabel,
-} from "../../../src/library/series";
-import { UpdateSettings } from "../../../src/updates/update-settings";
-import { PressableScale } from "../../../src/components/pressable-scale";
+} from "../src/library/series";
+import { UpdateSettings } from "../src/updates/update-settings";
+import { PressableScale } from "../src/components/pressable-scale";
 
 const number = (n: number) => new Intl.NumberFormat().format(n);
 
@@ -41,7 +41,7 @@ export default function ProfileScreen() {
   const [tzOffsetMinutes] = useState(() => new Date().getTimezoneOffset());
   const stats = useQuery(api.users.stats, { tzOffsetMinutes });
   const { colors } = useTheme();
-  const tabBarInset = useTabBarInset();
+  const insets = useSafeAreaInsets();
 
   if (user === undefined) {
     return (
@@ -61,7 +61,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={{ backgroundColor: colors.paper }}
-      contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + 24 }]}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
       keyboardShouldPersistTaps="handled"
     >
       <Identity user={user} />
