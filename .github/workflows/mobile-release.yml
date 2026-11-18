@@ -1,12 +1,19 @@
 name: Mobile release
 
-# Builds the Android app (APK) and attaches it to a GitHub Release.
+# Builds the Android app (APK) and publishes it as a GitHub Release.
 #
-# Release by pushing a tag:   git tag mobile-v1.2.0 && git push origin mobile-v1.2.0
-# or run it from the Actions tab with a version number.
+# Nightlies: a push to main that touches the mobile app publishes a prerelease
+# (mobile-v<version>-nightly.<date>.<run>) when the last nightly is at least 4 hours old and
+# mobile code changed since it. The hourly schedule picks up pushes that landed inside the gap.
+# Run workflow publishes a nightly at once, ignoring the gap.
+# Stable: pushing a mobile-v*.*.* tag publishes a release that becomes "latest". A tag with a
+# suffix (mobile-v1.2.0-beta.1) is a prerelease.
+#
+# <version> comes from apps/mobile/app.json (expo.version). To cut a stable release, bump it,
+# merge, then tag that commit: git tag mobile-v0.1.0 && git push origin mobile-v0.1.0
 #
 # Repository variables (Settings → Secrets and variables → Actions → Variables):
-#   EXPO_PUBLIC_CONVEX_URL  Convex deployment URL (same as VITE_CONVEX_URL)
+#   EXPO_PUBLIC_CONVEX_URL  Production Convex deployment URL (same as the web app's VITE_CONVEX_URL)
 #   EXPO_PUBLIC_SITE_URL    Deployed web app origin (serves /mobile-auth.html for sign-in)
 #
 # Optional secrets, to sign with your own key (strongly recommended: Android only
@@ -22,49 +29,121 @@ name: Mobile release
 
 on:
   push:
-    tags: ["mobile-v*"]
+    branches: [main]
+    tags: ["mobile-v*.*.*"]
+    # Not applied to tag pushes.
+    paths:
+      - "apps/mobile/**"
+      - "packages/backend/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile-release.yml"
+  schedule:
+    # Off the hour, when GitHub's scheduled runs are busiest.
+    - cron: "23 * * * *"
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version, e.g. 1.2.0 (creates the tag mobile-v<version>)"
-        required: true
-        type: string
 
 permissions:
-  contents: write
+  contents: read
 
+# One release run per ref at a time. Nothing is cancelled: a waiting run rechecks the gap when it
+# starts, so a push queued behind a nightly is skipped or released on its own merits.
 concurrency:
   group: mobile-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  meta:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      release: ${{ steps.gate.outputs.release }}
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: apps/mobile/app.json
+          sparse-checkout-cone-mode: false
+      - id: gate
+        name: Check the nightly gap
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GAP_HOURS: 4
+        run: |
+          set -euo pipefail
+          decide() { echo "release=$1" >> "$GITHUB_OUTPUT"; echo "$2" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            decide true "Tag or manual run: no gap applies."
+            exit 0
+          fi
+          nightlies='[.[] | select(.isDraft | not) | select(.tagName | test("^mobile-v.*-nightly[.]"))]'
+          last="$(gh release list --limit 100 --json tagName,publishedAt,isDraft --jq "$nightlies | sort_by(.publishedAt) | last // empty")"
+          if [[ -z "$last" ]]; then
+            decide true "No nightly published yet."
+            exit 0
+          fi
+          tag="$(jq -r .tagName <<<"$last")"
+          age=$(( $(date -u +%s) - $(date -u -d "$(jq -r .publishedAt <<<"$last")" +%s) ))
+          if (( age < GAP_HOURS * 3600 )); then
+            decide false "Skipped: $tag was published $(( age / 60 )) minutes ago (gap is $GAP_HOURS hours)."
+            exit 0
+          fi
+          compare="$(gh api "repos/$GH_REPO/compare/$tag...$GITHUB_SHA")"
+          if [[ "$(jq -r .status <<<"$compare")" != "ahead" ]]; then
+            decide false "Skipped: no new commits since $tag."
+            exit 0
+          fi
+          # The schedule ignores the paths filter, so check for mobile changes here too.
+          code="$(jq '[.files[].filename | select(startswith("apps/mobile/") or startswith("packages/backend/") or . == "pnpm-lock.yaml" or . == ".github/workflows/mobile-release.yml")] | length' <<<"$compare")"
+          if (( code == 0 )); then
+            decide false "Skipped: no mobile changes since $tag."
+            exit 0
+          fi
+          decide true "Releasing: mobile code changed since $tag."
+      - id: meta
+        name: Resolve release version
+        if: steps.gate.outputs.release == 'true'
+        shell: bash
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#mobile-v}"
+            # A tag with a suffix (mobile-v1.2.0-beta.1) is still a prerelease.
+            if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then prerelease=false; else prerelease=true; fi
+          else
+            base="$(node -p "require('./apps/mobile/app.json').expo.version")"
+            date="$(date -u +%Y%m%d)"
+            version="${base}-nightly.${date}.${RUN_NUMBER}"
+            prerelease=true
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: $version" >&2
+            exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "tag=mobile-v$version"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing mobile-v$version (prerelease: $prerelease)" >> "$GITHUB_STEP_SUMMARY"
+
   android:
     name: Build Android APK
+    needs: meta
+    if: needs.meta.outputs.release == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       EXPO_PUBLIC_CONVEX_URL: ${{ vars.EXPO_PUBLIC_CONVEX_URL }}
       EXPO_PUBLIC_SITE_URL: ${{ vars.EXPO_PUBLIC_SITE_URL }}
+      RELEASE_VERSION: ${{ needs.meta.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Resolve version
-        id: version
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            version="${INPUT_VERSION#v}"
-          else
-            version="${GITHUB_REF_NAME#mobile-v}"
-          fi
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Version must look like 1.2.0 (got '$version')"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=mobile-v$version" >> "$GITHUB_OUTPUT"
-
       - name: Check configuration
         run: |
           missing=0
@@ -76,6 +155,7 @@ jobs:
           done
           exit $missing
 
+      - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
@@ -88,17 +168,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run test
 
+      # versionCode must only ever increase for Android to install an update over the
+      # previous one; the run number of this workflow does.
       - name: Set app version
         working-directory: apps/mobile
         env:
-          VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ github.run_number }}
         run: |
           node -e '
             const fs = require("node:fs");
             const config = JSON.parse(fs.readFileSync("app.json", "utf8"));
-            config.expo.version = process.env.VERSION;
+            config.expo.version = process.env.RELEASE_VERSION;
             config.expo.android.versionCode = Number(process.env.VERSION_CODE);
             fs.writeFileSync("app.json", JSON.stringify(config, null, 2));
           '
@@ -142,33 +226,53 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Rename APK
-        id: apk
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
+      - name: Collect APK
         run: |
-          path="$RUNNER_TEMP/inkmark-$VERSION.apk"
-          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$path"
-          echo "path=$path" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/release"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk \
+            "$RUNNER_TEMP/release/inkmark-$RELEASE_VERSION.apk"
 
       - uses: actions/upload-artifact@v5
         with:
-          name: inkmark-android-${{ steps.version.outputs.version }}
-          path: ${{ steps.apk.outputs.path }}
+          name: inkmark-android
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
+          path: ${{ runner.temp }}/release/*.apk
 
-      - name: Publish GitHub Release
+  release:
+    name: Publish GitHub release
+    needs: [meta, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: inkmark-android
+          path: release-assets
+      - name: Write checksums
+        working-directory: release-assets
+        run: |
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+      # Created as a draft and published only after every file is attached.
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.version }}
-          APK: ${{ steps.apk.outputs.path }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.meta.outputs.tag }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          PRERELEASE: ${{ needs.meta.outputs.prerelease }}
         run: |
-          notes="Android app for Inkmark $VERSION.
-
-          **Install:** open this page on your Android phone, download \`$(basename "$APK")\`, and open it. Allow installing apps from your browser if Android asks."
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" --clobber
+          set -euo pipefail
+          notes="**Install:** open this page on your Android phone, download \`inkmark-$VERSION.apk\`, and open it. Allow installing apps from your browser if Android asks."
+          flags=(--draft --generate-notes --notes "$notes" --target "$GITHUB_SHA" --title "Inkmark mobile $VERSION")
+          if [[ "$PRERELEASE" == "true" ]]; then
+            flags+=(--prerelease --latest=false)
           else
-            gh release create "$TAG" "$APK" --target "$GITHUB_SHA" \
-              --title "Inkmark mobile $VERSION" --notes "$notes"
+            flags+=(--latest)
           fi
+          gh release create "$TAG" "${flags[@]}" release-assets/*
+          gh release edit "$TAG" --draft=false
