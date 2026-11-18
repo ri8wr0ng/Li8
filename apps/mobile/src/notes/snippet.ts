@@ -4,9 +4,11 @@ function escapeRegExp(text: string) {
 
 /** A case-insensitive regex matching any of the terms, longest first. */
 export function termsRegex(terms: string[]): RegExp | null {
-  const parts = [...new Set(terms.map((t) => t.trim()).filter(Boolean))]
-    .toSorted((a, b) => b.length - a.length)
-    .map(escapeRegExp);
+  // Hermes (Android's JS engine) has no Array.prototype.toSorted; calling it crashed
+  // every note card. Spreading the Set already makes a fresh array, so sort it in place.
+  const unique = [...new Set(terms.map((t) => t.trim()).filter(Boolean))];
+  // oxlint-disable-next-line unicorn/no-array-sort
+  const parts = unique.sort((a, b) => b.length - a.length).map(escapeRegExp);
   return parts.length ? new RegExp(`(${parts.join("|")})`, "giu") : null;
 }
 
