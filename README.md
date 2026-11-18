@@ -96,7 +96,7 @@ On Vercel, `vercel.json` selects the static output and configures the route fall
 
 `.github/workflows/mobile-release.yml` builds the Android app and attaches the APK to a GitHub Release, which people can download and install from their phone. It runs lint, typecheck and tests first.
 
-- **Every push to `main`** (every merged PR) publishes a nightly prerelease, `mobile-v<version>-nightly.<YYYYMMDD>.<run>`, where `<version>` is `expo.version` in `apps/mobile/app.json`. Nightlies are never marked latest.
+- **Every push to `main` that changes the mobile app** (`apps/mobile`, `packages/backend` or the lockfile) publishes a nightly prerelease, `mobile-v<version>-nightly.<YYYYMMDD>.<run>`, where `<version>` is `expo.version` in `apps/mobile/app.json`. Nightlies are never marked latest.
 - **Pushing a version tag** such as `mobile-v0.1.0` publishes a stable release marked latest. A tag with a suffix (`mobile-v0.1.0-beta.1`) is a prerelease.
 - **Run workflow** (Actions → **Mobile release**) on `main` publishes a nightly at once.
 
