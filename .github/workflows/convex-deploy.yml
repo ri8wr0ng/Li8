@@ -24,6 +24,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Deploy Convex
-        run: pnpm exec convex deploy
+        run: pnpm --filter @inkmark/backend exec convex deploy
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}

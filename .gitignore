@@ -14,3 +14,9 @@ todos.json
 
 .vercel
 .vitest/
+
+# Expo
+.expo/
+expo-env.d.ts
+android/
+ios/

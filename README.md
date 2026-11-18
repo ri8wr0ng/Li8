@@ -14,11 +14,23 @@ Notes, and where you left off. A notes app with a reading tracker for manga, man
 
 Stack: TanStack Start (SPA mode) · Convex · Convex Auth v2 (Google) · shadcn/ui · Tailwind v4 · MiniSearch. Brand guide: [docs/BRAND.md](docs/BRAND.md).
 
+## Repo layout
+
+A [Vite+](https://viteplus.dev) monorepo (pnpm workspaces, tasks run with `vp run`):
+
+| Path               | Package            | What                               |
+| ------------------ | ------------------ | ---------------------------------- |
+| `apps/web`         | `web`              | The web app / PWA (TanStack Start) |
+| `apps/mobile`      | `mobile`           | Native app (Expo)                  |
+| `packages/backend` | `@inkmark/backend` | Convex functions, schema and tests |
+
+Run `npx convex …` commands from `packages/backend`. `convex dev` writes `CONVEX_DEPLOYMENT` and `VITE_CONVEX_URL` to `packages/backend/.env.local`, and the web app reads its env from there.
+
 ## Setup
 
 ```bash
 pnpm install
-npx convex dev          # log in, create the project, keep it running
+pnpm dev:backend        # convex dev: log in, create the project, keep it running
 ```
 
 ### Google sign-in
@@ -38,7 +50,7 @@ npx convex dev          # log in, create the project, keep it running
 ### Run
 
 ```bash
-pnpm dev                # http://localhost:3000 (keep `npx convex dev` running too)
+pnpm dev                # http://localhost:3000 (keep `pnpm dev:backend` running too)
 ```
 
 ## AI features
@@ -68,24 +80,32 @@ One key covers both models: `anthropic/claude-haiku-5.5` for chat and `openai/te
 
 ## Continuous integration
 
-Pull requests run `pnpm format:check` (Vite+ / oxfmt) and `pnpm lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `pnpm format` to apply formatting or `pnpm lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
+Pull requests run `pnpm format:check` (Vite+ / oxfmt), `pnpm typecheck`, `pnpm test` and `pnpm lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `pnpm format` to apply formatting or `pnpm lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
 
 PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
 
 ## Deploy
 
-`pnpm build` produces a static app in `dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy`.
+`pnpm build` produces a static app in `apps/web/dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy` from `packages/backend`.
 
 Set `VITE_SITE_URL` (for example `https://inkmark.app`) at build time so link previews get absolute image URLs and the build writes `sitemap.xml` and a canonical link for the sign-in page. On Vercel it defaults to the project's production domain. `robots.txt` is always written and keeps crawlers out of the signed-in pages. The social card is `public/og-image.png`, rendered from `assets/og-image.html` (the command is in that file).
 
 On Vercel, `vercel.json` selects the static output and configures the route fallback and cache headers. The TanStack Start server preset is disabled because this app uses SPA mode.
 
+### Mobile app releases
+
+`.github/workflows/mobile-release.yml` builds the Android app and attaches the APK to a GitHub Release, which people can download and install from their phone. To release, push a tag (`git tag mobile-v1.0.0 && git push origin mobile-v1.0.0`), or run **Mobile release** from the Actions tab with a version number.
+
+First, set repository variables `EXPO_PUBLIC_CONVEX_URL` (the Convex URL) and `EXPO_PUBLIC_SITE_URL` (the deployed web app, which serves the sign-in hand-off page). To sign with your own key, add the secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Otherwise the APK uses the shared debug key. Pick one key and keep it: Android only installs an update over an existing install when both are signed with the same key. iOS isn't built, because iPhones only install apps signed through an Apple Developer account.
+
 ## Layout
 
 ```
-convex/          backend: schema, auth, notes, series (chapter history)
-src/routes/      /login · / (notes) · /notes/$noteId · /library · /library/$seriesId
-src/components/  app shell, ⌘K palette, highlight textarea, series card
-src/lib/         search index, highlighting, chapter-command parser, AniList client, offline cache, theme
-vite/            build plugin that generates the service worker (sw.js)
+packages/backend/convex/   backend: schema, auth, notes, series (chapter history)
+apps/web/src/routes/       /login · / (notes) · /notes/$noteId · /library · /library/$seriesId
+apps/web/src/components/   app shell, ⌘K palette, highlight textarea, series card
+apps/web/src/lib/          search index, highlighting, chapter-command parser, AniList client, offline cache, theme
+apps/web/vite/             build plugin that generates the service worker (sw.js)
+apps/mobile/app/           Expo Router screens: sign-in, Notes, Library, Profile
+apps/mobile/src/           Convex/auth providers, Google sign-in hand-off, theme
 ```
