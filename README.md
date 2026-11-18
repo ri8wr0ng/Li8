@@ -94,9 +94,15 @@ On Vercel, `vercel.json` selects the static output and configures the route fall
 
 ### Mobile app releases
 
-`.github/workflows/mobile-release.yml` builds the Android app and attaches the APK to a GitHub Release, which people can download and install from their phone. To release, push a tag (`git tag mobile-v1.0.0 && git push origin mobile-v1.0.0`), or run **Mobile release** from the Actions tab with a version number.
+`.github/workflows/mobile-release.yml` builds the Android app and attaches the APK to a GitHub Release, which people can download and install from their phone. It runs lint, typecheck and tests first.
 
-First, set repository variables `EXPO_PUBLIC_CONVEX_URL` (the Convex URL) and `EXPO_PUBLIC_SITE_URL` (the deployed web app, which serves the sign-in hand-off page). To sign with your own key, add the secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Otherwise the APK uses the shared debug key. Pick one key and keep it: Android only installs an update over an existing install when both are signed with the same key. iOS isn't built, because iPhones only install apps signed through an Apple Developer account.
+- **Pushes to `main`** that change the mobile app (`apps/mobile`, `packages/backend` or the lockfile) publish a nightly prerelease, `mobile-v<version>-nightly.<YYYYMMDD>.<run>`, where `<version>` is `expo.version` in `apps/mobile/app.json`, at most once every 4 hours. An hourly scheduled run releases skipped commits once the 4 hours pass. Nightlies are never marked latest.
+- **Pushing a version tag** such as `mobile-v0.1.0` publishes a stable release marked latest. A tag with a suffix (`mobile-v0.1.0-beta.1`) is a prerelease.
+- **Run workflow** (Actions → **Mobile release**) on `main` publishes a nightly at once.
+
+To cut a stable release, bump `expo.version` in `apps/mobile/app.json` (so later nightlies count from it), merge, then tag that commit: `git tag mobile-v0.1.0 && git push origin mobile-v0.1.0`. Each release has the APK, a `SHA256SUMS` file and notes generated from merged pull requests. It's created as a draft and published only once every file is attached.
+
+First, set repository variables `EXPO_PUBLIC_CONVEX_URL` (the production Convex URL) and `EXPO_PUBLIC_SITE_URL` (the deployed web app, which serves the sign-in hand-off page). To sign with your own key, add the secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. Otherwise the APK uses the shared debug key. Pick one key and keep it: Android only installs an update over an existing install when both are signed with the same key. iOS isn't built, because iPhones only install apps signed through an Apple Developer account.
 
 ## Layout
 
