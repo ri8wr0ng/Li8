@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "../../../src/theme";
+import { UpdateSettings } from "../../../src/updates/update-settings";
 
 export default function ProfileScreen() {
   const user = useQuery(api.users.me);
@@ -42,7 +43,7 @@ export default function ProfileScreen() {
           </Text>
         </View>
       ) : (
-        <View style={styles.content}>
+        <ScrollView contentContainerStyle={styles.content}>
           <View
             style={[
               styles.card,
@@ -76,6 +77,8 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          <UpdateSettings />
+
           <Pressable
             onPress={handleSignOut}
             disabled={isSigningOut}
@@ -98,7 +101,7 @@ export default function ProfileScreen() {
               </Text>
             )}
           </Pressable>
-        </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -107,7 +110,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -123,6 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   content: {
+    padding: 24,
     gap: 24,
   },
   card: {

@@ -142,6 +142,8 @@ jobs:
     env:
       EXPO_PUBLIC_CONVEX_URL: ${{ vars.EXPO_PUBLIC_CONVEX_URL }}
       EXPO_PUBLIC_SITE_URL: ${{ vars.EXPO_PUBLIC_SITE_URL }}
+      # The in-app updater (apps/mobile/src/updates) reads releases from this repo.
+      EXPO_PUBLIC_RELEASES_REPO: ${{ github.repository }}
       RELEASE_VERSION: ${{ needs.meta.outputs.version }}
     steps:
       - name: Check configuration
@@ -265,9 +267,12 @@ jobs:
           TAG: ${{ needs.meta.outputs.tag }}
           VERSION: ${{ needs.meta.outputs.version }}
           PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           set -euo pipefail
           notes="**Install:** open this page on your Android phone, download \`inkmark-$VERSION.apk\`, and open it. Allow installing apps from your browser if Android asks."
+          # The in-app updater reads the versionCode from this marker to order builds. Keep it.
+          notes+=$'\n\n'"<!-- inkmark:versionCode=$VERSION_CODE -->"
           flags=(--draft --generate-notes --notes "$notes" --target "$GITHUB_SHA" --title "Inkmark mobile $VERSION")
           if [[ "$PRERELEASE" == "true" ]]; then
             flags+=(--prerelease --latest=false)

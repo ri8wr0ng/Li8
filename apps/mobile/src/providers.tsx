@@ -4,6 +4,7 @@ import { ConvexReactClient } from "convex/react";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { api } from "@inkmark/backend/convex/_generated/api";
+import { UpdaterProvider } from "./updates/updater";
 
 function getConvexUrl(): string {
   const url = process.env.EXPO_PUBLIC_CONVEX_URL;
@@ -51,7 +52,7 @@ export function Providers({ children }: { children: ReactNode }) {
           isAuthenticated: api.auth.isAuthenticated,
         }}
       >
-        {children}
+        <UpdaterProvider>{children}</UpdaterProvider>
       </ConvexAuthProvider>
     </SafeAreaProvider>
   );
