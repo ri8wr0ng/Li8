@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
+import { PressableScale } from "../components/pressable-scale";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
@@ -8,6 +9,7 @@ import { useMutation } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../theme";
+import { haptics } from "../haptics";
 import {
   formatChapter,
   isEpisodic,
@@ -50,6 +52,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
   const handleBumpPlus = async (e: { stopPropagation?: () => void }) => {
     e.stopPropagation?.();
     if (isBumping) return;
+    haptics.tap();
     setIsBumping(true);
     try {
       await bump({ id: series._id, delta: 1 });
@@ -63,6 +66,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
   const handleBumpMinus = async (e: { stopPropagation?: () => void }) => {
     e.stopPropagation?.();
     if (isBumping || series.chapter <= 0) return;
+    haptics.tap();
     setIsBumping(true);
     try {
       await bump({ id: series._id, delta: -1 });
@@ -75,6 +79,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
 
   const handleMarkWatched = async (e: { stopPropagation?: () => void }) => {
     e.stopPropagation?.();
+    haptics.success();
     try {
       await update({ id: series._id, status: "completed" });
     } catch (err) {
@@ -106,17 +111,17 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
       : [];
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={`Open series ${series.title}`}
       onPress={handlePressCard}
-      style={({ pressed }) => [
+      scale={0.98}
+      style={[
         styles.card,
         {
           backgroundColor: colors.card,
           borderColor: colors.border,
           borderRadius: radii.card,
-          opacity: pressed ? 0.96 : 1,
         },
       ]}
     >
@@ -304,7 +309,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
           />
         </View>
       ) : null}
-    </Pressable>
+    </PressableScale>
   );
 }
 

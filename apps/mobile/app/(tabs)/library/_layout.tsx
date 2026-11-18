@@ -12,8 +12,10 @@ export default function LibraryLayout() {
         },
         headerTintColor: colors.ink,
         headerTitleStyle: {
+          fontSize: 18,
           fontWeight: "600",
         },
+        headerShadowVisible: false,
         contentStyle: {
           backgroundColor: colors.paper,
         },
@@ -23,7 +25,6 @@ export default function LibraryLayout() {
         name="index"
         options={{
           title: "Library",
-          headerShown: false,
         }}
       />
       <Stack.Screen

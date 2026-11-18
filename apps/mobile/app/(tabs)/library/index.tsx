@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useRouter, useNavigation } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTabBarInset } from "../../../src/components/glass";
 import { Feather } from "@expo/vector-icons";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -54,7 +54,7 @@ function HeaderRightButton({ onPress, color }: { onPress: () => void; color: str
 export default function LibraryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { colors, radii, typography } = useTheme();
 
   // Filters state
@@ -438,7 +438,7 @@ export default function LibraryScreen() {
         </View>
       );
     }
-    return <View style={{ height: insets.bottom + 16 }} />;
+    return <View style={{ height: tabBarInset + 16 }} />;
   };
 
   return (

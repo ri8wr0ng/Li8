@@ -12,8 +12,10 @@ export default function NotesLayout() {
         },
         headerTintColor: colors.ink,
         headerTitleStyle: {
+          fontSize: 18,
           fontWeight: "600",
         },
+        headerShadowVisible: false,
         contentStyle: {
           backgroundColor: colors.paper,
         },
@@ -23,7 +25,6 @@ export default function NotesLayout() {
         name="index"
         options={{
           title: "Notes",
-          headerShown: false,
         }}
       />
       <Stack.Screen

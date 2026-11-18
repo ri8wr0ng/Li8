@@ -4,7 +4,10 @@ import { ConvexReactClient } from "convex/react";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { api } from "@inkmark/backend/convex/_generated/api";
+import { loadThemePreference } from "./theme-preference";
 import { UpdaterProvider } from "./updates/updater";
+
+void loadThemePreference();
 
 function getConvexUrl(): string {
   const url = process.env.EXPO_PUBLIC_CONVEX_URL;
