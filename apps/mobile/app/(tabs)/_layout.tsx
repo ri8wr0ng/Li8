@@ -1,129 +1,51 @@
 import { Redirect } from "expo-router";
-import { Tabs } from "expo-router/js-tabs";
-import { useConvexAuth, useQuery } from "convex/react";
-import { api } from "@inkmark/backend/convex/_generated/api";
-import { Feather } from "@expo/vector-icons";
+import { NativeTabs } from "expo-router/native-tabs";
 import { useTheme } from "../../src/theme";
-import { GlassProvider, GlassTarget, TabBarGlass } from "../../src/components/glass";
+import { useTabsGate } from "../../src/navigation";
 import { haptics } from "../../src/haptics";
 
-type TabBarIconProps = {
-  color: unknown;
-  size: number;
-};
-
-function NotesTabIcon({ color, size }: TabBarIconProps) {
-  return (
-    <Feather name="file-text" size={size} color={typeof color === "string" ? color : undefined} />
-  );
-}
-
-function LibraryTabIcon({ color, size }: TabBarIconProps) {
-  return (
-    <Feather name="book-open" size={size} color={typeof color === "string" ? color : undefined} />
-  );
-}
-
-function AskTabIcon({ color, size }: TabBarIconProps) {
-  return (
-    <Feather
-      name="message-circle"
-      size={size}
-      color={typeof color === "string" ? color : undefined}
-    />
-  );
-}
-
-function ProfileTabIcon({ color, size }: TabBarIconProps) {
-  return <Feather name="user" size={size} color={typeof color === "string" ? color : undefined} />;
-}
-
-function GlassScreenLayout({
-  children,
-  navigation,
-}: {
-  children: React.ReactNode;
-  navigation: React.ComponentProps<typeof GlassTarget>["navigation"];
-}) {
-  return <GlassTarget navigation={navigation}>{children}</GlassTarget>;
-}
-
+/**
+ * iOS: the system tab bar, so it gets Apple's own material, minimize behavior
+ * and accessibility for free. Android uses _layout.android.tsx, a custom bar
+ * drawn to match this one.
+ */
 export default function TabsLayout() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
   const { colors } = useTheme();
-  // Ask only shows when AI is set up and allowed for this account, like on the web.
-  const ai = useQuery(api.chat.status, isAuthenticated ? {} : "skip");
+  const { signedOut, showAsk } = useTabsGate();
 
-  if (!isLoading && !isAuthenticated) {
-    return <Redirect href="/sign-in" />;
-  }
+  if (signedOut) return <Redirect href="/sign-in" />;
 
   return (
-    <GlassProvider>
-      <Tabs
-        screenLayout={GlassScreenLayout}
-        screenListeners={{ tabPress: () => haptics.select() }}
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: colors.paper,
-            shadowColor: "transparent",
-            elevation: 0,
-          },
-          headerTitleStyle: {
-            color: colors.ink,
-            fontSize: 18,
-            fontWeight: "600",
-            letterSpacing: -0.3,
-          },
-          // A floating, frosted bar: content scrolls underneath it instead of stopping at a divider.
-          tabBarStyle: {
-            position: "absolute",
-            backgroundColor: "transparent",
-            borderTopWidth: 0,
-            elevation: 0,
-            shadowOpacity: 0,
-          },
-          tabBarBackground: TabBarGlass,
-          tabBarHideOnKeyboard: true,
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "500", letterSpacing: 0.1 },
-          tabBarActiveTintColor: colors.hanko,
-          tabBarInactiveTintColor: colors.muted,
-        }}
-      >
-        <Tabs.Screen
-          name="notes"
-          options={{
-            title: "Notes",
-            headerShown: false,
-            tabBarIcon: NotesTabIcon,
+    <NativeTabs
+      tintColor={colors.hanko}
+      minimizeBehavior="onScrollDown"
+      screenListeners={{ tabPress: () => haptics.select() }}
+    >
+      <NativeTabs.Trigger name="notes">
+        <NativeTabs.Trigger.Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
+        <NativeTabs.Trigger.Label>Notes</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="ask" hidden={!showAsk}>
+        <NativeTabs.Trigger.Icon
+          sf={{
+            default: "bubble.left.and.text.bubble.right",
+            selected: "bubble.left.and.text.bubble.right.fill",
           }}
         />
-        <Tabs.Screen
-          name="ask/index"
-          options={{
-            title: "Ask",
-            headerTitle: "Ask",
-            tabBarIcon: AskTabIcon,
-            href: ai?.enabled ? undefined : null,
-          }}
+        <NativeTabs.Trigger.Label>Ask</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="library">
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "books.vertical", selected: "books.vertical.fill" }}
         />
-        <Tabs.Screen
-          name="library"
-          options={{
-            title: "Library",
-            headerShown: false,
-            tabBarIcon: LibraryTabIcon,
-          }}
+        <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }}
         />
-        <Tabs.Screen
-          name="profile/index"
-          options={{
-            title: "Profile",
-            headerTitle: "Profile",
-            tabBarIcon: ProfileTabIcon,
-          }}
-        />
-      </Tabs>
-    </GlassProvider>
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

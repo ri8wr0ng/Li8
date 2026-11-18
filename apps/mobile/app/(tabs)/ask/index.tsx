@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useNavigation } from "expo-router";
+import { useHeaderHeight } from "expo-router/react-navigation";
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
@@ -87,6 +88,7 @@ function errorMessage(error: unknown) {
 export default function AskScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const headerHeight = useHeaderHeight();
   const status = useQuery(api.chat.status, {});
   const threads = useQuery(api.chat.threads, {});
   const remove = useMutation(api.chat.remove);
@@ -141,7 +143,7 @@ export default function AskScreen() {
     <KeyboardAvoidingView
       style={[styles.flex, { backgroundColor: colors.paper }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
     >
       {threads && threads.length > 0 && (
         <View>

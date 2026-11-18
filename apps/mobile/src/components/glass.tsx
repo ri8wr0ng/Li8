@@ -8,10 +8,33 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { AccessibilityInfo, Platform, StyleSheet, View } from "react-native";
+import {
+  AccessibilityInfo,
+  Platform,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { BlurTargetView, BlurView } from "expo-blur";
-import { useBottomTabBarHeight } from "expo-router/js-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
+
+/** Android's floating tab bar: a capsule this tall, floating this far above the bottom edge. */
+export const GLASS_BAR_HEIGHT = 64;
+export const GLASS_BAR_GAP = 12;
+/** The height of iOS's own tab bar above the home indicator. */
+const IOS_TAB_BAR_HEIGHT = 49;
+
+/**
+ * Space the tab bar covers at the bottom of the screen, safe area included.
+ * Scrolling content and the Ask composer pad by this to clear it.
+ */
+export function useTabBarInset() {
+  const insets = useSafeAreaInsets();
+  if (Platform.OS === "ios") return insets.bottom + IOS_TAB_BAR_HEIGHT;
+  return GLASS_BAR_HEIGHT + Math.max(insets.bottom, GLASS_BAR_GAP) + GLASS_BAR_GAP;
+}
 
 type Target = RefObject<ComponentRef<typeof View> | null>;
 
@@ -55,15 +78,7 @@ export function GlassTarget({
   );
 }
 
-/**
- * Space the floating tab bar covers at the bottom of the screen (safe area included).
- * Scrolling content pads by this so its last item clears the bar.
- */
-export function useTabBarInset() {
-  return useBottomTabBarHeight();
-}
-
-function useReducedTransparency() {
+export function useReducedTransparency() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
     void AccessibilityInfo.isReduceTransparencyEnabled().then(setReduced);
@@ -74,48 +89,62 @@ function useReducedTransparency() {
 }
 
 /**
- * The tab bar's material: content scrolls underneath and shows through,
- * frosted. With Reduce Transparency on it turns solid.
+ * A piece of frosted glass: what's behind shows through, blurred, under a thin
+ * wash that keeps labels legible, with a bright rim where light catches the
+ * edge. With Reduce Transparency on it turns solid.
  */
-export function TabBarGlass() {
+export function GlassSurface({
+  style,
+  children,
+}: {
+  style?: StyleProp<ViewStyle>;
+  children?: ReactNode;
+}) {
   const { colors, isDark } = useTheme();
   const { target } = useContext(GlassContext);
   const reduced = useReducedTransparency();
-
-  if (reduced) {
-    return <View style={[styles.fill, { backgroundColor: colors.card }]} />;
-  }
+  const radius = StyleSheet.flatten(style)?.borderRadius ?? 0;
 
   return (
-    <View style={styles.fill}>
-      <BlurView
-        style={styles.fill}
-        intensity={Platform.OS === "ios" ? 80 : 60}
-        tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
-        blurMethod={target ? "dimezisBlurViewSdk31Plus" : "none"}
-        blurTarget={target ?? undefined}
-      />
-      {/* A light paper wash keeps labels legible over busy content, and stands in
-          for the blur on Android versions that can't do it. */}
+    <View style={[styles.surface, style]}>
+      {reduced ? (
+        <View style={[styles.fill, { backgroundColor: colors.card }]} />
+      ) : (
+        <>
+          <BlurView
+            style={styles.fill}
+            intensity={Platform.OS === "ios" ? 80 : 40}
+            tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
+            blurMethod={target ? "dimezisBlurViewSdk31Plus" : "none"}
+            blurTarget={target ?? undefined}
+          />
+          <View
+            style={[
+              styles.fill,
+              { backgroundColor: isDark ? "rgba(36, 34, 30, 0.6)" : "rgba(255, 253, 249, 0.62)" },
+            ]}
+          />
+        </>
+      )}
       <View
+        pointerEvents="none"
         style={[
           styles.fill,
-          { backgroundColor: isDark ? "rgba(27, 26, 23, 0.55)" : "rgba(255, 253, 249, 0.6)" },
+          styles.rim,
+          {
+            borderRadius: radius,
+            borderColor: isDark ? "rgba(255, 255, 255, 0.10)" : "rgba(255, 255, 255, 0.85)",
+          },
         ]}
       />
-      {/* Bright top edge, like light catching the material, instead of a hard divider. */}
-      <View
-        style={[
-          styles.edge,
-          { backgroundColor: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(28, 26, 23, 0.06)" },
-        ]}
-      />
+      {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  surface: { overflow: "hidden" },
   fill: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 },
-  edge: { position: "absolute", top: 0, left: 0, right: 0, height: StyleSheet.hairlineWidth },
+  rim: { borderWidth: StyleSheet.hairlineWidth },
 });
