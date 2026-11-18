@@ -9,6 +9,9 @@ WebBrowser.maybeCompleteAuthSession();
 
 // Must match the target in apps/web/public/mobile-auth.html and the `scheme` in app.json.
 const APP_RETURN_URL = "inkmark://auth";
+// Query params Convex Auth's OAuth callback appends to the redirect (lib/oauthParams in @convex-dev/auth).
+const AUTH_CODE_PARAM = "convexAuthCode";
+const AUTH_ERROR_PARAM = "convexAuthError";
 
 export function useMobileGoogleSignIn() {
   const { signIn } = useSignInWithGoogle(api.auth);
@@ -22,7 +25,7 @@ export function useMobileGoogleSignIn() {
     try {
       // Convex Auth only redirects to allowed http(s) origins, so Google sends the
       // browser to the web app's hand-off page (apps/web/public/mobile-auth.html),
-      // which forwards ?code=… to the app's deep link that the auth session waits for.
+      // which forwards ?convexAuthCode=… to the app's deep link that the auth session waits for.
       const siteUrl = process.env.EXPO_PUBLIC_SITE_URL || "http://localhost:3000";
       const redirectTo = `${siteUrl}/mobile-auth.html`;
 
@@ -41,15 +44,20 @@ export function useMobileGoogleSignIn() {
       );
 
       if (authResult.type === "success" && authResult.url) {
-        const parsed = Linking.parse(authResult.url);
-        const rawCode = parsed.queryParams?.code;
-        const code = typeof rawCode === "string" ? rawCode : null;
+        // Convex Auth's callback names its params convexAuthCode / convexAuthError.
+        const { queryParams } = Linking.parse(authResult.url);
+        const code = queryParams?.[AUTH_CODE_PARAM];
+        const authError = queryParams?.[AUTH_ERROR_PARAM];
 
-        if (code) {
+        if (typeof code === "string" && code) {
           const completeResult = await signIn({ code });
           if (completeResult.status === "error") {
             setErrorMessage("Authentication failed. Please try again.");
           }
+        } else if (authError === "access_denied") {
+          // The user declined on Google's consent screen; nothing to report.
+        } else if (authError === "expired") {
+          setErrorMessage("Sign-in took too long. Please try again.");
         } else {
           setErrorMessage("Sign-in completed without an authorization code.");
         }

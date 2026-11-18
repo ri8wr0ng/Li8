@@ -11,7 +11,7 @@
     <p><a id="open" href="inkmark://auth">Open Inkmark</a></p>
     <script>
       // Convex Auth only redirects to http(s) origins, so Google sign-in in the
-      // mobile app lands here first. Hand the query (?code=… or ?error=…) to the
+      // mobile app lands here first. Hand the query (?convexAuthCode=… or ?convexAuthError=…) to the
       // app's deep link, which the in-app auth browser session is waiting for.
       var target = "inkmark://auth" + window.location.search;
       document.getElementById("open").href = target;
