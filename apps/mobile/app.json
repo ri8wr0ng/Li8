@@ -18,7 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F7F4EE"
+        "backgroundColor": "#F7F4EE",
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
       "package": "com.inkmark.mobile"
     },
