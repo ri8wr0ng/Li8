@@ -88,6 +88,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   // Convex, AniList, Google sign-in: always straight to the network.
   if (url.origin !== self.location.origin) return;
+  // Mobile sign-in hand-off page (public/mobile-auth.html), not part of the SPA.
+  if (url.pathname === "/mobile-auth.html") return;
 
   // Every route is the same SPA shell. Serve it from the cache so the app opens
   // instantly and offline; a new deploy arrives as a new worker.

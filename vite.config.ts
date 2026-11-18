@@ -13,6 +13,10 @@ export default defineConfig({
       "pnpm-lock.yaml",
       ".agents/**",
       ".claude/**",
+      "**/.expo/**",
+      "**/expo-env.d.ts",
+      "**/android/**",
+      "**/ios/**",
     ],
   },
   lint: {
@@ -49,7 +53,16 @@ export default defineConfig({
       builtin: true,
       browser: true,
     },
-    ignorePatterns: ["**/routeTree.gen.ts", "**/convex/_generated/**", ".agents/**", ".claude/**"],
+    ignorePatterns: [
+      "**/routeTree.gen.ts",
+      "**/convex/_generated/**",
+      ".agents/**",
+      ".claude/**",
+      "**/.expo/**",
+      "**/expo-env.d.ts",
+      "**/android/**",
+      "**/ios/**",
+    ],
     options: {
       typeAware: true,
       typeCheck: true,

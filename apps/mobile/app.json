@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Inkmark",
+    "slug": "inkmark",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "inkmark",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F4EE"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.inkmark.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F4EE"
+      },
+      "package": "com.inkmark.mobile"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
