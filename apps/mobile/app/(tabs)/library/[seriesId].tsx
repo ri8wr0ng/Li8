@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTabBarInset } from "../../../src/components/glass";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { Feather } from "@expo/vector-icons";
@@ -20,6 +20,7 @@ import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Id } from "@inkmark/backend/convex/_generated/dataModel";
 import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
 import { useTheme } from "../../../src/theme";
+import { haptics } from "../../../src/haptics";
 import {
   formatChapter,
   isEpisodic,
@@ -38,7 +39,7 @@ import { relativeTime, fullDate } from "../../../src/library/time";
 
 export default function SeriesDetailScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { colors, radii, typography } = useTheme();
 
   const { seriesId } = useLocalSearchParams<{ seriesId: string }>();
@@ -134,6 +135,7 @@ export default function SeriesDetailScreen() {
   const progress = series.totalChapters ? Math.min(1, series.chapter / series.totalChapters) : null;
 
   const handleBumpPlus = async () => {
+    haptics.tap();
     try {
       await bump({ id: series._id, delta: 1 });
     } catch (err) {
@@ -143,6 +145,7 @@ export default function SeriesDetailScreen() {
 
   const handleBumpMinus = async () => {
     if (series.chapter <= 0) return;
+    haptics.tap();
     try {
       await bump({ id: series._id, delta: -1 });
     } catch (err) {
@@ -151,6 +154,7 @@ export default function SeriesDetailScreen() {
   };
 
   const handleNextSeason = async () => {
+    haptics.tap();
     try {
       await nextSeason({ id: series._id });
     } catch (err) {
@@ -182,6 +186,7 @@ export default function SeriesDetailScreen() {
   };
 
   const handleStatusChange = async (status: SeriesStatus) => {
+    haptics.select();
     try {
       await update({ id: series._id, status });
     } catch (err) {
@@ -310,6 +315,7 @@ export default function SeriesDetailScreen() {
   };
 
   const handleConfirmDelete = () => {
+    haptics.warning();
     Alert.alert(`Remove ${series.title}?`, "Its history goes too. This can't be undone.", [
       { text: "Cancel", style: "cancel" },
       {
@@ -340,7 +346,7 @@ export default function SeriesDetailScreen() {
 
       <ScrollView
         style={[styles.container, { backgroundColor: colors.paper }]}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + 40 }]}
       >
         {/* Title and Edit Button */}
         <View style={styles.titleRow}>

@@ -11,13 +11,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc, Id } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../../../src/theme";
+import { haptics } from "../../../src/haptics";
+import { useTabBarInset } from "../../../src/components/glass";
 import { ChipInput } from "../../../src/notes/chip-input";
 import { EmptyState } from "../../../src/notes/empty-state";
 import { relativeTime } from "../../../src/notes/time";
@@ -156,8 +158,8 @@ function NotFoundView() {
 
 function Editor({ note }: { note: Doc<"notes"> }) {
   const router = useRouter();
-  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { colors, typography } = useTheme();
 
   const [title, setTitle] = useState(note.title);
@@ -181,19 +183,6 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   }, [note.updatedAt]);
   /* oxlint-enable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps, react/set-state-in-effect */
 
-  // Hide parent tab navigation header when inside editor
-  useEffect(() => {
-    const parent = navigation.getParent();
-    parent?.setOptions({
-      headerShown: false,
-    });
-    return () => {
-      parent?.setOptions({
-        headerShown: true,
-      });
-    };
-  }, [navigation]);
-
   const handleBack = useCallback(async () => {
     await save.flush();
     router.back();
@@ -215,6 +204,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   };
 
   const togglePin = async () => {
+    haptics.select();
     try {
       await updateNote({ id: note._id, pinned: !note.pinned });
     } catch (err) {
@@ -223,6 +213,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   };
 
   const handleDelete = () => {
+    haptics.warning();
     Alert.alert(
       "Delete this note?",
       `“${title.trim() || "Untitled"}” will be removed from all your devices. This can't be undone.`,
@@ -319,7 +310,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingBottom: Math.max(insets.bottom, 24) + 40,
+              paddingBottom: tabBarInset + 40,
             },
           ]}
           keyboardShouldPersistTaps="handled"

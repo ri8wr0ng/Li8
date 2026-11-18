@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { useRouter, Stack } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTabBarInset } from "../../../src/components/glass";
 import { Feather } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -21,7 +21,7 @@ import { isEpisodic, KIND_OPTIONS, STATUS_ORDER, statusLabel } from "../../../sr
 
 export default function NewSeriesScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { colors, radii, typography } = useTheme();
 
   const createSeries = useMutation(api.series.create);
@@ -125,7 +125,7 @@ export default function NewSeriesScreen() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+          contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + 40 }]}
           keyboardShouldPersistTaps="handled"
         >
           {/* Title Input */}

@@ -10,12 +10,12 @@ import {
   View,
 } from "react-native";
 import { useNavigation, useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../../../src/theme";
+import { useTabBarInset } from "../../../src/components/glass";
 import { EmptyState } from "../../../src/notes/empty-state";
 import { NoteCard } from "../../../src/notes/note-card";
 
@@ -26,7 +26,7 @@ type ListItem =
 export default function NotesScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
+  const tabBarInset = useTabBarInset();
   const { colors, radii, typography } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -303,7 +303,7 @@ export default function NotesScreen() {
         contentContainerStyle={[
           styles.listContent,
           {
-            paddingBottom: Math.max(insets.bottom, 16) + 16,
+            paddingBottom: tabBarInset + 16,
           },
         ]}
         refreshControl={

@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { PressableScale } from "../components/pressable-scale";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
@@ -32,17 +33,17 @@ export function NoteCard({
   const bodySnippet = note.body.trim() ? snippet(note.body, terms, 90) : "";
 
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={note.title.trim() || "Untitled note"}
       onPress={handlePress}
-      style={({ pressed }) => [
+      scale={0.98}
+      style={[
         styles.card,
         {
           backgroundColor: colors.card,
           borderColor: colors.border,
           borderRadius: radii.card,
-          opacity: pressed ? 0.75 : 1,
         },
       ]}
     >
@@ -109,7 +110,7 @@ export function NoteCard({
           ))}
         </View>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
