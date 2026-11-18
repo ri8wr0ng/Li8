@@ -11,8 +11,8 @@ import { Highlight, snippet } from "#/lib/highlight";
 import { useCachedList, useCachedPaginatedQuery, writeCachedList } from "#/lib/offline";
 import { pageTitle } from "#/lib/seo";
 import { relativeTime } from "#/lib/time";
-import { api } from "../../../convex/_generated/api";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
 export const Route = createFileRoute("/_app/")({
   validateSearch: (search: Record<string, unknown>): { new?: "note" } =>

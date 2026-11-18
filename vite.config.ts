@@ -1,18 +1,15 @@
-import { defineConfig, lazyPlugins } from "vite-plus";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import viteReact from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
-import { seo } from "./vite/seo.ts";
-import { serviceWorker } from "./vite/service-worker.ts";
+import { defineConfig } from "vite-plus";
 
-const config = defineConfig({
+// Workspace-wide format, lint, staged-file and task-runner settings.
+// Each app keeps its own build config (apps/*/vite.config.ts).
+export default defineConfig({
   staged: {
     "*": "vp check --fix",
   },
   fmt: {
     ignorePatterns: [
-      "src/routeTree.gen.ts",
-      "convex/_generated/**",
+      "**/routeTree.gen.ts",
+      "**/convex/_generated/**",
       "pnpm-lock.yaml",
       ".agents/**",
       ".claude/**",
@@ -52,7 +49,7 @@ const config = defineConfig({
       builtin: true,
       browser: true,
     },
-    ignorePatterns: ["src/routeTree.gen.ts", "convex/_generated/**", ".agents/**", ".claude/**"],
+    ignorePatterns: ["**/routeTree.gen.ts", "**/convex/_generated/**", ".agents/**", ".claude/**"],
     options: {
       typeAware: true,
       typeCheck: true,
@@ -64,18 +61,7 @@ const config = defineConfig({
       },
     ],
   },
-  resolve: { tsconfigPaths: true },
-  plugins: lazyPlugins(() => [
-    tailwindcss(),
-    // All data is private and lives in Convex, so the app renders in the browser
-    // and builds to static files (any static host / installable PWA).
-    tanstackStart({ spa: { enabled: true } }),
-    viteReact(),
-    // Offline app shell: precaches the build and serves _shell.html for every route.
-    serviceWorker(),
-    // robots.txt, sitemap.xml and the public origin for canonical/Open Graph URLs.
-    seo(),
-  ]),
+  run: {
+    cache: true,
+  },
 });
-
-export default config;

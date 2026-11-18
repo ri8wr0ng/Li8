@@ -1,0 +1,35 @@
+{
+  "name": "@inkmark/backend",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./convex/_generated/*": "./convex/_generated/*.js",
+    "./convex/*": "./convex/*.ts"
+  },
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "typecheck": "tsc --noEmit -p convex",
+    "test": "vp test run"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "^4.0.38",
+    "@ai-sdk/provider-utils": "^5.0.81",
+    "@convex-dev/agent": "^0.7.9",
+    "@convex-dev/auth": "^2.0.0",
+    "@convex-dev/rate-limiter": "^0.4.3",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "ai": "^7.0.172",
+    "convex": "catalog:",
+    "convex-helpers": "^0.1.135",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "convex-test": "^0.0.71",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

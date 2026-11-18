@@ -1,4 +1,4 @@
-import type { SeriesKind } from "../../convex/validators";
+import type { SeriesKind } from "@inkmark/backend/convex/validators";
 
 /**
  * AniList lookups, straight from the browser.

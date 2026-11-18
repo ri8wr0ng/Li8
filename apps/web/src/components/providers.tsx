@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "#/components/ui/sonner";
 import { TooltipProvider } from "#/components/ui/tooltip";
-import { api } from "../../convex/_generated/api";
+import { api } from "@inkmark/backend/convex/_generated/api";
 // Starts listening for `beforeinstallprompt` as early as possible.
 import "#/lib/install";
 

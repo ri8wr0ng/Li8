@@ -1,4 +1,4 @@
-import type { SeriesKind, SeriesLink, SeriesStatus } from "../../convex/validators";
+import type { SeriesKind, SeriesLink, SeriesStatus } from "@inkmark/backend/convex/validators";
 
 export const STATUS_LABEL: Record<SeriesStatus, string> = {
   reading: "In progress",

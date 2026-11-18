@@ -14,8 +14,8 @@ import {
 import { Input } from "#/components/ui/input";
 import { type AniListMedia, AniListError, errorMessage, fillFrom, getAniList } from "#/lib/anilist";
 import { useReadOnly } from "#/lib/offline";
-import { api } from "../../convex/_generated/api";
-import type { Doc } from "../../convex/_generated/dataModel";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
 type Patch = {
   anilistId: number | null;

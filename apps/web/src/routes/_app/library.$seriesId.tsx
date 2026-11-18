@@ -68,9 +68,9 @@ import { useCachedList, useOnline, useReadOnly } from "#/lib/offline";
 import { pageTitle, useDocumentTitle } from "#/lib/seo";
 import { fullDate, relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
-import type { Doc, Id } from "../../../convex/_generated/dataModel";
-import type { SeriesLink } from "../../../convex/validators";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Doc, Id } from "@inkmark/backend/convex/_generated/dataModel";
+import type { SeriesLink } from "@inkmark/backend/convex/validators";
 
 export const Route = createFileRoute("/_app/library/$seriesId")({
   head: () => ({ meta: [{ title: pageTitle("Series") }] }),

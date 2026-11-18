@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [format:check, lint]
+        check: [format:check, lint, typecheck, test]
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4

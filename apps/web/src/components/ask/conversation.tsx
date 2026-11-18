@@ -47,8 +47,8 @@ import {
 } from "#/components/ui/trace";
 import { Button } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
-import type { PageRef } from "../../../convex/validators";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { PageRef } from "@inkmark/backend/convex/validators";
 
 /** The page the user has open, offered to the assistant as context. */
 export type CurrentPage = PageRef & { title: string };

@@ -25,8 +25,8 @@ import {
   progressLabel,
 } from "#/lib/series";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
-import type { SeriesStatus } from "../../../convex/validators";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { SeriesStatus } from "@inkmark/backend/convex/validators";
 
 export const Route = createFileRoute("/_app/profile")({ component: ProfilePage });
 

@@ -30,8 +30,8 @@ import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
 import { Highlight, snippet } from "#/lib/highlight";
 import { acronym, formatChapter, parseChapterCommand } from "#/lib/series";
-import { api } from "../../convex/_generated/api";
-import type { Doc } from "../../convex/_generated/dataModel";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
 type PaletteContext = { openPalette: () => void };
 const Ctx = createContext<PaletteContext>({ openPalette: () => {} });

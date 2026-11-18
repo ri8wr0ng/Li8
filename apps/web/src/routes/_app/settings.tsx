@@ -12,7 +12,7 @@ import { useInstall } from "#/lib/install";
 import { clearCache, useCachedQuery, useOnline } from "#/lib/offline";
 import { type Theme, useTheme } from "#/lib/theme";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
+import { api } from "@inkmark/backend/convex/_generated/api";
 
 export const Route = createFileRoute("/_app/settings")({ component: SettingsPage });
 

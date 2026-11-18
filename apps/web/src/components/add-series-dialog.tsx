@@ -37,9 +37,9 @@ import {
   progressLabel,
 } from "#/lib/series";
 import { cn } from "#/lib/utils";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import type { SeriesKind, SeriesStatus } from "../../convex/validators";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Id } from "@inkmark/backend/convex/_generated/dataModel";
+import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
 
 export function AddSeriesDialog({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);

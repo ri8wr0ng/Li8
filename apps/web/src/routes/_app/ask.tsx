@@ -16,7 +16,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import { pageTitle } from "#/lib/seo";
-import { api } from "../../../convex/_generated/api";
+import { api } from "@inkmark/backend/convex/_generated/api";
 
 export const Route = createFileRoute("/_app/ask")({
   head: () => ({ meta: [{ title: pageTitle("Ask") }] }),

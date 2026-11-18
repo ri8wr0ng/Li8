@@ -1,6 +1,6 @@
 import MiniSearch from "minisearch";
 import { useMemo } from "react";
-import type { Doc } from "../../convex/_generated/dataModel";
+import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { acronym } from "./series";
 
 type IndexedDoc = {

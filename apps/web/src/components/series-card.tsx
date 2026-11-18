@@ -24,8 +24,8 @@ import {
 import { useReadOnly } from "#/lib/offline";
 import { useSwipeRight, vibrate } from "#/lib/swipe";
 import { relativeTime } from "#/lib/time";
-import { api } from "../../convex/_generated/api";
-import type { Doc } from "../../convex/_generated/dataModel";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
 export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; terms?: string[] }) {
   const bump = useMutation(api.series.bump).withOptimisticUpdate((store, { id, delta }) => {

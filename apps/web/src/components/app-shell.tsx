@@ -62,7 +62,7 @@ import {
 import { useInstall } from "#/lib/install";
 import { clearCache, useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
 import { useTheme } from "#/lib/theme";
-import { api } from "../../convex/_generated/api";
+import { api } from "@inkmark/backend/convex/_generated/api";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 const modKey = isMac ? "⌘" : "Ctrl";

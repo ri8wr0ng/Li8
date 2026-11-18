@@ -40,8 +40,8 @@ import { useCachedList, useOnline, useReadOnly } from "#/lib/offline";
 import { pageTitle, useDocumentTitle } from "#/lib/seo";
 import { relativeTime } from "#/lib/time";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
-import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Doc, Id } from "@inkmark/backend/convex/_generated/dataModel";
 
 export const Route = createFileRoute("/_app/notes/$noteId")({
   validateSearch: (search: Record<string, unknown>): { q?: string } =>

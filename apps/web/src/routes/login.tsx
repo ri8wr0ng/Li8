@@ -8,7 +8,7 @@ import { Button } from "#/components/ui/button";
 import { clearCache } from "#/lib/offline";
 import { cn } from "#/lib/utils";
 import { HOME_TITLE, SITE_URL, absoluteUrl } from "#/lib/seo";
-import { api } from "../../convex/_generated/api";
+import { api } from "@inkmark/backend/convex/_generated/api";
 
 export const Route = createFileRoute("/login")({
   head: () => ({

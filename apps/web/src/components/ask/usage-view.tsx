@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
+import { api } from "@inkmark/backend/convex/_generated/api";
 
 const RANGES = [7, 30, 90] as const;
 type Measure = "cost" | "calls";

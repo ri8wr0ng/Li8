@@ -23,8 +23,8 @@ import {
 import { useCachedQuery } from "#/lib/offline";
 import { useSheetDrag } from "#/lib/use-sheet-drag";
 import { cn } from "#/lib/utils";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
+import { api } from "@inkmark/backend/convex/_generated/api";
+import type { Id } from "@inkmark/backend/convex/_generated/dataModel";
 
 const OPEN_KEY = "inkmark:ai-panel:open";
 const THREAD_KEY = "inkmark:ai-panel:thread";

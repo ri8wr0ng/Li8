@@ -164,6 +164,12 @@ settings:
 
 catalogs:
   default:
+    convex:
+      specifier: ^1.50.0
+      version: 1.50.0
+    typescript:
+      specifier: ^7.0.2
+      version: 7.0.2
     vite:
       specifier: npm:@voidzero-dev/vite-plus-core@1.6.0
       version: 1.6.0
@@ -177,22 +183,25 @@ overrides:
 importers:
 
   .:
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.6.0(@types/node@22.20.5)(esbuild@0.27.0)(jiti@2.7.0)(typescript@7.0.2)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.6.0(@edge-runtime/vm@5.0.0)(@types/node@22.20.5)(@vitest/ui@5.1.0)(esbuild@0.27.0)(jiti@2.7.0)(typescript@7.0.2)
+
+  apps/web:
     dependencies:
-      '@ai-sdk/provider':
-        specifier: ^4.0.38
-        version: 4.0.38
-      '@ai-sdk/provider-utils':
-        specifier: ^5.0.81
-        version: 5.0.81(zod@4.6.7)
       '@convex-dev/agent':
         specifier: ^0.7.9
         version: 0.7.9(@ai-sdk/provider-utils@5.0.81(zod@4.6.7))(@ai-sdk/provider@4.0.38)(ai@7.0.172(zod@4.6.7))(convex-helpers@0.1.135(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.50.0(react@19.3.1))(react@19.3.1)
       '@convex-dev/auth':
         specifier: ^2.0.0
         version: 2.0.0(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
-      '@convex-dev/rate-limiter':
-        specifier: ^0.4.3
-        version: 0.4.3(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       '@dicebear/collection':
         specifier: ^9.4.2
         version: 9.4.2(@dicebear/core@9.4.3)
@@ -208,9 +217,9 @@ importers:
       '@fontsource-variable/roboto':
         specifier: ^5.3.0
         version: 5.3.0
-      '@openrouter/ai-sdk-provider':
-        specifier: ^3.1.0
-        version: 3.1.0(ai@7.0.172(zod@4.6.7))(zod@4.6.7)
+      '@inkmark/backend':
+        specifier: workspace:*
+        version: link:../../packages/backend
       '@shadcn/react':
         specifier: ^0.3.1
         version: 0.3.1(@types/react@19.3.0)(react@19.3.1)
@@ -223,9 +232,6 @@ importers:
       '@tanstack/react-start':
         specifier: 1.169.5
         version: 1.169.5(@voidzero-dev/vite-plus-core@1.6.0(@types/node@22.20.5)(esbuild@0.27.0)(jiti@2.7.0)(typescript@7.0.2))(esbuild@0.27.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.19)
-      ai:
-        specifier: ^7.0.172
-        version: 7.0.172(zod@4.6.7)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -239,11 +245,8 @@ importers:
         specifier: ^0.5.2
         version: 0.5.2
       convex:
-        specifier: ^1.50.0
+        specifier: 'catalog:'
         version: 1.50.0(react@19.3.1)
-      convex-helpers:
-        specifier: ^0.1.135
-        version: 0.1.135(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.3.1)
@@ -271,13 +274,7 @@ importers:
       tw-animate-css:
         specifier: ^1.3.6
         version: 1.4.0
-      zod:
-        specifier: ^4.6.7
-        version: 4.6.7
     devDependencies:
-      '@edge-runtime/vm':
-        specifier: ^5.0.0
-        version: 5.0.0
       '@tailwindcss/typography':
         specifier: ^0.5.16
         version: 0.5.20(tailwindcss@4.3.5)
@@ -293,11 +290,60 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.0.1
         version: 6.3.0(@voidzero-dev/vite-plus-core@1.6.0(@types/node@22.20.5)(esbuild@0.27.0)(jiti@2.7.0)(typescript@7.0.2))
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: '@voidzero-dev/vite-plus-core@1.6.0(@types/node@22.20.5)(esbuild@0.27.0)(jiti@2.7.0)(typescript@7.0.2)'
+      vite-plus:
+        specifier: 'catalog:'
+        version: 1.6.0(@edge-runtime/vm@5.0.0)(@types/node@22.20.5)(@vitest/ui@5.1.0)(esbuild@0.27.0)(jiti@2.7.0)(typescript@7.0.2)
+
+  packages/backend:
+    dependencies:
+      '@ai-sdk/provider':
+        specifier: ^4.0.38
+        version: 4.0.38
+      '@ai-sdk/provider-utils':
+        specifier: ^5.0.81
+        version: 5.0.81(zod@4.6.7)
+      '@convex-dev/agent':
+        specifier: ^0.7.9
+        version: 0.7.9(@ai-sdk/provider-utils@5.0.81(zod@4.6.7))(@ai-sdk/provider@4.0.38)(ai@7.0.172(zod@4.6.7))(convex-helpers@0.1.135(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7))(convex@1.50.0(react@19.3.1))(react@19.3.1)
+      '@convex-dev/auth':
+        specifier: ^2.0.0
+        version: 2.0.0(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      '@convex-dev/rate-limiter':
+        specifier: ^0.4.3
+        version: 0.4.3(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      '@openrouter/ai-sdk-provider':
+        specifier: ^3.1.0
+        version: 3.1.0(ai@7.0.172(zod@4.6.7))(zod@4.6.7)
+      ai:
+        specifier: ^7.0.172
+        version: 7.0.172(zod@4.6.7)
+      convex:
+        specifier: 'catalog:'
+        version: 1.50.0(react@19.3.1)
+      convex-helpers:
+        specifier: ^0.1.135
+        version: 0.1.135(@standard-schema/spec@1.1.0)(convex@1.50.0(react@19.3.1))(prettier@3.10.1)(react@19.3.1)(typescript@7.0.2)(zod@4.6.7)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@edge-runtime/vm':
+        specifier: ^5.0.0
+        version: 5.0.0
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.5
       convex-test:
         specifier: ^0.0.71
         version: 0.0.71(convex@1.50.0(react@19.3.1))
       typescript:
-        specifier: ^7.0.2
+        specifier: 'catalog:'
         version: 7.0.2
       vite:
         specifier: 'catalog:'
