@@ -2,10 +2,8 @@ name: Mobile release
 
 # Builds the Android app (APK) and publishes it as a GitHub Release.
 #
-# Nightlies: a push to main that touches the mobile app publishes a prerelease
-# (mobile-v<version>-nightly.<date>.<run>) when the last nightly is at least 4 hours old and
-# mobile code changed since it. The hourly schedule picks up pushes that landed inside the gap.
-# Run workflow publishes a nightly at once, ignoring the gap.
+# Nightlies: every push to main (every merged PR) publishes a prerelease
+# (mobile-v<version>-nightly.<date>.<run>). Run workflow publishes one by hand.
 # Stable: pushing a mobile-v*.*.* tag publishes a release that becomes "latest". A tag with a
 # suffix (mobile-v1.2.0-beta.1) is a prerelease.
 #
@@ -31,22 +29,12 @@ on:
   push:
     branches: [main]
     tags: ["mobile-v*.*.*"]
-    # Not applied to tag pushes.
-    paths:
-      - "apps/mobile/**"
-      - "packages/backend/**"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/mobile-release.yml"
-  schedule:
-    # Off the hour, when GitHub's scheduled runs are busiest.
-    - cron: "23 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# One release run per ref at a time. Nothing is cancelled: a waiting run rechecks the gap when it
-# starts, so a push queued behind a nightly is skipped or released on its own merits.
+# One release run per ref at a time. Nothing is cancelled, so every merge gets its own nightly.
 concurrency:
   group: mobile-release-${{ github.ref }}
   cancel-in-progress: false
@@ -67,43 +55,13 @@ jobs:
           sparse-checkout: apps/mobile/app.json
           sparse-checkout-cone-mode: false
       - id: gate
-        name: Check the nightly gap
+        name: Decide whether to release
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          GAP_HOURS: 4
         run: |
           set -euo pipefail
-          decide() { echo "release=$1" >> "$GITHUB_OUTPUT"; echo "$2" | tee -a "$GITHUB_STEP_SUMMARY"; }
-          if [[ "$GITHUB_REF_TYPE" == "tag" || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            decide true "Tag or manual run: no gap applies."
-            exit 0
-          fi
-          nightlies='[.[] | select(.isDraft | not) | select(.tagName | test("^mobile-v.*-nightly[.]"))]'
-          last="$(gh release list --limit 100 --json tagName,publishedAt,isDraft --jq "$nightlies | sort_by(.publishedAt) | last // empty")"
-          if [[ -z "$last" ]]; then
-            decide true "No nightly published yet."
-            exit 0
-          fi
-          tag="$(jq -r .tagName <<<"$last")"
-          age=$(( $(date -u +%s) - $(date -u -d "$(jq -r .publishedAt <<<"$last")" +%s) ))
-          if (( age < GAP_HOURS * 3600 )); then
-            decide false "Skipped: $tag was published $(( age / 60 )) minutes ago (gap is $GAP_HOURS hours)."
-            exit 0
-          fi
-          compare="$(gh api "repos/$GH_REPO/compare/$tag...$GITHUB_SHA")"
-          if [[ "$(jq -r .status <<<"$compare")" != "ahead" ]]; then
-            decide false "Skipped: no new commits since $tag."
-            exit 0
-          fi
-          # The schedule ignores the paths filter, so check for mobile changes here too.
-          code="$(jq '[.files[].filename | select(startswith("apps/mobile/") or startswith("packages/backend/") or . == "pnpm-lock.yaml" or . == ".github/workflows/mobile-release.yml")] | length' <<<"$compare")"
-          if (( code == 0 )); then
-            decide false "Skipped: no mobile changes since $tag."
-            exit 0
-          fi
-          decide true "Releasing: mobile code changed since $tag."
+          # Tags, manual runs and every push to main (a merged PR) all release.
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "Releasing for $GITHUB_EVENT_NAME on $GITHUB_REF_NAME." >> "$GITHUB_STEP_SUMMARY"
       - id: meta
         name: Resolve release version
         if: steps.gate.outputs.release == 'true'
