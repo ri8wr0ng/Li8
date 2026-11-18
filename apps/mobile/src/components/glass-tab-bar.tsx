@@ -1,34 +1,38 @@
 import { useEffect, useState } from "react";
 import { Animated, Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { useTheme } from "../theme";
 import { haptics } from "../haptics";
 import { GLASS_BAR_GAP, GLASS_BAR_HEIGHT, GlassSurface } from "./glass";
-import { useReducedMotion } from "./pressable-scale";
+import { PressableScale, useReducedMotion } from "./pressable-scale";
 
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
 
 export type GlassTab = { name: string; title: string; icon: FeatherName };
 
-const INSET = 6;
+const INSET = 5;
+/** Tabs are square: as wide as they are tall, so the lit lens is a circle. */
+const ITEM_WIDTH = GLASS_BAR_HEIGHT - INSET * 2;
 /** Critically damped, ~0.35s: a tap carries no momentum, so the lens glides without overshoot. */
 const SPRING = { stiffness: 320, damping: 36, mass: 1, useNativeDriver: true } as const;
 
 /**
- * Android's tab bar, drawn to match the iOS one: a floating capsule of frosted
- * glass with a lens that glides to the selected tab. The lens moves on
- * touch-down, before the next screen renders, so the tap feels instant.
+ * Android's navigation, matching the web's phone bar: a glass pill of tabs whose
+ * lit lens glides to the current one, then search and Ask AI as round glass
+ * buttons beside it. The lens moves on touch-down, before the next screen
+ * renders, so a tap feels instant.
  */
 export function GlassTabBar({
   state,
   navigateToTab,
   insets,
   tabs,
-}: BottomTabBarProps & { tabs: GlassTab[] }) {
+  searchRoute,
+  onAskAi,
+}: BottomTabBarProps & { tabs: GlassTab[]; searchRoute: string; onAskAi?: () => void }) {
   const { colors, isDark } = useTheme();
   const reduced = useReducedMotion();
-  const [width, setWidth] = useState(0);
   const [pressed, setPressed] = useState<string | null>(null);
   const [lens] = useState(() => new Animated.Value(0));
   const keyboardUp = useKeyboardUp();
@@ -37,47 +41,42 @@ export function GlassTabBar({
     .map((tab) => ({ tab, route: state.routes.find((r) => r.name === tab.name) }))
     .filter((t): t is { tab: GlassTab; route: (typeof state.routes)[number] } => !!t.route);
   const focusedName = state.routes[state.index]?.name;
-  const active = Math.max(
-    0,
-    routes.findIndex((t) => t.route.name === (pressed ?? focusedName)),
-  );
-  const itemWidth = routes.length ? (width - INSET * 2) / routes.length : 0;
+  const current = pressed ?? focusedName;
+  const active = routes.findIndex((t) => t.route.name === current);
+  const search = state.routes.find((r) => r.name === searchRoute);
+  const searchActive = focusedName === searchRoute;
 
   useEffect(() => {
-    if (!itemWidth) return;
-    const toValue = active * itemWidth;
+    if (active < 0) return;
+    const toValue = active * ITEM_WIDTH;
     if (reduced) lens.setValue(toValue);
     // Starts from wherever the lens is, so a quick second tap just redirects it.
     else Animated.spring(lens, { toValue, ...SPRING }).start();
-  }, [active, itemWidth, reduced, lens]);
+  }, [active, reduced, lens]);
 
   // The route has caught up with the finger; let it drive again.
   if (pressed && pressed === focusedName) setPressed(null);
 
   if (keyboardUp) return null;
 
+  const shadow = isDark ? styles.shadowDark : styles.shadowLight;
+
   return (
     <View
       pointerEvents="box-none"
       style={[styles.wrap, { bottom: Math.max(insets.bottom, GLASS_BAR_GAP) }]}
     >
-      {/* Shadow on the outside, glass clipped to the capsule on the inside. */}
-      <View style={[styles.bar, isDark ? styles.shadowDark : styles.shadowLight]}>
-        <GlassSurface style={styles.glass}>
-          <View
-            style={styles.row}
-            onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-            accessibilityRole="tablist"
-          >
-            {itemWidth > 0 && (
+      {/* Tabs. Shadow on the outside, glass clipped to the pill on the inside. */}
+      <View style={[styles.pill, shadow, { width: routes.length * ITEM_WIDTH + INSET * 2 }]}>
+        <GlassSurface style={styles.pillGlass}>
+          <View style={styles.row} accessibilityRole="tablist">
+            {active >= 0 && (
               <Animated.View
                 style={[
                   styles.lens,
                   {
-                    width: itemWidth,
-                    backgroundColor: isDark
-                      ? "rgba(255, 255, 255, 0.10)"
-                      : "rgba(28, 26, 23, 0.07)",
+                    // The lit lens: warm hanko gradient, like the web's active tab.
+                    experimental_backgroundImage: `linear-gradient(135deg, ${colors.hanko}, #F08A3C)`,
                     transform: [{ translateX: lens }],
                   },
                 ]}
@@ -85,7 +84,7 @@ export function GlassTabBar({
             )}
             {routes.map(({ tab, route }, i) => {
               const selected = i === active;
-              const color = selected ? colors.hanko : colors.ink;
+              const color = selected ? "#FFFFFF" : colors.muted;
               return (
                 <Pressable
                   key={route.key}
@@ -105,7 +104,7 @@ export function GlassTabBar({
                   onPress={() => navigateToTab(route.key)}
                   style={styles.item}
                 >
-                  <Feather name={tab.icon} size={21} color={color} />
+                  <Feather name={tab.icon} size={20} color={color} />
                   <Text
                     style={[styles.label, { color }, selected && styles.labelSelected]}
                     numberOfLines={1}
@@ -118,7 +117,58 @@ export function GlassTabBar({
           </View>
         </GlassSurface>
       </View>
+
+      {search && (
+        <RoundGlassButton
+          label="Search"
+          icon={
+            <Feather name="search" size={21} color={searchActive ? colors.hanko : colors.ink} />
+          }
+          shadow={shadow}
+          onPress={() => {
+            if (!searchActive) haptics.select();
+            navigateToTab(search.key);
+          }}
+        />
+      )}
+      {onAskAi && (
+        <RoundGlassButton
+          label="Ask AI"
+          icon={<Ionicons name="sparkles-outline" size={21} color={colors.hanko} />}
+          shadow={shadow}
+          onPress={() => {
+            haptics.tap();
+            onAskAi();
+          }}
+        />
+      )}
     </View>
+  );
+}
+
+function RoundGlassButton({
+  label,
+  icon,
+  shadow,
+  onPress,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  shadow: object;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      scale={0.92}
+      onPress={onPress}
+      style={[styles.round, shadow]}
+    >
+      <GlassSurface style={styles.roundGlass}>
+        <View style={styles.roundIcon}>{icon}</View>
+      </GlassSurface>
+    </PressableScale>
   );
 }
 
@@ -135,15 +185,20 @@ function useKeyboardUp() {
   return up;
 }
 
+const RADIUS = GLASS_BAR_HEIGHT / 2;
+
 const styles = StyleSheet.create({
-  wrap: { position: "absolute", left: 16, right: 16, alignItems: "center" },
-  bar: {
-    width: "100%",
-    maxWidth: 440,
-    height: GLASS_BAR_HEIGHT,
-    borderRadius: GLASS_BAR_HEIGHT / 2,
+  wrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
   },
-  glass: { flex: 1, borderRadius: GLASS_BAR_HEIGHT / 2 },
+  pill: { height: GLASS_BAR_HEIGHT, borderRadius: RADIUS },
+  pillGlass: { flex: 1, borderRadius: RADIUS },
   shadowLight: {
     boxShadow: "0 8px 24px rgba(28, 26, 23, 0.12), 0 1px 3px rgba(28, 26, 23, 0.08)",
   },
@@ -154,9 +209,19 @@ const styles = StyleSheet.create({
     top: INSET,
     bottom: INSET,
     left: INSET,
-    borderRadius: (GLASS_BAR_HEIGHT - INSET * 2) / 2,
+    width: ITEM_WIDTH,
+    borderRadius: RADIUS - INSET,
   },
-  item: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
-  label: { fontSize: 10, fontWeight: "500", letterSpacing: 0.1 },
-  labelSelected: { fontWeight: "600" },
+  item: {
+    width: ITEM_WIDTH,
+    height: ITEM_WIDTH,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  label: { fontSize: 10, fontWeight: "500" },
+  labelSelected: { fontWeight: "700" },
+  round: { width: GLASS_BAR_HEIGHT, height: GLASS_BAR_HEIGHT, borderRadius: RADIUS },
+  roundGlass: { flex: 1, borderRadius: RADIUS },
+  roundIcon: { flex: 1, alignItems: "center", justifyContent: "center" },
 });

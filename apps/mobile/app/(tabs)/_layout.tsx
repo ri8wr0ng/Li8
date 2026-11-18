@@ -6,8 +6,9 @@ import { haptics } from "../../src/haptics";
 
 /**
  * iOS: the system tab bar, so it gets Apple's own material, minimize behavior
- * and accessibility for free. Android uses _layout.android.tsx, a custom bar
- * drawn to match this one.
+ * and accessibility for free, with search as its own round button. Profile
+ * lives in each header's top-left. Android uses _layout.android.tsx, a custom
+ * bar drawn to match.
  */
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -40,11 +41,10 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }}
-        />
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+      {/* Search is its own round glass button beside the bar, Apple's way. */}
+      <NativeTabs.Trigger name="search" role="search">
+        <NativeTabs.Trigger.Icon sf="magnifyingglass" />
+        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

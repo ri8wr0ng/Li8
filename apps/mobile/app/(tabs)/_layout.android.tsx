@@ -1,4 +1,4 @@
-import { Redirect } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { Tabs, type BottomTabBarProps } from "expo-router/js-tabs";
 import { GlassProvider, GlassTarget } from "../../src/components/glass";
 import { GlassTabBar, type GlassTab } from "../../src/components/glass-tab-bar";
@@ -8,7 +8,6 @@ const ALL_TABS: GlassTab[] = [
   { name: "notes", title: "Notes", icon: "file-text" },
   { name: "ask", title: "Ask", icon: "message-circle" },
   { name: "library", title: "Library", icon: "book-open" },
-  { name: "profile", title: "Profile", icon: "user" },
 ];
 
 function GlassScreenLayout({
@@ -22,15 +21,23 @@ function GlassScreenLayout({
 }
 
 /**
- * Android: Android has no system tab bar that looks like iOS's, so this draws
- * one. A floating glass capsule over the content, matching the iOS layout.
+ * Android: draws the web's phone navigation. A glass pill of tabs, then search
+ * and Ask AI as round glass buttons. Profile lives in each header's top-left.
  */
 export default function TabsLayout() {
+  const router = useRouter();
   const { signedOut, showAsk } = useTabsGate();
   if (signedOut) return <Redirect href="/sign-in" />;
 
   const tabs = showAsk ? ALL_TABS : ALL_TABS.filter((t) => t.name !== "ask");
-  const renderTabBar = (props: BottomTabBarProps) => <GlassTabBar {...props} tabs={tabs} />;
+  const renderTabBar = (props: BottomTabBarProps) => (
+    <GlassTabBar
+      {...props}
+      tabs={tabs}
+      searchRoute="search"
+      onAskAi={showAsk ? () => router.push("/ask-ai") : undefined}
+    />
+  );
 
   return (
     <GlassProvider>
@@ -42,7 +49,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="notes" />
         <Tabs.Screen name="ask" />
         <Tabs.Screen name="library" />
-        <Tabs.Screen name="profile" />
+        <Tabs.Screen name="search" />
       </Tabs>
     </GlassProvider>
   );
