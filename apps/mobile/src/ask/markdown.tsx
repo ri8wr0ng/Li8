@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
-import { useRouter, type Href } from "expo-router";
+import { useRouter } from "expo-router";
 import { useTheme } from "../theme";
 
 /**
@@ -14,10 +14,12 @@ export function Markdown({ text }: { text: string }) {
   const ctx: InlineContext = {
     colors,
     onLink: (href) => {
-      if (href.startsWith("/")) {
+      const route = /^\/(library|notes)\/(\w+)$/.exec(href);
+      if (route) {
         // navigate, not push: from the Ask AI modal this goes back to the tabs
         // and opens the screen there instead of stacking on top of the modal.
-        router.navigate(href as Href);
+        const [, section, id] = route;
+        router.navigate(section === "library" ? `/library/${id}` : `/notes/${id}`);
       } else if (/^https?:\/\//i.test(href)) {
         void Linking.openURL(href);
       }
