@@ -1,13 +1,28 @@
 import { Fragment, type ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
+import { useRouter, type Href } from "expo-router";
 import { useTheme } from "../theme";
 
 /**
  * Just enough Markdown for assistant replies: headings, bullet and numbered
- * lists, **bold**, *italic* and `code`. Anything else shows as plain text.
+ * lists, **bold**, *italic*, `code` and [links](/library/id). Anything else
+ * shows as plain text.
  */
 export function Markdown({ text }: { text: string }) {
   const { colors } = useTheme();
+  const router = useRouter();
+  const ctx: InlineContext = {
+    colors,
+    onLink: (href) => {
+      if (href.startsWith("/")) {
+        // navigate, not push: from the Ask AI modal this goes back to the tabs
+        // and opens the screen there instead of stacking on top of the modal.
+        router.navigate(href as Href);
+      } else if (/^https?:\/\//i.test(href)) {
+        void Linking.openURL(href);
+      }
+    },
+  };
   const blocks = text.split(/\n{2,}/);
 
   return (
@@ -19,7 +34,7 @@ export function Markdown({ text }: { text: string }) {
             if (heading) {
               return (
                 <Text key={i} style={[styles.heading, { color: colors.ink }]}>
-                  {inline(heading[2], colors)}
+                  {inline(heading[2], ctx)}
                 </Text>
               );
             }
@@ -32,14 +47,14 @@ export function Markdown({ text }: { text: string }) {
                     {bullet ? "•" : `${numbered?.[1]}.`}
                   </Text>
                   <Text style={[styles.text, styles.flex, { color: colors.ink }]}>
-                    {inline(bullet ? bullet[1] : (numbered?.[2] ?? ""), colors)}
+                    {inline(bullet ? bullet[1] : (numbered?.[2] ?? ""), ctx)}
                   </Text>
                 </View>
               );
             }
             return (
               <Text key={i} style={[styles.text, { color: colors.ink }]}>
-                {inline(line, colors)}
+                {inline(line, ctx)}
               </Text>
             );
           })}
@@ -49,9 +64,33 @@ export function Markdown({ text }: { text: string }) {
   );
 }
 
-function inline(text: string, colors: { surfaceHighlight: string }): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g);
+type InlineContext = {
+  colors: { surfaceHighlight: string; hanko: string };
+  onLink: (href: string) => void;
+};
+
+const LINK = /^\[([^\]]+)\]\(([^)\s]+)\)$/;
+
+function inline(text: string, ctx: InlineContext): ReactNode {
+  const { colors } = ctx;
+  const parts = text.split(
+    /(\[[^\]]+\]\([^)\s]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g,
+  );
   return parts.map((part, i) => {
+    const link = LINK.exec(part);
+    if (link) {
+      const [, label, href] = link;
+      return (
+        <Text
+          key={i}
+          accessibilityRole="link"
+          onPress={() => ctx.onLink(href)}
+          style={[styles.link, { color: colors.hanko }]}
+        >
+          {label.replace(/\*\*|`/g, "")}
+        </Text>
+      );
+    }
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       return (
         <Text key={i} style={styles.bold}>
@@ -90,6 +129,7 @@ const styles = StyleSheet.create({
   item: { flexDirection: "row", gap: 8, paddingLeft: 2 },
   marker: { minWidth: 14 },
   bold: { fontWeight: "600" },
+  link: { fontWeight: "500", textDecorationLine: "underline" },
   italic: { fontStyle: "italic" },
   code: { fontFamily: "monospace", fontSize: 13 },
 });

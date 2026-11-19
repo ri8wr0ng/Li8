@@ -447,7 +447,10 @@ export default function LibraryScreen() {
         data={displayItems}
         keyExtractor={(item) => item._id}
         renderItem={({ item }) => <SeriesCard series={item} labelsMap={labelsMap} />}
-        ListHeaderComponent={renderHeader}
+        // An element, not the function: a new function each render makes
+        // FlatList remount the header, which drops the search box's focus.
+        ListHeaderComponent={renderHeader()}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
         onEndReached={handleEndReached}
