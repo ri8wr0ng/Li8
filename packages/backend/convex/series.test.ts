@@ -138,6 +138,39 @@ test("nextSeason increments season, resets chapter to 0, and records history", a
   expect(updated2?.chapter).toBe(0);
 });
 
+test("seasons lists earlier seasons with their last episode; only earlier ones can be set", async () => {
+  const { reader, id } = await setup(12);
+  expect(await reader.query(api.series.seasons, { seriesId: id })).toEqual([]);
+
+  await reader.mutation(api.series.nextSeason, { id });
+  await reader.mutation(api.series.bump, { id, delta: 7 });
+  expect(await reader.query(api.series.seasons, { seriesId: id })).toEqual([
+    { season: 1, chapter: 12 },
+  ]);
+
+  // Jumping ahead by hand: season 3 has no record until it's typed in.
+  await reader.mutation(api.series.update, { id, season: 4 });
+  expect(await reader.query(api.series.seasons, { seriesId: id })).toEqual([
+    { season: 1, chapter: 12 },
+    { season: 2, chapter: 7 },
+    { season: 3, chapter: null },
+  ]);
+  await reader.mutation(api.series.setPastSeason, { id, season: 3, chapter: 26 });
+  await reader.mutation(api.series.setPastSeason, { id, season: 1, chapter: 13 });
+  expect(await reader.query(api.series.seasons, { seriesId: id })).toEqual([
+    { season: 1, chapter: 13 },
+    { season: 2, chapter: 7 },
+    { season: 3, chapter: 26 },
+  ]);
+
+  await expect(
+    reader.mutation(api.series.setPastSeason, { id, season: 4, chapter: 1 }),
+  ).rejects.toThrow("Only earlier seasons");
+  await expect(
+    reader.mutation(api.series.setPastSeason, { id, season: 1, chapter: -1 }),
+  ).rejects.toThrow();
+});
+
 test("labels lifecycle: create, dedupe, attach to series, rename, remove pulls from series", async () => {
   const { t, reader, id } = await setup(5);
 

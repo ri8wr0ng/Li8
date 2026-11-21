@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -48,11 +48,13 @@ export default function SeriesDetailScreen() {
 
   const series = useQuery(api.series.get, id ? { id } : "skip");
   const history = useQuery(api.series.history, id ? { seriesId: id } : "skip");
+  const pastSeasons = useQuery(api.series.seasons, id ? { seriesId: id } : "skip");
   const allLabels = useQuery(api.labels.list) ?? [];
 
   const update = useMutation(api.series.update);
   const setChapter = useMutation(api.series.setChapter);
   const nextSeason = useMutation(api.series.nextSeason);
+  const setPastSeason = useMutation(api.series.setPastSeason);
   const bump = useMutation(api.series.bump);
   const remove = useMutation(api.series.remove);
   const createLabel = useMutation(api.labels.create);
@@ -578,6 +580,28 @@ export default function SeriesDetailScreen() {
             <Text style={[styles.updatedText, { color: colors.muted }]}>
               Updated {relativeTime(series.lastReadAt)}
             </Text>
+
+            {episodic && pastSeasons && pastSeasons.length > 0 ? (
+              <View style={[styles.pastSeasonsContainer, { borderTopColor: colors.border }]}>
+                <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
+                  EARLIER SEASONS
+                </Text>
+                {pastSeasons.map((pastSeason) => (
+                  <PastSeasonRow
+                    key={pastSeason.season}
+                    season={pastSeason.season}
+                    chapter={pastSeason.chapter}
+                    onSave={(chapter) =>
+                      setPastSeason({
+                        id: series._id,
+                        season: pastSeason.season,
+                        chapter,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            ) : null}
 
             {/* Progress bar */}
             {progress !== null && (
@@ -1404,6 +1428,80 @@ export default function SeriesDetailScreen() {
   );
 }
 
+function PastSeasonRow({
+  season,
+  chapter,
+  onSave,
+}: {
+  season: number;
+  chapter: number | null;
+  onSave: (chapter: number | null) => Promise<unknown>;
+}) {
+  const { colors, radii, typography } = useTheme();
+  const [value, setValue] = useState(chapter === null ? "" : formatChapter(chapter));
+
+  useEffect(() => {
+    setValue(chapter === null ? "" : formatChapter(chapter));
+  }, [chapter]);
+
+  const handleSave = async () => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      if (chapter !== null) {
+        try {
+          await onSave(null);
+        } catch (err) {
+          console.error("Past season error:", err);
+          setValue(formatChapter(chapter));
+        }
+      }
+      return;
+    }
+
+    const number = Number(trimmed);
+    if (Number.isFinite(number) && number >= 0 && number !== chapter) {
+      try {
+        await onSave(number);
+      } catch (err) {
+        console.error("Past season error:", err);
+        setValue(chapter === null ? "" : formatChapter(chapter));
+      }
+      return;
+    }
+
+    setValue(chapter === null ? "" : formatChapter(chapter));
+  };
+
+  return (
+    <View style={styles.pastSeasonRow}>
+      <Text style={[styles.pastSeasonName, { color: colors.ink }]}>Season {season}</Text>
+      <View style={styles.pastSeasonInputRow}>
+        <Text style={[styles.pastSeasonEpisodeLabel, typography.number, { color: colors.muted }]}>
+          last E
+        </Text>
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          onEndEditing={() => void handleSave()}
+          keyboardType="decimal-pad"
+          accessibilityLabel={`Last episode watched in season ${season}`}
+          placeholder="—"
+          placeholderTextColor={colors.muted}
+          style={[
+            styles.pastSeasonInput,
+            typography.number,
+            {
+              borderColor: colors.border,
+              borderRadius: radii.controls,
+              color: colors.ink,
+            },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1606,6 +1704,34 @@ const styles = StyleSheet.create({
   },
   updatedText: {
     fontSize: 12,
+  },
+  pastSeasonsContainer: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  pastSeasonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pastSeasonName: {
+    fontSize: 14,
+  },
+  pastSeasonInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  pastSeasonEpisodeLabel: {
+    fontSize: 13,
+  },
+  pastSeasonInput: {
+    width: 56,
+    textAlign: "center",
+    borderWidth: 1,
+    paddingVertical: 4,
   },
   barTrack: {
     height: 4,

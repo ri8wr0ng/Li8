@@ -119,6 +119,8 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
   const bump = useMutation(api.series.bump);
   const remove = useMutation(api.series.remove);
   const history = useQuery(api.series.history, { seriesId: series._id });
+  const pastSeasons = useQuery(api.series.seasons, { seriesId: series._id });
+  const setPastSeason = useMutation(api.series.setPastSeason);
   const allLabels = useQuery(api.labels.list) ?? [];
   const createLabel = useMutation(api.labels.create);
   const navigate = useNavigate();
@@ -371,6 +373,47 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                 />
               </div>
             </div>
+
+            {pastSeasons && pastSeasons.length > 0 && (
+              <div className="mt-3 border-t pt-3">
+                <div className="text-[0.7rem] font-medium tracking-widest text-muted-foreground uppercase">
+                  Earlier seasons
+                </div>
+                <ul className="mt-2 divide-y">
+                  {pastSeasons.map((p) => (
+                    <li
+                      key={p.season}
+                      className="flex items-center justify-between gap-3 py-1.5 text-sm"
+                    >
+                      <span>Season {p.season}</span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        last
+                        <span className="font-mono">E</span>
+                        <BlurField
+                          value={p.chapter === null ? "" : formatChapter(p.chapter)}
+                          placeholder="—"
+                          inputMode="decimal"
+                          disabled={readOnly}
+                          aria-label={`Last episode watched in season ${p.season}`}
+                          onCommit={(v) => {
+                            const n = Number(v);
+                            if (v.trim() && (!Number.isFinite(n) || n < 0)) return false;
+                            void setPastSeason({
+                              id: series._id,
+                              season: p.season,
+                              chapter: v.trim() ? n : null,
+                            }).catch((err: unknown) => {
+                              toast.error(err instanceof Error ? err.message : "Couldn't save");
+                            });
+                          }}
+                          className="w-14 rounded border bg-background px-1.5 py-0.5 text-center font-mono text-foreground tabular-nums"
+                        />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {series.totalChapters ? (
               <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-secondary">

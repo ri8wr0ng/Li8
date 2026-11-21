@@ -42,6 +42,8 @@ export default defineSchema({
     totalChapters: v.optional(v.number()),
     season: v.optional(v.number()),
     totalSeasons: v.optional(v.number()),
+    // Last episode watched in each earlier season, set by "Next season" or typed in by hand.
+    pastSeasons: v.optional(v.array(v.object({ season: v.number(), chapter: v.number() }))),
     labelIds: v.optional(v.array(v.id("labels"))),
     searchText: v.optional(v.string()),
     description: v.string(),

@@ -67,6 +67,50 @@ export const history = query({
   },
 });
 
+/** Highest history entries scanned when working out earlier seasons. */
+const SEASON_HISTORY_SCAN = 2000;
+
+/**
+ * Earlier seasons (1 .. current-1) with the last episode watched in each: the saved
+ * value if there is one, otherwise the newest history entry for that season.
+ */
+export const seasons = query({
+  args: { seriesId: v.id("series") },
+  handler: async (ctx, { seriesId }) => {
+    const userId = await getAuthUserId(ctx);
+    const series = await ctx.db.get("series", seriesId);
+    if (!series || series.userId !== userId) return [];
+    const current = series.season ?? 1;
+    if (current <= 1) return [];
+    const fromHistory = new Map<number, number>();
+    const entries = await ctx.db
+      .query("chapterHistory")
+      .withIndex("by_series_at", (q) => q.eq("seriesId", seriesId))
+      .order("desc")
+      .take(SEASON_HISTORY_SCAN);
+    for (const entry of entries) {
+      const season = entry.season ?? 1;
+      if (season < current && !fromHistory.has(season)) fromHistory.set(season, entry.chapter);
+    }
+    const saved = new Map((series.pastSeasons ?? []).map((p) => [p.season, p.chapter]));
+    const out: { season: number; chapter: number | null }[] = [];
+    for (let season = 1; season < current; season++) {
+      out.push({ season, chapter: saved.get(season) ?? fromHistory.get(season) ?? null });
+    }
+    return out;
+  },
+});
+
+function withPastSeason(
+  pastSeasons: Doc<"series">["pastSeasons"],
+  season: number,
+  chapter: number | null,
+) {
+  const rest = (pastSeasons ?? []).filter((p) => p.season !== season);
+  const next = chapter === null ? rest : [...rest, { season, chapter }];
+  return next.sort((a, b) => a.season - b.season);
+}
+
 export function assertChapter(chapter: number) {
   if (!Number.isFinite(chapter) || chapter < 0) throw new Error("Chapter must be 0 or more");
 }
@@ -300,11 +344,28 @@ export const nextSeason = mutation({
     });
     await ctx.db.patch("series", id, {
       season: nextSeasonNumber,
+      pastSeasons: withPastSeason(series.pastSeasons, series.season ?? 1, series.chapter),
       chapter: 0,
       lastReadAt: now,
       updatedAt: now,
     });
     return { season: nextSeasonNumber, chapter: 0 };
+  },
+});
+
+/** Set (or clear, with null) the last episode watched in an earlier season. */
+export const setPastSeason = mutation({
+  args: { id: v.id("series"), season: v.number(), chapter: v.union(v.number(), v.null()) },
+  handler: async (ctx, { id, season, chapter }) => {
+    const series = await ownSeries(ctx, id);
+    if (!Number.isInteger(season) || season < 1 || season >= (series.season ?? 1)) {
+      throw new Error("Only earlier seasons can be set here");
+    }
+    if (chapter !== null) assertChapter(chapter);
+    await ctx.db.patch("series", id, {
+      pastSeasons: withPastSeason(series.pastSeasons, season, chapter),
+      updatedAt: Date.now(),
+    });
   },
 });
 
