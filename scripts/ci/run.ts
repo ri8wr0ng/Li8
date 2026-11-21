@@ -3,6 +3,7 @@
 //
 //   bun scripts/ci/run.ts checks|test|build
 import { appendFileSync } from "node:fs";
+import { cpus } from "node:os";
 
 type Check = { name: string; cmd: string[]; budgetMs: number };
 
@@ -78,6 +79,11 @@ if (ci && setupStart && setupEnd) {
     failures.push(`setup took ${setupMs} ms, budget ${SETUP_BUDGET_MS} ms`);
   if (jobMs > JOB_BUDGET_MS) failures.push(`job took ${jobMs} ms, budget ${JOB_BUDGET_MS} ms`);
 }
+
+// The machine, so a budget miss can be told apart from a slower code path: on a shared runner
+// pool, every check on the run slows by the same factor.
+const cpu = cpus();
+rows.push(`| _machine_ | ${cpu.length} cores | ${cpu[0]?.model.trim() ?? "unknown"} | |`);
 
 const table = ["| Step | Result | Time | Budget |", "|---|---|---|---|", ...rows].join("\n");
 console.log(`\n${table}`);
