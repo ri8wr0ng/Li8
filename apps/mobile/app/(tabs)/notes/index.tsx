@@ -110,7 +110,7 @@ export default function NotesScreen() {
     { initialNumItems: 50 },
   );
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setSearchQuery("");
     setDebouncedQuery("");

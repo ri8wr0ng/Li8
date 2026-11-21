@@ -1,6 +1,7 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
 
+/** @type {string} */
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, "../..");
 
