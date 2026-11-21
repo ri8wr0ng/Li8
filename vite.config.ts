@@ -10,7 +10,7 @@ export default defineConfig({
     ignorePatterns: [
       "**/routeTree.gen.ts",
       "**/convex/_generated/**",
-      "pnpm-lock.yaml",
+      "bun.lock",
       ".agents/**",
       ".claude/**",
       "**/.expo/**",

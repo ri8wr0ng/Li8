@@ -16,7 +16,7 @@ Stack: TanStack Start (SPA mode) · Convex · Convex Auth v2 (Google) · shadcn/
 
 ## Repo layout
 
-A [Vite+](https://viteplus.dev) monorepo (pnpm workspaces, tasks run with `vp run`):
+A [Vite+](https://viteplus.dev) monorepo (bun workspaces, tasks run with `vp run`):
 
 | Path               | Package            | What                               |
 | ------------------ | ------------------ | ---------------------------------- |
@@ -29,8 +29,8 @@ Run `npx convex …` commands from `packages/backend`. `convex dev` writes `CONV
 ## Setup
 
 ```bash
-pnpm install
-pnpm dev:backend        # convex dev: log in, create the project, keep it running
+bun install
+bun dev:backend         # convex dev: log in, create the project, keep it running
 ```
 
 ### Google sign-in
@@ -50,7 +50,7 @@ pnpm dev:backend        # convex dev: log in, create the project, keep it runnin
 ### Run
 
 ```bash
-pnpm dev                # http://localhost:3000 (keep `pnpm dev:backend` running too)
+bun dev                 # http://localhost:3000 (keep `bun dev:backend` running too)
 ```
 
 ## AI features
@@ -80,13 +80,13 @@ One key covers both models: `anthropic/claude-haiku-5.5` for chat and `openai/te
 
 ## Continuous integration
 
-Pull requests run `pnpm format:check` (Vite+ / oxfmt), `pnpm typecheck`, `pnpm test` and `pnpm lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `pnpm format` to apply formatting or `pnpm lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
+Pull requests run `bun format:check` (Vite+ / oxfmt), `bun typecheck`, `bun run test` and `bun lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `bun format` to apply formatting or `bun lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
 
 PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
 
 ## Deploy
 
-`pnpm build` produces a static app in `apps/web/dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy` from `packages/backend`.
+`bun run build` produces a static app in `apps/web/dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy` from `packages/backend`.
 
 Set `VITE_SITE_URL` (for example `https://inkmark.app`) at build time so link previews get absolute image URLs and the build writes `sitemap.xml` and a canonical link for the sign-in page. On Vercel it defaults to the project's production domain. `robots.txt` is always written and keeps crawlers out of the signed-in pages. The social card is `public/og-image.png`, rendered from `assets/og-image.html` (the command is in that file).
 
