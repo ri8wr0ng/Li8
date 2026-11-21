@@ -14,6 +14,7 @@
   },
   "type": "module",
   "scripts": {
+    "prepare": "bun scripts/prepare-hk.ts",
     "dev": "bun --filter web dev",
     "dev:backend": "bun --filter @inkmark/backend dev",
     "dev:mobile": "bun --filter mobile dev",

@@ -1,0 +1,29 @@
+amends "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Config.pkl"
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stage = true
+    stash = "git"
+    steps {
+      ["format"] {
+        fix = "bun fmt --staged"
+      }
+      ["lint"] {
+        fix = "bun lint --staged --fix"
+      }
+    }
+  }
+  // The same script CI runs, so a push that passes here passes CI's checks. The full test
+  // suite runs (it takes about a second), not the PR selection.
+  ["pre-push"] {
+    steps {
+      ["checks"] {
+        check = "bun scripts/ci/run.ts checks"
+      }
+      ["test"] {
+        check = "bun scripts/ci/run.ts test"
+      }
+    }
+  }
+}

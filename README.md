@@ -82,6 +82,8 @@ One key covers both models: `anthropic/claude-haiku-5.5` for chat and `openai/te
 
 Pull requests run `bun fmt --check`, `bun lint` (type-aware, warnings fail), `bun check` (TypeScript 7) and `bun test --isolate` (random order). Run `bun fmt` to apply formatting or `bun lint:fix` for lint fixes locally. Lint rules live in `.oxlintrc.json`, formatting in `.oxfmtrc.json`. `bun lint` runs a pinned bun canary through `bunx`, since stable bun has no linter yet. Generated files and installed agent skills are excluded from these checks.
 
+`bun install` installs git hooks with [hk](https://hk.jdx.dev) (pinned, downloaded and checksum-verified by `scripts/prepare-hk.ts`). Pre-commit formats and lints the staged files; pre-push runs the same checks and tests as CI.
+
 PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
 
 ## Deploy
