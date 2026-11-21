@@ -40,8 +40,14 @@ jobs:
       - uses: actions/checkout@v6
         with:
           filter: blob:none
+          # Selection diffs against the PR's base, so it needs history (blobless keeps it cheap).
+          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
       - uses: ./.github/actions/setup
+      # PRs run only the tests their diff can reach (scripts/ci/select.ts lists what reruns
+      # everything). Main and the merge queue run every test and prove every file ran.
       - run: bun scripts/ci/run.ts test
+        env:
+          TEST_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
 
   build:
     runs-on: ubuntu-latest

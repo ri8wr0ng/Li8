@@ -9,6 +9,9 @@
     },
     {
       "path": "packages/backend/convex"
+    },
+    {
+      "path": "scripts"
     }
   ]
 }
