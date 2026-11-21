@@ -2,10 +2,26 @@
 // check, or the job, that runs over its time budget. A slow check fails here, not in a month.
 //
 //   bun scripts/ci/run.ts checks|test|build
-import { appendFileSync } from "node:fs";
-import { cpus } from "node:os";
+import { appendFileSync, readFileSync } from "node:fs";
+import { cpus, tmpdir } from "node:os";
+import { join } from "node:path";
+import { changedFiles, commands, select } from "./select.ts";
 
 type Check = { name: string; cmd: string[]; budgetMs: number };
+
+const JUNIT = join(process.env.RUNNER_TEMP ?? tmpdir(), "bun-test.xml");
+
+// On a PR (TEST_BASE set), only the tests its diff can reach run; see select.ts. Everywhere
+// else every test runs, and the run must prove it ran every test file.
+const base = process.env.TEST_BASE;
+const selection = base
+  ? select(await changedFiles(base), base)
+  : ({ kind: "all", reason: "full run" } as const);
+const testChecks: Check[] = commands(selection).map((cmd, i) => ({
+  name: i === 0 ? "test" : `test ${cmd.at(-1)}`,
+  cmd: selection.kind === "all" ? [...cmd, "--reporter=junit", `--reporter-outfile=${JUNIT}`] : cmd,
+  budgetMs: 30_000,
+}));
 
 const GROUPS: Record<string, Check[]> = {
   checks: [
@@ -13,7 +29,7 @@ const GROUPS: Record<string, Check[]> = {
     { name: "lint", cmd: ["bun", "lint"], budgetMs: 1_000 },
     { name: "typecheck", cmd: ["bun", "check"], budgetMs: 5_000 },
   ],
-  test: [{ name: "test", cmd: ["bun", "test", "--isolate"], budgetMs: 30_000 }],
+  test: testChecks,
   build: [{ name: "build", cmd: ["bun", "run", "build"], budgetMs: 30_000 }],
 };
 
@@ -60,6 +76,28 @@ for (const r of results) {
   const header = `── ${r.name}: ${status} in ${Math.round(r.ms)} ms (budget ${r.budgetMs} ms) `;
   console.log(`\n${header.padEnd(100, "─")}`);
   if (failed || process.env.CI_VERBOSE) console.log(r.output.trimEnd());
+}
+
+if (group === "test") {
+  console.log(`\nTest selection: ${selection.reason}`);
+  rows.push(`| _selection_ | ${selection.kind} | ${selection.reason} | |`);
+  // A full run must have run every test file in the repo: a file bun didn't find (a bad glob,
+  // a renamed directory) is a test that silently stopped running.
+  if (selection.kind === "all" && results.every((r) => r.code === 0)) {
+    const ran = new Set(
+      [...readFileSync(JUNIT, "utf8").matchAll(/<testsuite name="([^"]+\.test\.tsx?)"/g)].map((m) =>
+        (m[1] ?? "").replaceAll("\\", "/"),
+      ),
+    );
+    const all = (await Bun.$`git ls-files "*.test.ts" "*.test.tsx"`.text())
+      .split("\n")
+      .filter(Boolean);
+    const missing = all.filter((file) => !ran.has(file));
+    rows.push(
+      `| _files_ | ${missing.length ? "MISSING" : "ok"} | ${ran.size} of ${all.length} ran | |`,
+    );
+    for (const file of missing) failures.push(`${file} never ran`);
+  }
 }
 
 const now = Date.now();
