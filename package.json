@@ -1,6 +1,18 @@
 {
   "name": "inkmark",
   "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "convex": "^1.50.0",
+      "typescript": "^7.0.2",
+      "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
+      "vite-plus": "1.6.0"
+    }
+  },
   "type": "module",
   "scripts": {
     "dev": "vp run web#dev",
@@ -21,8 +33,16 @@
     "vite": "catalog:",
     "vite-plus": "catalog:"
   },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
+    "vite@*": "catalog:"
+  },
   "engines": {
     "node": ">=22.18.0"
   },
-  "packageManager": "pnpm@12.18.0"
+  "packageManager": "bun@1.4.5",
+  "trustedDependencies": [
+    "esbuild",
+    "lightningcss"
+  ]
 }

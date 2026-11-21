@@ -27,7 +27,7 @@ jobs:
             const files = await github.paginate(github.rest.pulls.listFiles, {
               owner, repo, pull_number: number, per_page: 100,
             });
-            const ignored = /(^|\/)(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|skills-lock\.json)$|(^|\/)_generated\/|(^|\/)routeTree\.gen\.ts$/;
+            const ignored = /(^|\/)(bun\.lock|pnpm-lock\.yaml|package-lock\.json|yarn\.lock|skills-lock\.json)$|(^|\/)_generated\/|(^|\/)routeTree\.gen\.ts$/;
             // GitHub returns at most 3,000 files; use totals if the list is incomplete.
             const lines = files.length < pr.changed_files
               ? pr.additions + pr.deletions
