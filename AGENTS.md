@@ -13,3 +13,5 @@ Convex agent skills for common tasks can be installed by running
 <!-- convex-ai-end -->
 
 Git hooks are installed by `bun install`; do not skip them with `--no-verify`.
+
+When you fix a failing test before 2026-12-05, log it in `docs/test-failures.md` as a caught regression or a change detector. Never delete tests for authorization, privacy, migrations or concurrency.
