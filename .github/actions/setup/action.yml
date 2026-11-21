@@ -4,7 +4,8 @@ description: Install bun and the workspace's dependencies, restoring them from m
 runs:
   using: composite
   steps:
-    - run: echo "SETUP_START=$(date +%s%3N)" >> "$GITHUB_ENV"
+    # Setup's budget starts at the job's first step (JOB_START) when the job sets one.
+    - run: echo "SETUP_START=${JOB_START:-$(date +%s%3N)}" >> "$GITHUB_ENV"
       shell: bash
     - uses: oven-sh/setup-bun@v2
       with:
