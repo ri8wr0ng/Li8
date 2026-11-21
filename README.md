@@ -16,7 +16,7 @@ Stack: TanStack Start (SPA mode) · Convex · Convex Auth v2 (Google) · shadcn/
 
 ## Repo layout
 
-A [Vite+](https://viteplus.dev) monorepo (bun workspaces, tasks run with `vp run`):
+A [bun](https://bun.com) workspace monorepo (the web app builds with Vite):
 
 | Path               | Package            | What                               |
 | ------------------ | ------------------ | ---------------------------------- |
@@ -80,7 +80,7 @@ One key covers both models: `anthropic/claude-haiku-5.5` for chat and `openai/te
 
 ## Continuous integration
 
-Pull requests run `bun format:check` (Vite+ / oxfmt), `bun typecheck`, `bun run test` and `bun lint` (Vite+ / oxlint, including type-aware checks). Lint warnings fail CI. Run `bun format` to apply formatting or `bun lint:fix` for lint fixes locally. Configuration lives in `vite.config.ts`. Generated files and installed agent skills are excluded from these checks.
+Pull requests run `bun fmt --check`, `bun lint` (type-aware, warnings fail), `bun check` (TypeScript 7) and `bun test --isolate` (random order). Run `bun fmt` to apply formatting or `bun lint:fix` for lint fixes locally. Lint rules live in `.oxlintrc.json`, formatting in `.oxfmtrc.json`. `bun lint` runs a pinned bun canary through `bunx`, since stable bun has no linter yet. Generated files and installed agent skills are excluded from these checks.
 
 PRs also receive a size label based on added + deleted lines, excluding lockfiles and generated code: `size/XS` (0–9), `size/S` (10–49), `size/M` (50–249), `size/L` (250–499), `size/XL` (500–999), or `size/XXL` (1,000+). The label updates when commits change; size never fails CI. For PRs exceeding GitHub's 3,000-file API limit, the count includes all files. The label workflow starts working once it is on the default branch.
 

@@ -14,13 +14,18 @@ concurrency:
 
 jobs:
   quality:
-    name: ${{ matrix.check }}
+    name: ${{ matrix.check.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        check: [format:check, lint, typecheck, test]
+        check:
+          - { name: format, run: bun fmt --check }
+          - { name: lint, run: bun lint }
+          - { name: typecheck, run: bun check }
+          # Every file gets a fresh global and module registry; bunfig.toml randomizes the order.
+          - { name: test, run: bun test --isolate }
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
@@ -35,5 +40,4 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
-      # Scripts use the Vite+ formatter (oxfmt) and linter (oxlint).
-      - run: bun run ${{ matrix.check }}
+      - run: ${{ matrix.check.run }}

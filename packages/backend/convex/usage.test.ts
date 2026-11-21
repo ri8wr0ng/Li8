@@ -2,7 +2,7 @@
 import { registerCore, sessionIdentity } from "@convex-dev/auth/test";
 import { register as registerRateLimiter } from "@convex-dev/rate-limiter/test";
 import { convexTest } from "convex-test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, setSystemTime } from "vitest";
 import { api, components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -45,10 +45,10 @@ async function setup() {
 
 describe("usage.summary", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
+    // Only the clock is faked, so convex-test's timers still run.
+    setSystemTime(new Date("2026-11-14T12:00:00Z"));
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => setSystemTime());
 
   it("totals only the signed-in user's calls, by day, kind and model", async () => {
     const { alice, bob, asAlice, record } = await setup();
@@ -56,7 +56,7 @@ describe("usage.summary", () => {
     await record(alice, "chat", 0.003);
     await record(alice, "search", 0.000002, 10);
     await record(bob, "chat", 5);
-    vi.setSystemTime(new Date("2026-11-16T12:00:00Z"));
+    setSystemTime(new Date("2026-11-16T12:00:00Z"));
     await record(alice, "index", 0.0001, 5000);
 
     const s = (await asAlice.query(api.usage.summary, { days: 7, tzOffsetMinutes: 0 }))!;
@@ -79,7 +79,7 @@ describe("usage.summary", () => {
   it("leaves out calls older than the range", async () => {
     const { alice, asAlice, record } = await setup();
     await record(alice, "chat", 1);
-    vi.setSystemTime(new Date("2026-11-30T12:00:00Z"));
+    setSystemTime(new Date("2026-11-30T12:00:00Z"));
     const s = (await asAlice.query(api.usage.summary, { days: 7, tzOffsetMinutes: 0 }))!;
     expect(s.total.calls).toBe(0);
   });

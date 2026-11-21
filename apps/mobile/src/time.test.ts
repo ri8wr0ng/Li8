@@ -1,14 +1,21 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vitest";
+
+const realIntl = globalThis.Intl;
 
 describe("relativeTime without Intl.RelativeTimeFormat (Hermes on Android)", () => {
   afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.resetModules();
+    // No module reset needed: bun test --isolate gives every file a fresh module registry, and
+    // this file imports ./time once.
+    globalThis.Intl = realIntl;
   });
 
   it("loads and formats instead of throwing", async () => {
     // Intl's members are not enumerable, so name the ones Hermes does have.
-    vi.stubGlobal("Intl", { DateTimeFormat: Intl.DateTimeFormat, NumberFormat: Intl.NumberFormat });
+    // Assigned directly: bun's vitest shim has no vi.stubGlobal.
+    Reflect.set(globalThis, "Intl", {
+      DateTimeFormat: Intl.DateTimeFormat,
+      NumberFormat: Intl.NumberFormat,
+    });
     const { relativeTime } = await import("./time");
     const now = Date.UTC(2026, 10, 18, 12);
     expect(relativeTime(now - 5 * 60_000, now)).toBe("5 minutes ago");

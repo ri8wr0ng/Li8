@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "**/routeTree.gen.ts",
+    "**/convex/_generated/**",
+    "pnpm-lock.yaml",
+    "bun.lock",
+    ".agents/**",
+    ".claude/**",
+    "**/.expo/**",
+    "**/expo-env.d.ts",
+    "**/android/**",
+    "**/ios/**"
+  ]
+}
