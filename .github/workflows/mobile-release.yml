@@ -132,7 +132,7 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v5
 
-      # The same checks as CI. Budgets don't apply here (this job isn't on the PR path).
+      # Run the same checks as CI before building the APK.
       - run: bun fmt --check && bun lint && bun check && bun test --isolate
 
       # versionCode must only ever increase for Android to install an update over the

@@ -4,7 +4,7 @@ description: Install bun and the workspace's dependencies, restoring them from m
 runs:
   using: composite
   steps:
-    # Setup's budget starts at the job's first step (JOB_START) when the job sets one.
+    # Include checkout in the setup time when the job records a start time.
     - run: echo "SETUP_START=${JOB_START:-$(date +%s%3N)}" >> "$GITHUB_ENV"
       shell: bash
     - uses: oven-sh/setup-bun@v2
@@ -25,7 +25,7 @@ runs:
     # Still runs on a cache hit: it checks node_modules matches bun.lock (and is ~0.2 s then).
     - run: bun install --frozen-lockfile
       shell: bash
-    # bun lint runs a pinned canary through bunx; fetch it here so lint's budget times linting.
+    # Fetch the pinned Bun canary during setup so lint measures linting time.
     - run: bun run lint --version > /dev/null
       shell: bash
     - if: steps.deps.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'

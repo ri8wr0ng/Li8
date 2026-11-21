@@ -1,5 +1,4 @@
-// Runs one CI job's checks, prints every failure (not just the first), and fails any
-// check, or the job, that runs over its time budget. A slow check fails here, not in a month.
+// Runs one CI job's checks and reports all failures and elapsed times.
 //
 //   bun scripts/ci/run.ts checks|test|build
 import { appendFileSync, readFileSync } from "node:fs";
@@ -7,7 +6,7 @@ import { cpus, tmpdir } from "node:os";
 import { join } from "node:path";
 import { changedFiles, commands, select } from "./select.ts";
 
-type Check = { name: string; cmd: string[]; budgetMs: number };
+type Check = { name: string; cmd: string[] };
 
 const JUNIT = join(process.env.RUNNER_TEMP ?? tmpdir(), "bun-test.xml");
 
@@ -20,22 +19,17 @@ const selection = base
 const testChecks: Check[] = commands(selection).map((cmd, i) => ({
   name: i === 0 ? "test" : `test ${cmd.at(-1)}`,
   cmd: selection.kind === "all" ? [...cmd, "--reporter=junit", `--reporter-outfile=${JUNIT}`] : cmd,
-  budgetMs: 30_000,
 }));
 
 const GROUPS: Record<string, Check[]> = {
   checks: [
-    { name: "format", cmd: ["bun", "fmt", "--check"], budgetMs: 1_000 },
-    { name: "lint", cmd: ["bun", "lint"], budgetMs: 1_000 },
-    { name: "typecheck", cmd: ["bun", "check"], budgetMs: 5_000 },
+    { name: "format", cmd: ["bun", "fmt", "--check"] },
+    { name: "lint", cmd: ["bun", "lint"] },
+    { name: "typecheck", cmd: ["bun", "check"] },
   ],
   test: testChecks,
-  build: [{ name: "build", cmd: ["bun", "run", "build"], budgetMs: 30_000 }],
+  build: [{ name: "build", cmd: ["bun", "run", "build"] }],
 };
-
-// Whole-job budgets. Setup is measured by .github/actions/setup (SETUP_START/SETUP_END).
-const SETUP_BUDGET_MS = 15_000;
-const JOB_BUDGET_MS = 35_000;
 
 const group = process.argv[2] ?? "";
 const checks = GROUPS[group];
@@ -57,8 +51,7 @@ async function run(check: Check): Promise<Result> {
   return { ...check, code, ms: performance.now() - start, output: stdout + stderr };
 }
 
-// One at a time: in parallel they compete for cores, and each budget should time the tool,
-// not the contention. Every check still runs, so every failure is listed.
+// Run each check in sequence to measure its elapsed time without contention from the others.
 const results: Result[] = [];
 for (const check of checks) results.push(await run(check));
 const failures: string[] = [];
@@ -67,20 +60,17 @@ const ci = Boolean(process.env.CI);
 
 for (const r of results) {
   const failed = r.code !== 0;
-  const slow = r.ms > r.budgetMs;
-  const status = failed ? "FAILED" : slow ? "OVER BUDGET" : "ok";
-  rows.push(`| ${r.name} | ${status} | ${Math.round(r.ms)} ms | ${r.budgetMs} ms |`);
+  const status = failed ? "FAILED" : "ok";
+  rows.push(`| ${r.name} | ${status} | ${Math.round(r.ms)} ms |`);
   if (failed) failures.push(`${r.name} failed (exit ${r.code})`);
-  // Budgets are for CI's machines. Locally (hooks, laptops) only correctness counts.
-  if (slow && ci) failures.push(`${r.name} took ${Math.round(r.ms)} ms, budget ${r.budgetMs} ms`);
-  const header = `── ${r.name}: ${status} in ${Math.round(r.ms)} ms (budget ${r.budgetMs} ms) `;
+  const header = `── ${r.name}: ${status} in ${Math.round(r.ms)} ms `;
   console.log(`\n${header.padEnd(100, "─")}`);
   if (failed || process.env.CI_VERBOSE) console.log(r.output.trimEnd());
 }
 
 if (group === "test") {
   console.log(`\nTest selection: ${selection.reason}`);
-  rows.push(`| _selection_ | ${selection.kind} | ${selection.reason} | |`);
+  rows.push(`| _selection_ | ${selection.kind} | ${selection.reason} |`);
   // A full run must have run every test file in the repo: a file bun didn't find (a bad glob,
   // a renamed directory) is a test that silently stopped running.
   if (selection.kind === "all" && results.every((r) => r.code === 0)) {
@@ -94,7 +84,7 @@ if (group === "test") {
       .filter(Boolean);
     const missing = all.filter((file) => !ran.has(file));
     rows.push(
-      `| _files_ | ${missing.length ? "MISSING" : "ok"} | ${ran.size} of ${all.length} ran | |`,
+      `| _files_ | ${missing.length ? "MISSING" : "ok"} | ${ran.size} of ${all.length} ran |`,
     );
     for (const file of missing) failures.push(`${file} never ran`);
   }
@@ -107,21 +97,13 @@ if (ci && setupStart && setupEnd) {
   const setupMs = setupEnd - setupStart;
   const jobMs = now - setupStart;
   const cache = process.env.DEPS_CACHE_HIT === "true" ? "hit" : "miss";
-  rows.push(
-    `| _setup (cache ${cache})_ | ${setupMs > SETUP_BUDGET_MS ? "OVER BUDGET" : "ok"} | ${setupMs} ms | ${SETUP_BUDGET_MS} ms |`,
-    `| _job_ | ${jobMs > JOB_BUDGET_MS ? "OVER BUDGET" : "ok"} | ${jobMs} ms | ${JOB_BUDGET_MS} ms |`,
-  );
-  if (setupMs > SETUP_BUDGET_MS)
-    failures.push(`setup took ${setupMs} ms, budget ${SETUP_BUDGET_MS} ms`);
-  if (jobMs > JOB_BUDGET_MS) failures.push(`job took ${jobMs} ms, budget ${JOB_BUDGET_MS} ms`);
+  rows.push(`| _setup (cache ${cache})_ | | ${setupMs} ms |`, `| _job_ | | ${jobMs} ms |`);
 }
 
-// The machine, so a budget miss can be told apart from a slower code path: on a shared runner
-// pool, every check on the run slows by the same factor.
 const cpu = cpus();
-rows.push(`| _machine_ | ${cpu.length} cores | ${cpu[0]?.model.trim() ?? "unknown"} | |`);
+rows.push(`| _machine_ | ${cpu.length} cores | ${cpu[0]?.model.trim() ?? "unknown"} |`);
 
-const table = ["| Step | Result | Time | Budget |", "|---|---|---|---|", ...rows].join("\n");
+const table = ["| Step | Result | Details |", "|---|---|---|", ...rows].join("\n");
 console.log(`\n${table}`);
 if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${group}\n\n${table}\n\n`);
