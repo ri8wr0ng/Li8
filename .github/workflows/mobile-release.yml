@@ -140,9 +140,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun run typecheck
-      - run: bun run test
+      - run: bun lint
+      - run: bun check
+      - run: bun test --isolate
 
       # versionCode must only ever increase for Android to install an update over the
       # previous one; the run number of this workflow does.

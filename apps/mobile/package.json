@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "typecheck": "tsc --noEmit",
-    "test": "vp test run"
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@convex-dev/agent": "^0.7.9",
@@ -41,7 +39,6 @@
   "devDependencies": {
     "@types/react": "^19.2.0",
     "babel-preset-expo": "~58.0.26",
-    "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "typescript": "catalog:"
   }
 }

@@ -53,17 +53,18 @@ export const HighlightTextarea = forwardRef<HighlightTextareaHandle, Props>(
       },
     }));
 
+    // Fit the height to the content after every render (the content is what renders change),
+    // and again whenever the window width changes how it wraps.
     useLayoutEffect(() => {
-      const el = textarea.current;
-      if (!el) return undefined;
+      if (textarea.current) fitHeight(textarea.current);
+    });
+    useLayoutEffect(() => {
       const resize = () => {
-        el.style.height = "auto";
-        el.style.height = `${el.scrollHeight}px`;
+        if (textarea.current) fitHeight(textarea.current);
       };
-      resize();
       window.addEventListener("resize", resize);
       return () => window.removeEventListener("resize", resize);
-    }, [value]);
+    }, []);
 
     useEffect(() => {
       if (scrollKey === 0) return;
@@ -116,3 +117,8 @@ export const HighlightTextarea = forwardRef<HighlightTextareaHandle, Props>(
     );
   },
 );
+
+function fitHeight(el: HTMLTextAreaElement) {
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}

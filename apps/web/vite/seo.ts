@@ -1,6 +1,5 @@
 /// <reference types="node" />
-import { loadEnv } from "vite-plus";
-import type { Plugin } from "vite";
+import { loadEnv, type Plugin } from "vite";
 
 /** Public pages worth listing in the sitemap. Everything else needs a sign-in. */
 const PUBLIC_PATHS = ["/login"];

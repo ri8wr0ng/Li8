@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { registerCore, sessionIdentity } from "@convex-dev/auth/test";
 import { convexTest } from "convex-test";
-import { expect, test, vi } from "vite-plus/test";
+import { expect, test, vi } from "vitest";
 import { api, components } from "./_generated/api";
 import schema from "./schema";
 

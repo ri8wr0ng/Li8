@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "apps/web"
+    },
+    {
+      "path": "apps/mobile"
+    },
+    {
+      "path": "packages/backend/convex"
+    }
+  ]
+}
