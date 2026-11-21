@@ -36,6 +36,32 @@ test("label deletion cleans references across multiple batches", async () => {
   }
 });
 
+test("label-filtered list fills the first page past non-matching series", async () => {
+  const { t, reader, id } = await setup();
+  const labelId = await reader.mutation(api.labels.create, { name: "K-Drama" });
+  await t.run(async (ctx) => {
+    const original = await ctx.db.get("series", id);
+    if (!original) throw new Error("Missing series");
+    const { _id, _creationTime, ...fields } = original;
+    await ctx.db.insert("series", { ...fields, title: "Match", labelIds: [labelId] });
+    // Newer, non-matching rows that a post-pagination filter would page through first.
+    for (let i = 0; i < 60; i++) {
+      await ctx.db.insert("series", {
+        ...fields,
+        title: `Other ${i}`,
+        updatedAt: fields.updatedAt + 1 + i,
+      });
+    }
+  });
+  const page = await reader.query(api.library.listPage, {
+    paginationOpts: { numItems: 10, cursor: null },
+    status: undefined,
+    labelIds: [labelId],
+  });
+  expect(page.page.map((s) => s.title)).toEqual(["Match"]);
+  expect(page.isDone).toBe(true);
+});
+
 async function setup(chapter = 348) {
   const t = convexTest(schema, modules);
   registerCore(t);

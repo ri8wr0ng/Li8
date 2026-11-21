@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
-import { filter } from "convex-helpers/server/filter";
+import { stream } from "convex-helpers/server/stream";
 import { query } from "./_generated/server";
 import schema from "./schema";
 import { vSeriesKind, vSeriesStatus } from "./validators";
@@ -22,28 +22,48 @@ export const listPage = query({
       return { page: [], isDone: true, continueCursor: "" };
     }
 
-    const baseQuery =
+    const kindSet = kinds && kinds.length > 0 ? new Set<string>(kinds) : null;
+    const labelSet = labelIds && labelIds.length > 0 ? new Set<string>(labelIds) : null;
+
+    if (!kindSet && !labelSet) {
+      const baseQuery =
+        status !== undefined
+          ? ctx.db
+              .query("series")
+              .withIndex("by_user_status_updated", (q) =>
+                q.eq("userId", userId).eq("status", status),
+              )
+              .order("desc")
+          : ctx.db
+              .query("series")
+              .withIndex("by_user_updated", (q) => q.eq("userId", userId))
+              .order("desc");
+      return await baseQuery.paginate(paginationOpts);
+    }
+
+    // Filter before paginating, so a page holds up to numItems matches. Filtering
+    // a normal page afterwards left pages nearly empty, and the list kept showing
+    // "loading more" while it fetched near-empty pages through the whole library.
+    const db = stream(ctx.db, schema);
+    const streamQuery =
       status !== undefined
-        ? ctx.db
+        ? db
             .query("series")
             .withIndex("by_user_status_updated", (q) => q.eq("userId", userId).eq("status", status))
             .order("desc")
-        : ctx.db
+        : db
             .query("series")
             .withIndex("by_user_updated", (q) => q.eq("userId", userId))
             .order("desc");
 
-    const kindSet = kinds && kinds.length > 0 ? new Set<string>(kinds) : null;
-    const labelSet = labelIds && labelIds.length > 0 ? new Set<string>(labelIds) : null;
-    if (!kindSet && !labelSet) return await baseQuery.paginate(paginationOpts);
-
-    const filtered = filter(baseQuery, (doc) => {
+    const filtered = streamQuery.filterWith(async (doc) => {
       if (kindSet && !kindSet.has(doc.kind)) return false;
       if (labelSet && !(doc.labelIds ?? []).some((id) => labelSet.has(id))) return false;
       return true;
     });
 
-    return await filtered.paginate(paginationOpts);
+    // Bound the rows scanned per page; the next page continues where this one stopped.
+    return await filtered.paginate({ maximumRowsRead: 2000, ...paginationOpts });
   },
 });
 
