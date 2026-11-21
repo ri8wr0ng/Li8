@@ -11,3 +11,5 @@ Convex agent skills for common tasks can be installed by running
 `npx convex ai-files install`.
 
 <!-- convex-ai-end -->
+
+Git hooks are installed by `bun install`; do not skip them with `--no-verify`.
