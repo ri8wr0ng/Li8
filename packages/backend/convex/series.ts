@@ -112,7 +112,7 @@ function withPastSeason(
 }
 
 export function assertChapter(chapter: number) {
-  if (!Number.isFinite(chapter) || chapter < 0) throw new Error("Chapter must be 0 or more");
+  if (!Number.isFinite(chapter)) throw new Error("Chapter must be 0 or more");
 }
 
 async function ownSeries(ctx: MutationCtx, id: Id<"series">) {
