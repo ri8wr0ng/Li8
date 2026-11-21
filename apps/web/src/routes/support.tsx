@@ -16,7 +16,7 @@ function SupportPage() {
         Contact the li8 maintainer through the contact details on the
         <a href="https://github.com/sharull9"> maintainer’s GitHub profile</a>. For a general bug
         report, you can also use the{" "}
-        <a href="https://github.com/sharull9/ai-notes/issues">project issue tracker</a>.
+        <a href="https://github.com/ri8wr0ng/li8/issues">project issue tracker</a>.
       </p>
 
       <h2>Request account or data deletion</h2>

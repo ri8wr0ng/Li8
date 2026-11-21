@@ -27,7 +27,7 @@ import {
 } from "./releases";
 
 // Set by .github/workflows/mobile-release.yml to the repo that publishes the APKs.
-const RELEASES_REPO = process.env.EXPO_PUBLIC_RELEASES_REPO || "sharull9/ai-notes";
+const RELEASES_REPO = process.env.EXPO_PUBLIC_RELEASES_REPO || "ri8wr0ng/li8";
 const RELEASES_URL = `https://api.github.com/repos/${RELEASES_REPO}/releases?per_page=50`;
 
 const CHANNEL_KEY = "inkmark_update_channel";
