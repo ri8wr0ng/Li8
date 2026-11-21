@@ -240,3 +240,107 @@ test("maintains searchText with title, altNames, acronyms, genres, and kind", as
   expect(series?.searchText).toContain("Fantasy");
   expect(series?.searchText).toContain("manhua");
 });
+
+test("another user cannot update a series", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  await expect(
+    other.mutation(api.series.update, { id, title: "Changed by another user" }),
+  ).rejects.toThrow(/Series not found/);
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot advance a series season", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  await expect(other.mutation(api.series.nextSeason, { id })).rejects.toThrow(/Series not found/);
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot set a past season on a series", async () => {
+  const { t, reader, id } = await setup();
+  await reader.mutation(api.series.update, { id, season: 2 });
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  await expect(
+    other.mutation(api.series.setPastSeason, { id, season: 1, chapter: 12 }),
+  ).rejects.toThrow(/Series not found/);
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot set a series chapter", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  await expect(other.mutation(api.series.setChapter, { id, chapter: 50 })).rejects.toThrow(
+    /Series not found/,
+  );
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot bump a series chapter", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  await expect(other.mutation(api.series.bump, { id, delta: 1 })).rejects.toThrow(
+    /Series not found/,
+  );
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot remove a series", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  await expect(other.mutation(api.series.remove, { id })).rejects.toThrow(/Series not found/);
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot read a series by id", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  expect(await other.query(api.series.get, { id })).toBeNull();
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot read a series history by id", async () => {
+  const { t, id } = await setup();
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  expect(await other.query(api.series.history, { seriesId: id })).toEqual([]);
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+test("another user cannot read past seasons by series id", async () => {
+  const { t, reader, id } = await setup();
+  await reader.mutation(api.series.update, { id, season: 2 });
+  const other = await createOtherUser(t);
+  const before = await t.run((ctx) => ctx.db.get("series", id));
+
+  expect(await other.query(api.series.seasons, { seriesId: id })).toEqual([]);
+  expect(await t.run((ctx) => ctx.db.get("series", id))).toEqual(before);
+});
+
+async function createOtherUser(t: Awaited<ReturnType<typeof setup>>["t"]) {
+  const userId = await t.run((ctx) => ctx.db.insert("users", { name: "Other" }));
+  const tokens = await t.mutation(components.auth.public._internal_dangerous_signIn, {
+    userId,
+    claims: { method: "google", profile: {} },
+    componentPath: "authGoogle",
+    accessTokenTtlSeconds: 60,
+    refreshInactivityTimeoutSeconds: 3600,
+    sessionMaxLifetimeSeconds: 3600,
+  });
+  return t.withIdentity(sessionIdentity(tokens));
+}
