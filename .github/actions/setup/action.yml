@@ -1,0 +1,42 @@
+name: Setup
+description: Install bun and the workspace's dependencies, restoring them from main's cache.
+
+runs:
+  using: composite
+  steps:
+    - run: echo "SETUP_START=$(date +%s%3N)" >> "$GITHUB_ENV"
+      shell: bash
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: package.json
+    # node_modules (links) and bun's store (the packages they link to), keyed on the lockfile.
+    # Only main saves it, so every PR restores the cache main seeded and never spends time
+    # uploading its own copy.
+    - id: deps
+      uses: actions/cache/restore@v5
+      with:
+        path: |
+          ~/.bun/install/cache
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+        key: deps-${{ runner.os }}-${{ hashFiles('bun.lock', 'bunfig.toml') }}
+    # Still runs on a cache hit: it checks node_modules matches bun.lock (and is ~0.2 s then).
+    - run: bun install --frozen-lockfile
+      shell: bash
+    # bun lint runs a pinned canary through bunx; fetch it here so lint's budget times linting.
+    - run: bun run lint --version > /dev/null
+      shell: bash
+    - if: steps.deps.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/cache/save@v5
+      with:
+        path: |
+          ~/.bun/install/cache
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+        key: ${{ steps.deps.outputs.cache-primary-key }}
+    - run: |
+        echo "SETUP_END=$(date +%s%3N)" >> "$GITHUB_ENV"
+        echo "DEPS_CACHE_HIT=${{ steps.deps.outputs.cache-hit == 'true' }}" >> "$GITHUB_ENV"
+      shell: bash

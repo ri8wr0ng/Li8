@@ -122,27 +122,18 @@ jobs:
           exit $missing
 
       - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - uses: actions/cache@v5
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
+      - uses: ./.github/actions/setup
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v5
 
-      - run: bun install --frozen-lockfile
-      - run: bun lint
-      - run: bun check
-      - run: bun test --isolate
+      # The same checks as CI. Budgets don't apply here (this job isn't on the PR path).
+      - run: bun fmt --check && bun lint && bun check && bun test --isolate
 
       # versionCode must only ever increase for Android to install an update over the
       # previous one; the run number of this workflow does.
