@@ -6,11 +6,9 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vp dev --port 3000",
-    "build": "vp build",
-    "preview": "vp preview",
-    "typecheck": "tsc --noEmit -p .",
-    "test": "vp test run"
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@convex-dev/agent": "^0.7.9",
@@ -47,7 +45,6 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "catalog:",
-    "vite": "catalog:",
-    "vite-plus": "catalog:"
+    "vite": "catalog:"
   }
 }

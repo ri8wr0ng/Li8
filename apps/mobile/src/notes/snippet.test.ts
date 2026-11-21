@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { afterEach, describe, expect, it } from "vitest";
 import { snippet, termsRegex } from "./snippet";
 
 describe("snippet helpers on Hermes (no Array.prototype.toSorted)", () => {

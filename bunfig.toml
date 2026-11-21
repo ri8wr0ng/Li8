@@ -1,0 +1,4 @@
+[test]
+preload = ["./scripts/test-preload.ts"]
+# Random order flushes out tests that depend on another file having run first.
+randomize = true

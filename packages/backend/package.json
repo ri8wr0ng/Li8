@@ -8,9 +8,7 @@
   },
   "scripts": {
     "dev": "convex dev",
-    "deploy": "convex deploy",
-    "typecheck": "tsc --noEmit -p convex",
-    "test": "vp test run"
+    "deploy": "convex deploy"
   },
   "dependencies": {
     "@ai-sdk/provider": "^4.0.38",
@@ -25,11 +23,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^22.10.2",
     "convex-test": "^0.0.71",
-    "typescript": "catalog:",
-    "vite": "catalog:",
-    "vite-plus": "catalog:"
+    "typescript": "catalog:"
   }
 }
