@@ -1,6 +1,25 @@
+import { useEffect } from "react";
 import { useConvexAuth, useQuery } from "convex/react";
+import * as SecureStore from "expo-secure-store";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "./theme";
+
+const AI_KEY = "inkmark.aiEnabled";
+
+/**
+ * The last AI access answer, read synchronously at startup so the tab bar is
+ * drawn at its final size on the first frame instead of growing once
+ * `chat.status` comes back (the web does the same with its offline cache).
+ */
+let lastAiEnabled = readAiEnabled();
+
+function readAiEnabled() {
+  try {
+    return SecureStore.getItem(AI_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 /** Header look shared by every tab's stack. */
 export function useStackScreenOptions() {
@@ -21,8 +40,17 @@ export function useStackScreenOptions() {
 export function useTabsGate() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const ai = useQuery(api.chat.status, isAuthenticated ? {} : "skip");
+  const live = ai?.enabled;
+
+  useEffect(() => {
+    if (live === undefined || live === lastAiEnabled) return;
+    lastAiEnabled = live;
+    void SecureStore.setItemAsync(AI_KEY, live ? "1" : "0").catch(() => {});
+  }, [live]);
+
   return {
     signedOut: !isLoading && !isAuthenticated,
-    showAsk: ai?.enabled === true,
+    // Until the live answer arrives, keep the last one so the bar doesn't resize.
+    showAsk: live ?? lastAiEnabled,
   };
 }
