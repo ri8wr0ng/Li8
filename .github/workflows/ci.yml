@@ -4,40 +4,55 @@ on:
   pull_request:
   push:
     branches: [main]
+  merge_group:
 
 permissions:
   contents: read
 
+# A new commit on a PR cancels that PR's run in progress. Pushes to main and merge-queue
+# runs are never cancelled: every merged commit gets a full result.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Three independent jobs, none waits on another. Each fails if it runs over budget
+# (see scripts/ci/run.ts): setup 15 s, job 35 s, and a budget per check.
 jobs:
-  quality:
-    name: ${{ matrix.check.name }}
+  checks:
+    name: checks (format, lint, typecheck)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        check:
-          - { name: format, run: bun fmt --check }
-          - { name: lint, run: bun lint }
-          - { name: typecheck, run: bun check }
-          # Every file gets a fresh global and module registry; bunfig.toml randomizes the order.
-          - { name: test, run: bun test --isolate }
+    timeout-minutes: 5
     steps:
+      # Budgets count from here, so checkout is inside them.
+      - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: package.json
-      - uses: actions/setup-node@v6
+          filter: blob:none
+      - uses: ./.github/actions/setup
+      - run: bun scripts/ci/run.ts checks
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Budgets count from here, so checkout is inside them.
+      - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v6
         with:
-          node-version: 24
-      - uses: actions/cache@v5
+          filter: blob:none
+      - uses: ./.github/actions/setup
+      - run: bun scripts/ci/run.ts test
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Budgets count from here, so checkout is inside them.
+      - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v6
         with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-      - run: bun install --frozen-lockfile
-      - run: ${{ matrix.check.run }}
+          filter: blob:none
+      - uses: ./.github/actions/setup
+      # Vite runs on the runner's Node, like Vercel. Under bun's runtime Vite emits a
+      # different preload helper, so the build stays on Node.
+      - run: bun scripts/ci/run.ts build
