@@ -398,7 +398,7 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                           onCommit={(v) => {
                             const n = Number(v);
                             if (v.trim() && (!Number.isFinite(n) || n < 0)) return false;
-                            void setPastSeason({
+                            return void setPastSeason({
                               id: series._id,
                               season: p.season,
                               chapter: v.trim() ? n : null,

@@ -108,7 +108,7 @@ function withPastSeason(
 ) {
   const rest = (pastSeasons ?? []).filter((p) => p.season !== season);
   const next = chapter === null ? rest : [...rest, { season, chapter }];
-  return next.sort((a, b) => a.season - b.season);
+  return next.toSorted((a, b) => a.season - b.season);
 }
 
 export function assertChapter(chapter: number) {
