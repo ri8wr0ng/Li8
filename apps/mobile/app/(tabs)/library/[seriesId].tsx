@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -1439,10 +1439,12 @@ function PastSeasonRow({
 }) {
   const { colors, radii, typography } = useTheme();
   const [value, setValue] = useState(chapter === null ? "" : formatChapter(chapter));
-
-  useEffect(() => {
+  // Follow saved changes by adjusting state during render, not in an effect.
+  const [shownChapter, setShownChapter] = useState(chapter);
+  if (chapter !== shownChapter) {
+    setShownChapter(chapter);
     setValue(chapter === null ? "" : formatChapter(chapter));
-  }, [chapter]);
+  }
 
   const handleSave = async () => {
     const trimmed = value.trim();
