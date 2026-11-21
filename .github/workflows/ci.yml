@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # Budgets count from here, so checkout is inside them.
+      - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
           filter: blob:none
@@ -33,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # Budgets count from here, so checkout is inside them.
+      - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
           filter: blob:none
@@ -43,6 +47,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # Budgets count from here, so checkout is inside them.
+      - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
           filter: blob:none
