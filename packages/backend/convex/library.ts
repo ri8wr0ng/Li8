@@ -56,11 +56,13 @@ export const listPage = query({
             .withIndex("by_user_updated", (q) => q.eq("userId", userId))
             .order("desc");
 
-    const filtered = streamQuery.filterWith(async (doc) => {
-      if (kindSet && !kindSet.has(doc.kind)) return false;
-      if (labelSet && !(doc.labelIds ?? []).some((id) => labelSet.has(id))) return false;
-      return true;
-    });
+    // filterWith takes an async predicate; this one needs no I/O.
+    const filtered = streamQuery.filterWith((doc) =>
+      Promise.resolve(
+        (!kindSet || kindSet.has(doc.kind)) &&
+          (!labelSet || (doc.labelIds ?? []).some((id) => labelSet.has(id))),
+      ),
+    );
 
     // Bound the rows scanned per page; the next page continues where this one stopped.
     return await filtered.paginate({ maximumRowsRead: 2000, ...paginationOpts });

@@ -109,8 +109,6 @@ if (ci && setupStart && setupEnd) {
   const cache = process.env.DEPS_CACHE_HIT === "true" ? "hit" : "miss";
   rows.push(
     `| _setup (cache ${cache})_ | ${setupMs > SETUP_BUDGET_MS ? "OVER BUDGET" : "ok"} | ${setupMs} ms | ${SETUP_BUDGET_MS} ms |`,
-  );
-  rows.push(
     `| _job_ | ${jobMs > JOB_BUDGET_MS ? "OVER BUDGET" : "ok"} | ${jobMs} ms | ${JOB_BUDGET_MS} ms |`,
   );
   if (setupMs > SETUP_BUDGET_MS)
