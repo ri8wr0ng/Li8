@@ -31,7 +31,7 @@ export function InstallBanner({ className }: { className?: string }) {
     <>
       <div
         role="region"
-        aria-label="Install Inkmark"
+        aria-label="Install li8"
         className={cn(
           "flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-[0_12px_32px_-16px_rgba(28,26,23,0.35)] animate-in fade-in slide-in-from-bottom-2 duration-300",
           className,
@@ -39,7 +39,7 @@ export function InstallBanner({ className }: { className?: string }) {
       >
         <LogoMark className="size-9 rounded-[0.6rem]" />
         <div className="min-w-0 flex-1 text-sm leading-tight">
-          <div className="font-medium">Install Inkmark</div>
+          <div className="font-medium">Install li8</div>
           <div className="text-xs text-muted-foreground">Opens offline, from your home screen.</div>
         </div>
         <Button
@@ -77,9 +77,7 @@ export function IosInstallHelp({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-2xl sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">
-            Add Inkmark to your Home Screen
-          </DialogTitle>
+          <DialogTitle className="font-display text-xl">Add li8 to your Home Screen</DialogTitle>
           <DialogDescription>
             It opens full screen and works without a connection.
           </DialogDescription>

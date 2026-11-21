@@ -234,7 +234,7 @@ jobs:
           notes="**Install:** open this page on your Android phone, download \`inkmark-$VERSION.apk\`, and open it. Allow installing apps from your browser if Android asks."
           # The in-app updater reads the versionCode from this marker to order builds. Keep it.
           notes+=$'\n\n'"<!-- inkmark:versionCode=$VERSION_CODE -->"
-          flags=(--draft --generate-notes --notes "$notes" --target "$GITHUB_SHA" --title "Inkmark mobile $VERSION")
+          flags=(--draft --generate-notes --notes "$notes" --target "$GITHUB_SHA" --title "li8 mobile $VERSION")
           if [[ "$PRERELEASE" == "true" ]]; then
             flags+=(--prerelease --latest=false)
           else

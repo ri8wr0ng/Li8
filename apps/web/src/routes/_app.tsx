@@ -42,8 +42,8 @@ function OfflineFirstRun() {
           You're offline
         </h1>
         <p className="mt-2 text-sm text-muted-foreground text-pretty">
-          Inkmark saves a copy of your notes and library once it has synced. Connect once and it'll
-          open without a network after that.
+          li8 saves a copy of your notes and library once it has synced. Connect once and it'll open
+          without a network after that.
         </p>
       </div>
     </main>

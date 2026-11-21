@@ -50,7 +50,7 @@ export function serviceWorker(): Plugin {
   };
 }
 
-const SW_SOURCE = /* js */ `// Inkmark service worker. Generated at build time by vite/service-worker.ts.
+const SW_SOURCE = /* js */ `// li8 service worker. Generated at build time by vite/service-worker.ts.
 const VERSION = "__VERSION__";
 const PRECACHE = __PRECACHE__;
 const SHELL = "/_shell.html";

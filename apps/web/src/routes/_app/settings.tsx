@@ -75,7 +75,7 @@ function SettingsPage() {
         <div className="divide-y rounded-xl border bg-card">
           {install.kind !== "none" && (
             <Row
-              title="Install Inkmark"
+              title="Install li8"
               description="Open it from your home screen or dock, and use it offline."
             >
               <Button

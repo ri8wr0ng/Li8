@@ -52,7 +52,7 @@ function useServiceWorker() {
     };
 
     function offerUpdate(worker: ServiceWorker) {
-      toast("A new version of Inkmark is ready", {
+      toast("A new version of li8 is ready", {
         duration: Infinity,
         action: {
           label: "Reload",

@@ -3,7 +3,10 @@
   "framework": null,
   "buildCommand": "bun run build",
   "outputDirectory": "apps/web/dist/client",
-  "rewrites": [{ "source": "/(.*)", "destination": "/_shell.html" }],
+  "rewrites": [
+    { "source": "/:page(login|privacy|terms|support)", "destination": "/:page.html" },
+    { "source": "/(.*)", "destination": "/_shell.html" }
+  ],
   "headers": [
     {
       "source": "/sw.js",

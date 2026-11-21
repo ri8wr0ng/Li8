@@ -5,6 +5,7 @@ import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { seo } from "./vite/seo.ts";
 import { serviceWorker } from "./vite/service-worker.ts";
+import { PUBLIC_PATHS } from "./src/lib/public-paths.ts";
 
 const config = defineConfig({
   // `convex dev` (run in packages/backend) writes VITE_CONVEX_URL to its .env.local.
@@ -12,9 +13,11 @@ const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     tailwindcss(),
-    // All data is private and lives in Convex, so the app renders in the browser
-    // and builds to static files (any static host / installable PWA).
-    tanstackStart({ spa: { enabled: true } }),
+    tanstackStart({
+      spa: { enabled: true },
+      pages: PUBLIC_PATHS.map((path) => ({ path })),
+      prerender: { crawlLinks: false, autoSubfolderIndex: false },
+    }),
     viteReact(),
     // Offline app shell: precaches the build and serves _shell.html for every route.
     serviceWorker(),

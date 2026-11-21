@@ -1,28 +1,86 @@
 import { useOauth, useSignInWithGoogle } from "@convex-dev/auth/methods/google/react";
-import { Navigate, createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, Link, Navigate, createFileRoute } from "@tanstack/react-router";
 import { useConvexAuth } from "convex/react";
-import { Loader2, Search } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Splash, Wordmark } from "#/components/brand";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Wordmark } from "#/components/brand";
 import { Button } from "#/components/ui/button";
 import { clearCache } from "#/lib/offline";
-import { cn } from "#/lib/utils";
-import { HOME_TITLE, SITE_URL, absoluteUrl } from "#/lib/seo";
+import { HOME_TITLE, SITE_NAME, SITE_URL, absoluteUrl } from "#/lib/seo";
 import { api } from "@inkmark/backend/convex/_generated/api";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: HOME_TITLE }],
+    meta: [
+      { title: HOME_TITLE },
+      ...(SITE_URL ? [{ property: "og:url", content: absoluteUrl("/login") }] : []),
+    ],
     links: SITE_URL ? [{ rel: "canonical", href: absoluteUrl("/login") }] : [],
   }),
   component: LoginPage,
 });
 
 function LoginPage() {
+  return (
+    <ClientOnly fallback={<Landing signIn={<GoogleButton pending />} />}>
+      <AuthLanding />
+    </ClientOnly>
+  );
+}
+
+function AuthLanding() {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  if (isLoading) return <Splash />;
   if (isAuthenticated) return <Navigate to="/" />;
-  return <SignedOut />;
+  return <Landing signIn={isLoading ? <GoogleButton pending /> : <SignIn />} />;
+}
+
+/** The public page: what the app is, how to sign in, and the policy links. */
+function Landing({ signIn }: { signIn: ReactNode }) {
+  return (
+    <div className="pt-safe pb-safe flex min-h-dvh flex-col">
+      {/* Same column as the content below, so the logo lines up with the headline. */}
+      <header className="mx-auto w-full max-w-6xl px-6 pt-6 sm:px-10 sm:pt-8">
+        <Wordmark />
+      </header>
+
+      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-14 px-6 py-10 sm:px-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 lg:py-16">
+        <section className="max-w-xl">
+          <h1 className="font-display text-[2.75rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-[4.25rem]">
+            Remember where you left off.
+          </h1>
+          <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-muted-foreground text-pretty">
+            {SITE_NAME} is a private notebook and a tracker for manga, novels, anime, and TV. Type a
+            title and a chapter or episode to save your place.
+          </p>
+
+          <div className="mt-9">{signIn}</div>
+
+          <ul className="mt-12 space-y-3 text-[0.95rem] leading-relaxed">
+            <Point title="Track progress.">
+              Each series keeps its current chapter or episode and a history of when you read it.
+            </Point>
+            <Point title="Write notes.">
+              Notes save as you type, so you can close them and pick up later.
+            </Point>
+            <Point title="Find anything.">
+              Search notes and series together. After syncing, you can browse them offline.
+            </Point>
+          </ul>
+        </section>
+
+        <NotebookExample />
+      </main>
+
+      <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 pt-4 pb-8 text-sm text-muted-foreground sm:px-10">
+        <span className="mr-auto">{SITE_NAME}</span>
+        <nav aria-label="Legal and help" className="flex flex-wrap gap-x-5 gap-y-2">
+          <FooterLink to="/privacy">Privacy policy</FooterLink>
+          <FooterLink to="/terms">Terms of service</FooterLink>
+          <FooterLink to="/support">Support</FooterLink>
+        </nav>
+      </footer>
+    </div>
+  );
 }
 
 function flowErrorMessage(error: ReturnType<typeof useOauth>["flowError"]) {
@@ -43,14 +101,14 @@ function flowErrorMessage(error: ReturnType<typeof useOauth>["flowError"]) {
   }
 }
 
-function SignedOut() {
+/** The Google button and its errors; the only part of the page that talks to auth. */
+function SignIn() {
   const { signIn } = useSignInWithGoogle(api.auth);
   const { flowError } = useOauth();
   const [startError, setStartError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const error = startError ?? flowErrorMessage(flowError);
 
-  // Signed out (or the session was revoked elsewhere): drop the offline copy.
   useEffect(() => {
     void clearCache();
   }, []);
@@ -68,256 +126,168 @@ function SignedOut() {
   }
 
   return (
-    <main className="pt-safe pb-safe flex min-h-dvh flex-col">
-      {/* Same column as the content below, so the logo lines up with the headline. */}
-      <header className="mx-auto w-full max-w-6xl px-6 pt-6 sm:px-10 sm:pt-8">
-        <Wordmark />
-      </header>
-
-      <div className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 py-10 sm:px-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-16 lg:py-16">
-        <section className="max-w-xl">
-          <h1 className="font-display text-[2.75rem] leading-[1.02] font-semibold tracking-[-0.045em] text-balance sm:text-[4.25rem]">
-            Remember where you left off.
-          </h1>
-          <p className="mt-6 max-w-[34rem] text-lg leading-relaxed text-muted-foreground text-pretty">
-            Inkmark is a notebook and a reading tracker in one. Type a title and a chapter, and it
-            keeps your place in every manga, novel and show you follow.
-          </p>
-
-          <Button
-            size="lg"
-            variant="outline"
-            className="mt-9 h-12 w-full gap-3 rounded-xl bg-card text-[0.95rem] sm:w-auto sm:px-6"
-            onClick={start}
-            disabled={pending}
-          >
-            {pending ? <Loader2 className="animate-spin" /> : <GoogleLogo />}
-            Continue with Google
-          </Button>
-          {error && (
-            <p role="alert" className="mt-3 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-
-          <ul className="mt-12 grid gap-4 sm:grid-cols-3 sm:gap-6">
-            <Point title="Notes that save as you type">
-              No save button, no folders to file into.
-            </Point>
-            <Point title="One search for everything">
-              <Kbd>{isMac ? "⌘" : "Ctrl"} K</Kbd> finds notes and series by title or meaning.
-            </Point>
-            <Point title="Works offline">Installs like an app and syncs when you reconnect.</Point>
-          </ul>
-        </section>
-
-        <LiveDemo />
-      </div>
-    </main>
+    <>
+      <GoogleButton pending={pending} onClick={start} />
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 
-const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+function GoogleButton({ pending, onClick }: { pending: boolean; onClick?: () => void }) {
+  return (
+    <Button
+      size="lg"
+      variant="outline"
+      className="h-12 w-full gap-3 rounded-xl bg-card text-[0.95rem] shadow-[0_1px_0_rgb(28_26_23/0.04),0_10px_24px_-18px_rgb(28_26_23/0.45)] sm:w-auto sm:px-6"
+      onClick={onClick}
+      disabled={pending}
+      aria-busy={pending}
+    >
+      {pending && onClick ? <Loader2 className="motion-safe:animate-spin" /> : <GoogleLogo />}
+      Continue with Google
+    </Button>
+  );
+}
 
 function Point({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <li>
-      <p className="font-display font-semibold tracking-[-0.01em]">{title}</p>
-      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{children}</p>
+    <li className="max-w-[34rem] text-muted-foreground">
+      <span className="font-display font-semibold tracking-[-0.01em] text-foreground">{title}</span>{" "}
+      {children}
     </li>
   );
 }
 
-function Kbd({ children }: { children: ReactNode }) {
+function FooterLink({
+  to,
+  children,
+}: {
+  to: "/privacy" | "/terms" | "/support";
+  children: ReactNode;
+}) {
   return (
-    <kbd className="rounded-md border bg-card px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">
+    <Link
+      to={to}
+      className="rounded-sm underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    >
       {children}
-    </kbd>
+    </Link>
   );
 }
 
-type Example = { command: string; title: string; meta: string; unit: string; from: number };
-
-const EXAMPLES: Example[] = [
-  {
-    command: "btth 349",
-    title: "Battle Through The Heavens",
-    meta: "Manhua, in progress",
-    unit: "Chapter",
-    from: 348,
-  },
-  {
-    command: "frieren 12",
-    title: "Frieren: Beyond Journey's End",
-    meta: "Anime, season 2",
-    unit: "Episode",
-    from: 11,
-  },
-  {
-    command: "orv 201",
-    title: "Omniscient Reader's Viewpoint",
-    meta: "Manhwa, in progress",
-    unit: "Chapter",
-    from: 200,
-  },
-];
-
-type Phase = "typing" | "stamped";
+/** Page ruling that lines up with a 1.75rem line height. */
+const RULED =
+  "bg-[repeating-linear-gradient(to_bottom,transparent_0,transparent_calc(1.75rem-1px),color-mix(in_oklab,var(--border)_85%,transparent)_calc(1.75rem-1px),color-mix(in_oklab,var(--border)_85%,transparent)_1.75rem)]";
 
 /**
- * The product's one trick, played out: a quick-add command types itself, the
- * chapter rolls over and a hanko seal marks the card. Decorative, so hidden
- * from assistive tech; reduced motion shows the finished state and holds.
+ * An open notebook showing the app's two halves: the left page is a series
+ * with its chapter log, the right page is a note. The red ribbon marks the
+ * place, as in the logo. On load the ribbon drops in and the chapter rolls
+ * from 348 to 349, once; with reduced motion it renders the finished state.
+ * The content is real text, so it reads the same without the animation.
  */
-function LiveDemo() {
-  const reduced = useReducedMotion();
-  const [index, setIndex] = useState(0);
-  const [typed, setTyped] = useState(0);
-  const [phase, setPhase] = useState<Phase>("typing");
-  const example = EXAMPLES[index];
-
-  useEffect(() => {
-    if (reduced) return undefined;
-    const timer =
-      phase === "typing"
-        ? typed < example.command.length
-          ? setTimeout(() => setTyped((n) => n + 1), typed === 0 ? 700 : 85)
-          : setTimeout(() => setPhase("stamped"), 450)
-        : setTimeout(() => {
-            setIndex((i) => (i + 1) % EXAMPLES.length);
-            setTyped(0);
-            setPhase("typing");
-          }, 2800);
-    return () => clearTimeout(timer);
-  }, [reduced, phase, typed, example.command.length]);
-
-  const stamped = reduced || phase === "stamped";
-  const shown = reduced ? example.command : example.command.slice(0, typed);
-  const to = example.from + 1;
-
+function NotebookExample() {
   return (
-    <section aria-hidden className="relative mx-auto w-full max-w-[30rem] select-none lg:mx-0">
-      {/* The search bar the command is typed into. */}
-      <div className="flex h-14 items-center gap-3 rounded-2xl border bg-card px-4 shadow-[0_1px_0_rgb(28_26_23/0.04),0_18px_40px_-24px_rgb(28_26_23/0.35)]">
-        <Search className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate font-mono text-[0.95rem]">
-          {shown}
-          {!stamped && (
-            <span className="ml-px inline-block h-[1.1em] w-[2px] translate-y-[0.15em] animate-pulse bg-hanko" />
-          )}
-        </span>
-        <span
-          className={cn(
-            "rounded-md border px-1.5 py-0.5 font-mono text-[0.7rem] text-muted-foreground transition-opacity duration-200",
-            shown.length === example.command.length ? "opacity-100" : "opacity-0",
-          )}
-        >
-          Enter
-        </span>
-      </div>
+    <figure className="relative mx-auto w-full max-w-[36rem] lg:mx-0 lg:justify-self-end">
+      <figcaption className="sr-only">
+        An example: Battle Through the Heavens updated to chapter 349, next to a short note about
+        it.
+      </figcaption>
 
-      {/* The series card it updates. */}
-      <div className="relative mt-4 overflow-hidden rounded-[1.25rem] border bg-card p-6 sm:p-7">
-        <p className="text-sm text-muted-foreground">{example.meta}</p>
-        <p className="mt-1 max-w-[16rem] font-display text-2xl leading-tight font-semibold tracking-[-0.025em] text-balance sm:max-w-[18rem]">
-          {example.title}
-        </p>
+      <div className="relative grid overflow-hidden rounded-2xl border bg-card shadow-[0_1px_0_rgb(28_26_23/0.04),0_30px_60px_-36px_rgb(28_26_23/0.45)] sm:grid-cols-2">
+        {/* The spine: a soft fold between the pages, when they sit side by side. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-10 -translate-x-1/2 sm:block bg-[linear-gradient(to_right,transparent,rgb(28_26_23/0.07)_50%,transparent)] dark:opacity-60"
+        />
 
-        <div className="mt-8 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">{example.unit}</p>
-            <div className="relative mt-1 h-[3.75rem] overflow-hidden font-mono text-[3.75rem] leading-none font-semibold tracking-[-0.04em] tabular-nums">
-              {!(stamped && reduced) && (
-                <span
-                  key={`${index}-from-${String(stamped)}`}
-                  className={cn(
-                    "absolute inset-0",
-                    stamped && "animate-[roll-out_380ms_cubic-bezier(0.32,0.72,0,1)_forwards]",
-                  )}
-                >
-                  {example.from}
-                </span>
-              )}
-              {stamped && (
-                <span
-                  key={`${index}-to`}
-                  className={cn(
-                    "absolute inset-0",
-                    !reduced && "animate-[roll-in_380ms_cubic-bezier(0.32,0.72,0,1)_both]",
-                  )}
-                >
-                  {to}
-                </span>
-              )}
-              {/* Reserves the width of the wider number. */}
-              <span className="invisible">{to}</span>
-            </div>
-          </div>
-          <p className="pb-1 text-right text-sm text-muted-foreground">
-            {stamped ? "Saved just now" : "Last read yesterday"}
+        {/* Left page: the series. */}
+        <div className="relative px-6 pt-7 pb-6 sm:px-7 sm:pt-8 sm:pb-7">
+          <p className="text-sm text-muted-foreground">Manhua, reading</p>
+          <p className="mt-1 max-w-[12rem] font-display text-[1.45rem] leading-tight font-semibold tracking-[-0.025em] text-balance">
+            Battle Through the Heavens
           </p>
+
+          <p className="mt-7 text-sm text-muted-foreground">Chapter</p>
+          <div className="relative mt-1 h-16 overflow-hidden font-mono text-[4rem] leading-none font-semibold tracking-[-0.04em] tabular-nums">
+            <span
+              aria-hidden
+              className="absolute inset-0 opacity-0 motion-safe:animate-[roll-out_380ms_cubic-bezier(0.32,0.72,0,1)_900ms_both] motion-reduce:hidden"
+            >
+              348
+            </span>
+            <span className="absolute inset-0 motion-safe:animate-[roll-in_380ms_cubic-bezier(0.32,0.72,0,1)_900ms_both]">
+              349
+            </span>
+            {/* Reserves the width. */}
+            <span aria-hidden className="invisible">
+              349
+            </span>
+          </div>
+
+          <ol className="mt-6 border-t pt-3 text-sm" aria-label="Reading history">
+            <LogRow chapter={349} when="Today" current />
+            <LogRow chapter={348} when="Tuesday" />
+            <LogRow chapter={347} when="Last Sunday" />
+          </ol>
         </div>
 
-        {/* The seal. */}
-        {stamped && (
-          <span
-            key={`${index}-seal`}
-            className={cn(
-              "absolute top-5 right-5 grid size-[4.5rem] -rotate-8 place-items-center rounded-full border-[3px] border-hanko text-hanko",
-              !reduced && "animate-[stamp-press_420ms_cubic-bezier(0.2,0.9,0.3,1.2)_both]",
-            )}
-          >
-            <span className="text-center leading-none">
-              <span className="block font-mono text-lg font-bold tabular-nums">{to}</span>
-              <span className="mt-0.5 block text-[0.6rem] font-semibold">saved</span>
-            </span>
-          </span>
-        )}
+        {/* Right page: a note, on ruled paper. */}
+        <div className="relative border-t px-6 pt-7 pb-6 sm:border-t-0 sm:px-7 sm:pt-8 sm:pb-7">
+          <p className="text-sm text-muted-foreground">Note</p>
+          <p className="mt-1 font-display text-[1.15rem] leading-tight font-semibold tracking-[-0.02em]">
+            Where I am in BTTH
+          </p>
+          <p className={`mt-4 text-[0.95rem] leading-7 text-pretty ${RULED}`}>
+            Caught up to 349 on the train. New chapters come out on Saturdays, so save the next few
+            for the weekend. Ask Mei which translation she reads, hers is further ahead.
+          </p>
+        </div>
       </div>
 
-      {/* A note: the other half of the app, kept quieter. */}
-      <div className="mt-4 ml-8 rounded-[1.25rem] border bg-card/70 p-5">
-        <p className="font-display font-semibold tracking-[-0.01em]">Japan trip</p>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Book the ryokan in Kyoto before March. Rail pass covers the{" "}
-          <mark className="rounded-sm bg-marker px-0.5 text-marker-foreground">Shinkansen</mark>,
-          not the Nozomi…
-        </p>
-      </div>
-    </section>
+      {/* The ribbon, hanging over the top edge of the left page. */}
+      <span
+        aria-hidden
+        className="absolute -top-2 right-6 h-24 w-5 bg-hanko shadow-[0_6px_10px_-6px_rgb(28_26_23/0.5)] [clip-path:polygon(0_0,100%_0,100%_100%,50%_82%,0_100%)] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-6 motion-safe:duration-500 motion-safe:fill-mode-[both] sm:right-auto sm:left-[calc(50%-0.625rem)]"
+      />
+    </figure>
   );
 }
 
-function useReducedMotion() {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-      mql.addEventListener("change", onChange);
-      return () => mql.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    () => false,
+function LogRow({ chapter, when, current }: { chapter: number; when: string; current?: boolean }) {
+  return (
+    <li className="flex items-baseline justify-between gap-4 py-1">
+      <span className={current ? "text-foreground" : "text-muted-foreground"}>
+        Chapter <span className="font-mono tabular-nums">{chapter}</span>
+      </span>
+      <span className="text-muted-foreground">{current ? "Saved just now" : when}</span>
+    </li>
   );
 }
 
+/** Google's official four-color "G", as its sign-in branding guidelines require. */
 function GoogleLogo() {
   return (
     <svg viewBox="0 0 48 48" className="size-5" aria-hidden>
       <path
-        fill="#FFC107"
-        d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
       />
       <path
-        fill="#FF3D00"
-        d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
       />
       <path
-        fill="#4CAF50"
-        d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
       />
       <path
-        fill="#1976D2"
-        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
       />
     </svg>
   );

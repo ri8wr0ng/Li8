@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 
-export const SITE_NAME = "Inkmark";
-export const TAGLINE = "Notes, and where you left off.";
-/** Title for the landing (sign-in) page, the one page search engines should list. */
-export const HOME_TITLE = `${SITE_NAME}: notes and a manga reading tracker`;
+export const SITE_NAME = "li8";
+export const TAGLINE = "Remember where you left off.";
+/** Title for the public landing page. */
+export const HOME_TITLE = `${SITE_NAME}: notes and a reading tracker`;
 export const DESCRIPTION =
-  "Inkmark is a notes app with a reading tracker for manga, manhwa and manhua. Notes save as you type, search finds them in a keystroke, and it works offline as an installable app.";
+  "li8 is a private notebook and a tracker for reading and watching progress. Save notes as you type and pick up where you left off in manga, novels, anime, and TV.";
 
 /** Public origin without a trailing slash, or "" when unknown (see vite/seo.ts). */
 export const SITE_URL: string = import.meta.env.VITE_SITE_URL ?? "";
@@ -15,9 +15,24 @@ export function absoluteUrl(path: string) {
   return `${SITE_URL}${path}`;
 }
 
-/** "Library · Inkmark". Pass nothing for the bare site name. */
+/** "Library · li8". Pass nothing for the bare site name. */
 export function pageTitle(title?: string) {
   return title ? `${title} · ${SITE_NAME}` : SITE_NAME;
+}
+
+export function publicPageHead(path: string, title: string, description: string) {
+  return {
+    meta: [
+      { title: pageTitle(title) },
+      { name: "description", content: description },
+      { property: "og:title", content: pageTitle(title) },
+      { property: "og:description", content: description },
+      { name: "twitter:title", content: pageTitle(title) },
+      { name: "twitter:description", content: description },
+      ...(SITE_URL ? [{ property: "og:url", content: absoluteUrl(path) }] : []),
+    ],
+    links: SITE_URL ? [{ rel: "canonical", href: absoluteUrl(path) }] : [],
+  };
 }
 
 /**

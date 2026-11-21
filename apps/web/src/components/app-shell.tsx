@@ -101,7 +101,7 @@ function Shell({ children }: { children: ReactNode }) {
           <Link
             to="/"
             onClick={closeMobile}
-            aria-label="Inkmark home"
+            aria-label="li8 home"
             className="flex min-w-0 items-center"
           >
             <Wordmark className="group-data-[collapsible=icon]:[&>span:last-child]:hidden" />

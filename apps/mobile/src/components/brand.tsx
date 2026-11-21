@@ -69,7 +69,7 @@ export function Wordmark({ size = 32 }: { size?: number }) {
           },
         ]}
       >
-        Inkmark
+        li8
       </Text>
     </View>
   );

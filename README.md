@@ -1,6 +1,6 @@
 <img src="assets/icon.svg" width="64" height="64" alt="">
 
-# Inkmark
+# li8
 
 Notes, and where you left off. A notes app with a reading tracker for manga, manhwa and manhua. It's an installable web app (PWA) that syncs across devices.
 
@@ -90,7 +90,7 @@ PRs also receive a size label based on added + deleted lines, excluding lockfile
 
 `bun run build` produces a static app in `apps/web/dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy` from `packages/backend`.
 
-Set `VITE_SITE_URL` (for example `https://inkmark.app`) at build time so link previews get absolute image URLs and the build writes `sitemap.xml` and a canonical link for the sign-in page. On Vercel it defaults to the project's production domain. `robots.txt` is always written and keeps crawlers out of the signed-in pages. The social card is `public/og-image.png`, rendered from `assets/og-image.html` (the command is in that file).
+Set `VITE_SITE_URL` (for example `https://your-app.example.com`) at build time so link previews get absolute image URLs and the build writes `sitemap.xml` and canonical links for the public pages. On Vercel it defaults to the project's production domain. `robots.txt` is always written and keeps crawlers out of the signed-in pages. The social card is `public/og-image.png`, rendered from `assets/og-image.html` (the command is in that file).
 
 On Vercel, `vercel.json` selects the static output and configures the route fallback and cache headers. The TanStack Start server preset is disabled because this app uses SPA mode.
 

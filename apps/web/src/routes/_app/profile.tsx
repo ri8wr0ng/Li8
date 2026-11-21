@@ -163,7 +163,7 @@ function Identity({ me }: { me: Me | null | undefined }) {
           {joined && (
             <>
               <br />
-              Using Inkmark since {joined}
+              Using li8 since {joined}
             </>
           )}
         </p>

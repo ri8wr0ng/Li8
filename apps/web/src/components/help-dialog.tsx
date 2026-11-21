@@ -56,12 +56,12 @@ export function HelpDialog({
       <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Help and shortcuts</DialogTitle>
-          <DialogDescription>The quick ways to get around Inkmark.</DialogDescription>
+          <DialogDescription>The quick ways to get around li8.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5">
           <Tip title="Log a chapter in one line">
-            Open search and type a title with a number, like <Kbd>btth 349</Kbd>. Inkmark moves that
+            Open search and type a title with a number, like <Kbd>btth 349</Kbd>. li8 moves that
             series to chapter 349, or offers to add it if it's new.
           </Tip>
           <Tip title="Bump progress from the list">

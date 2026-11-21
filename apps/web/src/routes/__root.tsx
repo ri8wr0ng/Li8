@@ -5,10 +5,12 @@ import {
   ScriptOnce,
   Scripts,
   createRootRoute,
+  useLocation,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Splash } from "#/components/brand";
 import { Providers } from "#/components/providers";
+import { PUBLIC_PATHS } from "#/lib/public-paths";
 import { DESCRIPTION, HOME_TITLE, SITE_NAME, SITE_URL, TAGLINE, absoluteUrl } from "#/lib/seo";
 import { THEME_INIT_SCRIPT } from "#/lib/theme";
 
@@ -61,7 +63,7 @@ export const Route = createRootRoute({
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { name: "apple-mobile-web-app-title", content: "Inkmark" },
+      { name: "apple-mobile-web-app-title", content: SITE_NAME },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -76,9 +78,10 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  // Auth tokens live in the browser, so everything below renders client-side.
+  const pathname = useLocation({ select: (location) => location.pathname.replace(/\/$/, "") });
+  const isPublicPage = PUBLIC_PATHS.includes(pathname);
   return (
-    <ClientOnly fallback={<Splash />}>
+    <ClientOnly fallback={isPublicPage ? <Outlet /> : <Splash />}>
       <Providers>
         <Outlet />
       </Providers>

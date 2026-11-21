@@ -212,7 +212,7 @@ export function AiPanel() {
         ref={(el) => void (sheetRef.current = el)}
         data-ai-panel
         data-state={closing ? "closed" : "open"}
-        aria-label="Ask Inkmark"
+        aria-label="Ask li8"
         className={cn(
           // Phones: a floating sheet between the top bar and the nav, input at its bottom, rising from the nav.
           "fixed inset-x-3 h-[min(75dvh,calc(100dvh-env(safe-area-inset-top,0px)-10rem))] bottom-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] z-[35] flex origin-bottom flex-col overflow-hidden rounded-3xl border bg-background/90 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] backdrop-blur-2xl",
@@ -234,7 +234,7 @@ export function AiPanel() {
           />
           <Sparkles className="size-4 shrink-0 text-muted-foreground" />
           <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
-            {current?.title ?? "Ask Inkmark"}
+            {current?.title ?? "Ask li8"}
           </h2>
 
           <DropdownMenu>

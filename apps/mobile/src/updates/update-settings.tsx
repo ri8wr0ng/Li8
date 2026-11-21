@@ -48,8 +48,7 @@ export function UpdateSettings() {
   else if (status.kind === "current") message = "You're on the latest build.";
   else if (status.kind === "ahead")
     message = `You're on a newer build than the latest ${channel} (${status.build.version}). You'll get the next ${channel} release when it's newer.`;
-  else
-    message = `Inkmark ${status.build.version} is available (${formatBytes(status.build.apkSize)}).`;
+  else message = `li8 ${status.build.version} is available (${formatBytes(status.build.apkSize)}).`;
 
   const available = status?.kind === "available" ? status.build : null;
   const progress = install.phase === "downloading" ? install.progress : null;
