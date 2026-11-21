@@ -1,22 +1,16 @@
 <!doctype html>
 <!--
-  Source for public/og-image.png (the 1200×630 social sharing card).
-  Regenerate after `pnpm install`:
-  chrome --headless --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot=public/og-image.png assets/og-image.html
+  Source for apps/web/public/og-image.png (the 1200×630 social sharing card).
+  Regenerate from the repo root after `bun install`:
+  chrome --headless --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot=apps/web/public/og-image.png assets/og-image.html
 -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <style>
       @font-face {
-        font-family: "Fraunces";
-        src: url("../node_modules/@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2")
-          format("woff2");
-        font-weight: 100 900;
-      }
-      @font-face {
         font-family: "Geist";
-        src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+        src: url("../apps/web/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
           format("woff2");
         font-weight: 100 900;
       }
@@ -42,7 +36,6 @@
         display: flex;
         align-items: center;
         gap: 20px;
-        font-family: "Fraunces", serif;
         font-weight: 600;
         font-size: 44px;
         letter-spacing: -0.02em;
@@ -53,14 +46,10 @@
       }
       h1 {
         margin: 0;
-        font-family: "Fraunces", serif;
         font-weight: 600;
         font-size: 104px;
         line-height: 1.02;
         letter-spacing: -0.03em;
-      }
-      h1 em {
-        color: #e5412d;
       }
       p {
         margin: 0;
@@ -78,10 +67,10 @@
           <rect x="25" y="20" width="14" height="3.2" rx="1.6" fill="#1C1A17" />
           <rect x="25" y="27" width="9" height="3.2" rx="1.6" fill="#1C1A17" />
         </svg>
-        Inkmark
+        li8
       </div>
-      <h1>Notes, and where<br />you <em>left off.</em></h1>
-      <p>Notes and a reading tracker for manga, manhwa and manhua.</p>
+      <h1>Remember where<br />you left off.</h1>
+      <p>A private notebook and a tracker for reading and watching.</p>
     </div>
   </body>
 </html>

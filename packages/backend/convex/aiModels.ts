@@ -11,7 +11,7 @@ import { env, type QueryCtx } from "./_generated/server";
 const openrouter = createOpenRouter({
   apiKey: env.OPENROUTER_API_KEY ?? "",
   // Shown on openrouter.ai activity and rankings.
-  appName: "Inkmark",
+  appName: "li8",
   ...(env.SITE_URL ? { appUrl: env.SITE_URL } : {}),
 });
 

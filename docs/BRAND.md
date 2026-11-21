@@ -1,12 +1,12 @@
-# Inkmark brand
+# li8 brand
 
-**Inkmark** stands for _ink_ (your notes) and _bookmark_ (your place in a series).
+li8 is a private notebook and a tracker for reading and watching progress.
 
-**Tagline:** Notes, and where you left off.
+**Tagline:** Remember where you left off.
 
 ## Personality
 
-Inkmark should feel like a good paper notebook with a red bookmark ribbon: warm, quiet and quick. The paper is calm, and the only loud color is the red you tap to move forward.
+li8 should feel like a good paper notebook with a red bookmark ribbon: warm, quiet and quick. The paper is calm, and the only loud color is the red you tap to move forward.
 
 - **Calm surfaces, one loud action.** Hanko red is used only for the main forward action (+1 chapter, New note, Add series) and for the logo.
 - **Numbers are the hero in the Library.** Chapter numbers are large, monospaced and tabular, so you can read your place at a glance.
@@ -16,7 +16,7 @@ Inkmark should feel like a good paper notebook with a red bookmark ribbon: warm,
 
 `assets/icon.svg`: a paper-colored bookmark ribbon with two lines of ink, on a rounded Hanko-red square.
 
-- The rounded square (`rx 14/64`) is the app icon. Next to the word "Inkmark" it forms the wordmark.
+- The rounded square (`rx 14/64`) is the app icon. Next to the word "li8" it forms the wordmark.
 - The maskable version (`public/icon-maskable.svg`) bleeds to the edges, with the ribbon scaled to 72% so it stays inside Android's safe zone.
 - Don't recolor the ribbon, add a drop shadow, or put the mark on a red background.
 

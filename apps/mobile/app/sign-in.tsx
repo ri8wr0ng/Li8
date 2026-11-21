@@ -1,4 +1,12 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Redirect } from "expo-router";
 import { useConvexAuth } from "convex/react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -27,11 +35,14 @@ export default function SignInScreen() {
             Remember where you left off.
           </Text>
           <Text style={[styles.subtitle, typography.body, { color: colors.muted }]}>
-            Inkmark is a notebook and a reading tracker in one. Type a title and a chapter, and it
-            keeps your place in every manga, novel and show you follow.
+            li8 is a private notebook and a tracker for reading and watching progress. Keep your
+            place in the manga, novels, and shows you follow.
           </Text>
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
+            accessibilityState={{ busy: isSubmitting, disabled: isSubmitting }}
             onPress={startGoogleSignIn}
             disabled={isSubmitting}
             style={({ pressed }) => [
@@ -49,7 +60,12 @@ export default function SignInScreen() {
               <ActivityIndicator size="small" color={colors.ink} />
             ) : (
               <View style={styles.buttonContent}>
-                <GoogleIcon size={20} />
+                <Image
+                  source={require("../assets/google-g.png")}
+                  style={styles.googleLogo}
+                  resizeMode="contain"
+                  accessible={false}
+                />
                 <Text style={[styles.buttonText, typography.display, { color: colors.ink }]}>
                   Continue with Google
                 </Text>
@@ -94,24 +110,6 @@ function Point({ title, description }: { title: string; description: string }) {
   );
 }
 
-function GoogleIcon({ size = 20 }: { size?: number }) {
-  const { colors } = useTheme();
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: colors.surfaceHighlight,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text style={{ fontSize: size * 0.65, fontWeight: "700", color: "#4285F4" }}>G</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -151,6 +149,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  googleLogo: {
+    width: 20,
+    height: 20,
   },
   buttonText: {
     fontSize: 16,

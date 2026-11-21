@@ -1,6 +1,6 @@
 import { cn } from "#/lib/utils";
 
-/** The Inkmark mark: a bookmark ribbon with two lines of ink, on Hanko red. */
+/** The li8 mark: a bookmark ribbon with two lines of ink, on Hanko red. */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" aria-hidden className={cn("size-8 shrink-0", className)}>
@@ -16,7 +16,7 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
       <LogoMark className="size-7" />
-      <span className="font-display text-[1.35rem] font-semibold tracking-[-0.02em]">Inkmark</span>
+      <span className="font-display text-[1.35rem] font-semibold tracking-[-0.02em]">li8</span>
     </span>
   );
 }

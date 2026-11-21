@@ -4,10 +4,12 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Inkmark brand tokens. See docs/BRAND.md.
+ * li8 brand tokens. See docs/BRAND.md.
  * Paper (light) and Ink (dark), one accent: Hanko red.
  */
 :root {
@@ -389,21 +391,7 @@
   animation-timing-function: ease;
 }
 
-/* Landing demo: a hanko seal pressed onto the card, and the chapter number rolling over. */
-@keyframes stamp-press {
-  0% {
-    opacity: 0;
-    transform: rotate(-14deg) scale(1.6);
-  }
-  55% {
-    opacity: 1;
-    transform: rotate(-8deg) scale(0.94);
-  }
-  100% {
-    opacity: 1;
-    transform: rotate(-8deg) scale(1);
-  }
-}
+/* The landing page's chapter number rolls over once. */
 @keyframes roll-in {
   from {
     transform: translateY(60%);

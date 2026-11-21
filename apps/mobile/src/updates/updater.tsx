@@ -27,7 +27,7 @@ import {
 } from "./releases";
 
 // Set by .github/workflows/mobile-release.yml to the repo that publishes the APKs.
-const RELEASES_REPO = process.env.EXPO_PUBLIC_RELEASES_REPO || "sharull9/ai-notes";
+const RELEASES_REPO = process.env.EXPO_PUBLIC_RELEASES_REPO || "ri8wr0ng/li8";
 const RELEASES_URL = `https://api.github.com/repos/${RELEASES_REPO}/releases?per_page=50`;
 
 const CHANNEL_KEY = "inkmark_update_channel";
@@ -146,7 +146,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
       });
       setInstall({ phase: "idle" });
       // Android's package installer takes over from here. The first time, it asks to allow
-      // installing apps from Inkmark.
+      // installing apps from li8.
       await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
         data: file.contentUri,
         type: APK_MIME,
@@ -187,7 +187,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
       await SecureStore.setItemAsync(PROMPTED_KEY, build.tag).catch(() => {});
       Alert.alert(
         "Update available",
-        `Inkmark ${build.version} is ready (${formatBytes(build.apkSize)}).`,
+        `li8 ${build.version} is ready (${formatBytes(build.apkSize)}).`,
         [
           { text: "Later", style: "cancel" },
           { text: "Update", onPress: () => void installBuild(build) },

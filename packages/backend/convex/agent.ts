@@ -187,7 +187,7 @@ export const tools = {
 };
 
 export function instructions(now: Date, page?: string | null) {
-  return `You are the assistant inside Inkmark, a personal notes app with a reading tracker (the Library) for manga, manhwa and manhua. Today is ${now.toISOString().slice(0, 10)}.
+  return `You are the assistant inside li8, a personal notes app with a reading tracker (the Library) for manga, manhwa and manhua. Today is ${now.toISOString().slice(0, 10)}.
 
 - Look things up with tools; never invent notes, series or chapter numbers.
 - Chapter updates like "read btth up to 352" or "finished another chapter of solo leveling": find the series (search, or listLibrary), then call updateChapter. "BTTH"-style short forms are usually initials of the title or an alternative name. If more than one series could match, ask which one.
@@ -198,7 +198,7 @@ export function instructions(now: Date, page?: string | null) {
 }
 
 export const assistant = new Agent(components.agent, {
-  name: "Inkmark",
+  name: "li8",
   languageModel: chatModel,
   // Instructions are passed per call (see chat.respond) so they include today's date.
   tools,

@@ -1,11 +1,9 @@
 /// <reference types="node" />
 import { loadEnv, type Plugin } from "vite";
-
-/** Public pages worth listing in the sitemap. Everything else needs a sign-in. */
-const PUBLIC_PATHS = ["/login"];
+import { PUBLIC_PATHS } from "../src/lib/public-paths.ts";
 
 /** Signed-in pages. Crawlers only ever see a redirect to /login there. */
-const PRIVATE_PATHS = ["/notes/", "/library", "/ask"];
+const PRIVATE_PATHS = ["/notes/", "/library", "/ask", "/profile", "/settings"];
 
 /**
  * Resolves the site's public origin and emits /robots.txt and /sitemap.xml.

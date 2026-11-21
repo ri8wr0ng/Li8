@@ -15,15 +15,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Three independent jobs, none waits on another. Each fails if it runs over budget
-# (see scripts/ci/run.ts): setup 15 s, job 35 s, and a budget per check.
 jobs:
   checks:
     name: checks (format, lint, typecheck)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Budgets count from here, so checkout is inside them.
       - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
@@ -35,7 +32,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Budgets count from here, so checkout is inside them.
       - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:
@@ -54,7 +50,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # Budgets count from here, so checkout is inside them.
       - run: echo "JOB_START=$(date +%s%3N)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
         with:

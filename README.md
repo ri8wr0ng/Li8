@@ -1,12 +1,12 @@
 <img src="assets/icon.svg" width="64" height="64" alt="">
 
-# Inkmark
+# li8
 
-Notes, and where you left off. A notes app with a reading tracker for manga, manhwa and manhua. It's an installable web app (PWA) that syncs across devices.
+li8 is a private notebook and a tracker for manga, manhwa, manhua, novels, anime, and TV. Use the installable web app or get the Android APK from [GitHub Releases](https://github.com/ri8wr0ng/li8/releases). Sign in with Google to sync your notes and progress across devices.
 
 - **Notes** that save as you type, with tags and pinning
 - **Search** that tolerates typos and highlights what matched, in the notes list, the ⌘K palette, and inside a note with **Ctrl F / ⌘F**
-- **Library** for series, with alternative names, type, status, description, genres, a one-tap **+1 chapter** button, chapter history, and a "Read next chapter" link
+- **Library** for reading and watching progress, with labels, chapter and episode history, and shortcuts to log the next chapter or episode
 - **⌘K command bar**: type `btth 349` to set a chapter, `btth +1` to bump it, or `Battle Through The Heavens 348` to add a new series
 - **AniList auto-fill**: start typing in Add series and pick a match to fill in names, description, genres, type and chapter count. Linked series get a "Refresh from AniList" button. No cover art is fetched or stored.
 - **Works offline**: the app shell is cached by a service worker, and the last notes and library are kept on the device (IndexedDB), so lists and search open instantly and work read-only with no connection
@@ -88,11 +88,15 @@ PRs also receive a size label based on added + deleted lines, excluding lockfile
 
 ## Deploy
 
-`bun run build` produces a static app in `apps/web/dist/client`. Serve it from any static host, with all routes falling back to `_shell.html`. Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps; everything in `assets/` is hashed and can be cached forever. Deploy the backend with `npx convex deploy` from `packages/backend`.
+Run `bun run build` to produce the static site in `apps/web/dist/client`. Serve `/login`, `/privacy`, `/terms`, and `/support` from their corresponding `.html` files. Serve existing assets directly and use `_shell.html` as the fallback for other app routes. Vercel configures these rules in [`vercel.json`](vercel.json).
 
-Set `VITE_SITE_URL` (for example `https://inkmark.app`) at build time so link previews get absolute image URLs and the build writes `sitemap.xml` and a canonical link for the sign-in page. On Vercel it defaults to the project's production domain. `robots.txt` is always written and keeps crawlers out of the signed-in pages. The social card is `public/og-image.png`, rendered from `assets/og-image.html` (the command is in that file).
+Serve `sw.js` and `_shell.html` with `Cache-Control: no-cache` so updates reach installed apps. Files in `assets/` use content hashes and can be cached indefinitely. Deploy the backend with `npx convex deploy` from `packages/backend`.
 
-On Vercel, `vercel.json` selects the static output and configures the route fallback and cache headers. The TanStack Start server preset is disabled because this app uses SPA mode.
+Set `VITE_SITE_URL` to your public web origin at build time. The build uses it for canonical links, the sitemap, and the social image URL. On Vercel, it defaults to the project's production domain. The social image lives at `apps/web/public/og-image.png`. See [`assets/og-image.html`](assets/og-image.html) for the regeneration command.
+
+### Google OAuth verification
+
+Use the same verified domain for the public URLs in Google Auth Platform. Set the app name to **li8** and use `/login` for the home page, `/privacy` for the privacy policy, and `/terms` for the terms of service. Open each URL while signed out to confirm it's publicly accessible. The landing page also links to `/support` for help and account deletion requests.
 
 ### Mobile app releases
 
@@ -110,7 +114,7 @@ First, set repository variables `EXPO_PUBLIC_CONVEX_URL` (the production Convex 
 
 ```
 packages/backend/convex/   backend: schema, auth, notes, series (chapter history)
-apps/web/src/routes/       /login · / (notes) · /notes/$noteId · /library · /library/$seriesId
+apps/web/src/routes/       public pages, notes, Library, and account settings
 apps/web/src/components/   app shell, ⌘K palette, highlight textarea, series card
 apps/web/src/lib/          search index, highlighting, chapter-command parser, AniList client, offline cache, theme
 apps/web/vite/             build plugin that generates the service worker (sw.js)
