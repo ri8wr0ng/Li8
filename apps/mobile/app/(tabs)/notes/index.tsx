@@ -21,7 +21,13 @@ import { NoteCard } from "../../../src/notes/note-card";
 
 type ListItem =
   | { type: "header"; id: string; title: string }
-  | { type: "note"; id: string; note: Doc<"notes">; terms: string[] };
+  | {
+      type: "note";
+      id: string;
+      note: Doc<"notes">;
+      terms: string[];
+      subtitle?: string;
+    };
 
 export default function NotesScreen() {
   const router = useRouter();
@@ -31,6 +37,7 @@ export default function NotesScreen() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [view, setView] = useState<"all" | "shared" | "archived">("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -110,6 +117,13 @@ export default function NotesScreen() {
     { initialNumItems: 50 },
   );
 
+  const shared = useQuery(api.notes.sharedWithMe, view === "shared" ? {} : "skip");
+  const archivedQuery = usePaginatedQuery(
+    api.notes.listPage,
+    view === "archived" ? { archived: true } : "skip",
+    { initialNumItems: 50 },
+  );
+
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setSearchQuery("");
@@ -121,12 +135,19 @@ export default function NotesScreen() {
 
   const handleEndReached = useCallback(() => {
     if (isSearching) return;
+    if (view === "archived") {
+      if (archivedQuery.status === "CanLoadMore") {
+        archivedQuery.loadMore(50);
+      }
+      return;
+    }
+    if (view === "shared") return;
     if (restQuery.status === "CanLoadMore") {
       restQuery.loadMore(50);
     } else if (pinnedQuery.status === "CanLoadMore") {
       pinnedQuery.loadMore(50);
     }
-  }, [isSearching, restQuery, pinnedQuery]);
+  }, [isSearching, view, archivedQuery, restQuery, pinnedQuery]);
 
   const searchTerms = useMemo(() => trimmedQuery.split(/\s+/).filter(Boolean), [trimmedQuery]);
 
@@ -141,6 +162,26 @@ export default function NotesScreen() {
         }
       }
       return items;
+    }
+
+    if (view === "shared") {
+      if (!shared) return [];
+      return shared.map((entry) => ({
+        type: "note" as const,
+        id: entry.note._id,
+        note: entry.note,
+        terms: [],
+        subtitle: `${entry.ownerName ?? "Someone"} · ${entry.role === "edit" ? "Can edit" : "View only"}`,
+      }));
+    }
+
+    if (view === "archived") {
+      return archivedQuery.results.map((note) => ({
+        type: "note" as const,
+        id: note._id,
+        note,
+        terms: [],
+      }));
     }
 
     const items: ListItem[] = [];
@@ -161,21 +202,40 @@ export default function NotesScreen() {
     }
 
     return items;
-  }, [isSearching, searchResults, searchTerms, pinnedQuery.results, restQuery.results]);
+  }, [
+    isSearching,
+    searchResults,
+    searchTerms,
+    view,
+    shared,
+    archivedQuery.results,
+    pinnedQuery.results,
+    restQuery.results,
+  ]);
 
   const isLoadingSearch =
     isSearching && (trimmedQuery !== debouncedQuery || searchResults === undefined);
   const isLoadingInitial =
     !isSearching &&
+    view === "all" &&
     pinnedQuery.status === "LoadingFirstPage" &&
     restQuery.status === "LoadingFirstPage";
+  const isLoadingShared = !isSearching && view === "shared" && shared === undefined;
+  const isLoadingArchived =
+    !isSearching && view === "archived" && archivedQuery.status === "LoadingFirstPage";
+  const isLoading = isLoadingSearch || isLoadingInitial || isLoadingShared || isLoadingArchived;
 
   const isSearchEmpty = isSearching && !isLoadingSearch && (searchResults?.length ?? 0) === 0;
   const isFeedEmpty =
     !isSearching &&
     !isLoadingInitial &&
+    view === "all" &&
     pinnedQuery.results.length === 0 &&
     restQuery.results.length === 0;
+  const isSharedEmpty =
+    !isSearching && !isLoadingShared && view === "shared" && (shared?.length ?? 0) === 0;
+  const isArchivedEmpty =
+    !isSearching && !isLoadingArchived && view === "archived" && archivedQuery.results.length === 0;
 
   const renderItem = ({ item }: { item: ListItem }) => {
     if (item.type === "header") {
@@ -189,13 +249,14 @@ export default function NotesScreen() {
       <NoteCard
         note={item.note}
         terms={item.terms}
+        subtitle={item.subtitle}
         query={isSearching ? trimmedQuery : undefined}
       />
     );
   };
 
   const renderFooter = () => {
-    if (isLoadingSearch || isLoadingInitial) {
+    if (isLoading) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.hanko} size="large" />
@@ -216,7 +277,7 @@ export default function NotesScreen() {
   };
 
   const renderEmpty = () => {
-    if (isLoadingSearch || isLoadingInitial) return null;
+    if (isLoading) return null;
     if (isSearchEmpty) {
       return (
         <EmptyState
@@ -251,6 +312,24 @@ export default function NotesScreen() {
               <Text style={styles.newNoteBtnText}>Write a note</Text>
             </Pressable>
           }
+        />
+      );
+    }
+    if (isSharedEmpty) {
+      return (
+        <EmptyState
+          icon={<Feather name="users" size={24} color={colors.muted} />}
+          title="Nothing shared with you yet"
+          description="When someone shares a note with your email, it shows up here."
+        />
+      );
+    }
+    if (isArchivedEmpty) {
+      return (
+        <EmptyState
+          icon={<Feather name="archive" size={24} color={colors.muted} />}
+          title="No archived notes"
+          description="Archive a note from its ⋯ menu to tuck it away without deleting it."
         />
       );
     }
@@ -294,6 +373,50 @@ export default function NotesScreen() {
             </Pressable>
           )}
         </View>
+
+        {searchQuery.length === 0 && (
+          <View
+            style={[
+              styles.segmentedControl,
+              {
+                borderColor: colors.border,
+                borderRadius: radii.controls,
+                backgroundColor: colors.card,
+              },
+            ]}
+          >
+            {(
+              [
+                ["all", "Notes"],
+                ["shared", "Shared"],
+                ["archived", "Archived"],
+              ] as const
+            ).map(([key, label]) => {
+              const selected = view === key;
+              return (
+                <Pressable
+                  key={key}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected }}
+                  onPress={() => setView(key)}
+                  style={[
+                    styles.segment,
+                    selected && {
+                      backgroundColor: colors.ink,
+                      borderRadius: radii.controls - 2,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.segmentText, { color: selected ? colors.paper : colors.muted }]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -355,6 +478,23 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 4,
+  },
+  segmentedControl: {
+    marginTop: 10,
+    height: 34,
+    borderWidth: 1,
+    padding: 2,
+    flexDirection: "row",
+  },
+  segment: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
   },
   listContent: {
     paddingHorizontal: 16,

@@ -12,10 +12,12 @@ export function NoteCard({
   note,
   terms = [],
   query,
+  subtitle,
 }: {
   note: Doc<"notes">;
   terms?: string[];
   query?: string;
+  subtitle?: string;
 }) {
   const router = useRouter();
   const { colors, radii, typography } = useTheme();
@@ -75,7 +77,22 @@ export function NoteCard({
             <Text style={[styles.untitled, { color: colors.muted }]}>Untitled</Text>
           )}
         </View>
-        <Text style={[styles.time, { color: colors.muted }]}>{relativeTime(note.updatedAt)}</Text>
+        <View style={styles.headerRight}>
+          <Text style={[styles.time, { color: colors.muted }]}>{relativeTime(note.updatedAt)}</Text>
+          {note.archived === true && (
+            <Text
+              style={[
+                styles.archivedBadge,
+                {
+                  color: colors.muted,
+                  backgroundColor: colors.paper,
+                },
+              ]}
+            >
+              Archived
+            </Text>
+          )}
+        </View>
       </View>
 
       {bodySnippet ? (
@@ -110,6 +127,8 @@ export function NoteCard({
           ))}
         </View>
       )}
+
+      {subtitle ? <Text style={[styles.subtitle, { color: colors.muted }]}>{subtitle}</Text> : null}
     </PressableScale>
   );
 }
@@ -147,6 +166,24 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 12,
     flexShrink: 0,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  archivedBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: "hidden",
+  },
+  subtitle: {
+    fontSize: 12,
+    marginTop: 6,
   },
   snippet: {
     marginTop: 6,

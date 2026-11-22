@@ -18,6 +18,7 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppAskRouteImport } from './routes/_app/ask'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as SPublicIdRouteImport } from './routes/s.$publicId'
 import { Route as AppLibraryIndexRouteImport } from './routes/_app/library.index'
 import { Route as AppLibrarySeriesIdRouteImport } from './routes/_app/library.$seriesId'
 import { Route as AppNotesNoteIdRouteImport } from './routes/_app/notes.$noteId'
@@ -66,6 +67,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const SPublicIdRoute = SPublicIdRouteImport.update({
+  id: '/s/$publicId',
+  path: '/s/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppLibraryIndexRoute = AppLibraryIndexRouteImport.update({
   id: '/library/',
   path: '/library/',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/ask': typeof AppAskRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
+  '/s/$publicId': typeof SPublicIdRoute
   '/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
   '/library/': typeof AppLibraryIndexRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/ask': typeof AppAskRoute
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
+  '/s/$publicId': typeof SPublicIdRoute
   '/': typeof AppIndexRoute
   '/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/_app/ask': typeof AppAskRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/s/$publicId': typeof SPublicIdRoute
   '/_app/': typeof AppIndexRoute
   '/_app/library/$seriesId': typeof AppLibrarySeriesIdRoute
   '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/ask'
     | '/profile'
     | '/settings'
+    | '/s/$publicId'
     | '/library/$seriesId'
     | '/notes/$noteId'
     | '/library/'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/ask'
     | '/profile'
     | '/settings'
+    | '/s/$publicId'
     | '/'
     | '/library/$seriesId'
     | '/notes/$noteId'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/_app/ask'
     | '/_app/profile'
     | '/_app/settings'
+    | '/s/$publicId'
     | '/_app/'
     | '/_app/library/$seriesId'
     | '/_app/notes/$noteId'
@@ -172,6 +184,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
+  SPublicIdRoute: typeof SPublicIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/s/$publicId': {
+      id: '/s/$publicId'
+      path: '/s/$publicId'
+      fullPath: '/s/$publicId'
+      preLoaderRoute: typeof SPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/library/': {
       id: '/_app/library/'
       path: '/library'
@@ -291,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
+  SPublicIdRoute: SPublicIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
