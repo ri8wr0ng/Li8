@@ -40,3 +40,7 @@ export type UsageKind = Infer<typeof vUsageKind>;
  */
 export const vSeriesLink = v.object({ url: v.string(), label: v.optional(v.string()) });
 export type SeriesLink = Infer<typeof vSeriesLink>;
+
+/** What someone a note is shared with may do: read it, or also change it. */
+export const vShareRole = v.union(v.literal("view"), v.literal("edit"));
+export type ShareRole = Infer<typeof vShareRole>;

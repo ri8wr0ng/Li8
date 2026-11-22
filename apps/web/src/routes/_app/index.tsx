@@ -1,12 +1,13 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useConvexAuth, useQuery } from "convex/react";
-import { NotebookPen, PenLine, Pin, SearchX } from "lucide-react";
+import { useConvexAuth, usePaginatedQuery, useQuery } from "convex/react";
+import { Archive, NotebookPen, PenLine, Pin, SearchX, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNewNote } from "#/components/app-shell";
 import { EmptyState, PageHeader, SearchField, SectionLabel } from "#/components/page";
 import { PullToRefresh } from "#/components/pull-to-refresh";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { Highlight, snippet } from "#/lib/highlight";
 import { useCachedList, useCachedPaginatedQuery, writeCachedList } from "#/lib/offline";
 import { pageTitle } from "#/lib/seo";
@@ -21,9 +22,12 @@ export const Route = createFileRoute("/_app/")({
   component: NotesPage,
 });
 
+type NotesView = "all" | "shared" | "archived";
+
 function NotesPage() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [view, setView] = useState<NotesView>("all");
   const [paginationKey, setPaginationKey] = useState(0);
   const newNote = useNewNote();
   useHomeScreenShortcut(newNote);
@@ -58,14 +62,36 @@ function NotesPage() {
           placeholder="Search notes…"
         />
 
+        {!query.trim() && (
+          <Tabs
+            value={view}
+            onValueChange={(value) => {
+              if (value === "all" || value === "shared" || value === "archived") setView(value);
+            }}
+            className="mt-4"
+          >
+            <TabsList>
+              <TabsTrigger value="all">Notes</TabsTrigger>
+              <TabsTrigger value="shared">Shared with me</TabsTrigger>
+              <TabsTrigger value="archived">Archived</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
         <div className="mt-6">
-          <NotesFeed
-            key={paginationKey}
-            query={query.trim()}
-            debouncedQuery={debouncedQuery}
-            searchResults={searchResults}
-            newNote={newNote}
-          />
+          {!query.trim() && view === "shared" ? (
+            <SharedFeed key={paginationKey} />
+          ) : !query.trim() && view === "archived" ? (
+            <ArchivedFeed key={paginationKey} />
+          ) : (
+            <NotesFeed
+              key={paginationKey}
+              query={query.trim()}
+              debouncedQuery={debouncedQuery}
+              searchResults={searchResults}
+              newNote={newNote}
+            />
+          )}
         </div>
       </div>
     </PullToRefresh>
@@ -170,6 +196,50 @@ function NotesFeed({
   );
 }
 
+function SharedFeed() {
+  const shared = useQuery(api.notes.sharedWithMe);
+  if (shared === undefined) return <ListSkeleton />;
+  if (shared.length === 0) {
+    return (
+      <EmptyState icon={<Users />} title="Nothing shared with you yet">
+        When someone shares a note with your email, it shows up here.
+      </EmptyState>
+    );
+  }
+  return (
+    <NoteList
+      items={shared.map(({ note, role, ownerName }) => ({
+        note,
+        terms: [],
+        subtitle: `${ownerName ?? "Someone"} · ${role === "edit" ? "Can edit" : "View only"}`,
+      }))}
+    />
+  );
+}
+
+function ArchivedFeed() {
+  const archived = usePaginatedQuery(
+    api.notes.listPage,
+    { archived: true },
+    { initialNumItems: 50 },
+  );
+  if (archived.status === "LoadingFirstPage") return <ListSkeleton />;
+  if (archived.results.length === 0) {
+    return (
+      <EmptyState icon={<Archive />} title="No archived notes">
+        Archive a note from its ⋯ menu to tuck it away without deleting it.
+      </EmptyState>
+    );
+  }
+  return (
+    <NoteList
+      items={archived.results.map((note) => ({ note, terms: [] }))}
+      status={archived.status}
+      loadMore={archived.loadMore}
+    />
+  );
+}
+
 /** The installed app's "New note" shortcut opens /?new=note. */
 function useHomeScreenShortcut(newNote: () => Promise<void>) {
   const { new: wantsNew } = Route.useSearch();
@@ -190,7 +260,7 @@ function NoteList({
   status,
   loadMore,
 }: {
-  items: { note: Doc<"notes">; terms: string[] }[];
+  items: { note: Doc<"notes">; terms: string[]; subtitle?: string }[];
   query?: string;
   status?: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
   loadMore?: (numItems: number) => void;
@@ -210,7 +280,7 @@ function NoteList({
   return (
     <>
       <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-        {items.map(({ note, terms }) => (
+        {items.map(({ note, terms, subtitle }) => (
           <li key={note._id}>
             <Link
               to="/notes/$noteId"
@@ -229,6 +299,11 @@ function NoteList({
                     <span className="text-muted-foreground">Untitled</span>
                   )}
                 </h3>
+                {note.archived && (
+                  <span className="shrink-0 rounded-md bg-secondary px-1.5 py-0.5 text-[0.7rem] font-medium text-secondary-foreground">
+                    Archived
+                  </span>
+                )}
                 <time className="shrink-0 text-xs text-muted-foreground">
                   {relativeTime(note.updatedAt)}
                 </time>
@@ -250,6 +325,7 @@ function NoteList({
                   ))}
                 </div>
               )}
+              {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
             </Link>
           </li>
         ))}

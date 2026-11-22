@@ -1,6 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { vSeriesKind, vSeriesLink, vSeriesStatus, vUsageKind } from "./validators";
+import { vSeriesKind, vSeriesLink, vSeriesStatus, vShareRole, vUsageKind } from "./validators";
 
 export default defineSchema({
   users: defineTable({
@@ -9,7 +9,7 @@ export default defineSchema({
     // Generated avatar: a DiceBear style and the seed it's drawn from. Unset means the defaults.
     avatarStyle: v.optional(v.string()),
     avatarSeed: v.optional(v.string()),
-  }),
+  }).index("email", ["email"]),
 
   notes: defineTable({
     userId: v.id("users"),
@@ -19,13 +19,30 @@ export default defineSchema({
     pinned: v.boolean(),
     updatedAt: v.number(),
     searchText: v.optional(v.string()),
+    // True when archived; unset (not false) otherwise, so older notes count as active.
+    archived: v.optional(v.literal(true)),
+    // Secret token for the public read-only link; unset when the link is off.
+    publicId: v.optional(v.string()),
   })
     .index("by_user_updated", ["userId", "updatedAt"])
     .index("by_user_pinned_updated", ["userId", "pinned", "updatedAt"])
+    .index("by_user_archived_updated", ["userId", "archived", "updatedAt"])
+    .index("by_user_archived_pinned_updated", ["userId", "archived", "pinned", "updatedAt"])
+    .index("by_public_id", ["publicId"])
     .searchIndex("search_text", {
       searchField: "searchText",
       filterFields: ["userId"],
     }),
+
+  // A note shared with another user. The owner stays notes.userId.
+  noteShares: defineTable({
+    noteId: v.id("notes"),
+    ownerId: v.id("users"),
+    userId: v.id("users"),
+    role: vShareRole,
+  })
+    .index("by_note_user", ["noteId", "userId"])
+    .index("by_user", ["userId"]),
 
   labels: defineTable({
     userId: v.id("users"),

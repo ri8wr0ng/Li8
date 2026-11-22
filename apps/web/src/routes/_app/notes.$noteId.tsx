@@ -2,19 +2,26 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
+  Archive,
+  ArchiveRestore,
   ChevronDown,
   ChevronUp,
+  Copy,
   FileQuestion,
   MoreHorizontal,
+  LogOut,
   Pin,
   PinOff,
   Search,
+  Share2,
   Trash2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ConvexError } from "convex/values";
 import { ChipInput } from "#/components/chip-input";
+import { ShareDialog } from "#/components/share-dialog";
 import { HighlightTextarea, type HighlightTextareaHandle } from "#/components/highlight-textarea";
 import { EmptyState } from "#/components/page";
 import {
@@ -32,6 +39,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "#/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#/components/ui/tooltip";
@@ -148,13 +156,72 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   const { q } = Route.useSearch();
   const setPinned = useMutation(api.notes.update);
   const remove = useMutation(api.notes.remove);
+  const duplicate = useMutation(api.notes.duplicate);
+  const setArchived = useMutation(api.notes.setArchived);
+  const unshare = useMutation(api.notes.unshare);
+  const access = useQuery(api.notes.access, { id: note._id });
+  const me = useQuery(api.users.me, {});
   const save = useAutosave(note._id);
-  const readOnly = useReadOnly();
+  const offlineReadOnly = useReadOnly();
+  const role = access?.role ?? "owner";
+  const isOwner = role === "owner";
+  const readOnly = offlineReadOnly || role === "view";
 
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
   const [tags, setTags] = useState(note.tags);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  async function archive() {
+    try {
+      await setArchived({ id: note._id, archived: true });
+      toast("Note archived", {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            void setArchived({ id: note._id, archived: false }).catch((err: unknown) =>
+              toast.error(mutationErrorMessage(err)),
+            );
+          },
+        },
+      });
+      await navigate({ to: "/" });
+    } catch (err) {
+      toast.error(mutationErrorMessage(err));
+    }
+  }
+
+  async function unarchive() {
+    try {
+      await setArchived({ id: note._id, archived: false });
+      toast("Note restored");
+    } catch (err) {
+      toast.error(mutationErrorMessage(err));
+    }
+  }
+
+  async function makeCopy() {
+    try {
+      await save.flush();
+      const id = await duplicate({ id: note._id });
+      toast("Copy made");
+      await navigate({ to: "/notes/$noteId", params: { noteId: id } });
+    } catch (err) {
+      toast.error(mutationErrorMessage(err));
+    }
+  }
+
+  async function leaveSharedNote() {
+    if (!me?.id) return;
+    try {
+      await unshare({ id: note._id, userId: me.id });
+      toast("Removed from your shared notes");
+      await navigate({ to: "/" });
+    } catch (err) {
+      toast.error(mutationErrorMessage(err));
+    }
+  }
 
   // Take edits made on another device, unless you're typing here.
   const titleRef = useRef<HTMLInputElement>(null);
@@ -235,6 +302,12 @@ function Editor({ note }: { note: Doc<"notes"> }) {
           </Link>
         </Button>
         <SaveIndicator state={save.state} onRetry={() => void save.flush()} />
+        {!isOwner && (
+          <span className="ml-2 hidden items-center rounded-md bg-secondary px-1.5 py-0.5 text-[0.7rem] font-medium text-secondary-foreground sm:inline-flex">
+            Shared by {access?.ownerName ?? "someone"} ·{" "}
+            {role === "edit" ? "Can edit" : "View only"}
+          </span>
+        )}
 
         <div className="ml-auto flex items-center gap-0.5">
           <Tooltip>
@@ -251,22 +324,45 @@ function Editor({ note }: { note: Doc<"notes"> }) {
             </TooltipTrigger>
             <TooltipContent>Find in note · Ctrl F</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("rounded-xl", note.pinned && "text-hanko")}
-                aria-label={note.pinned ? "Unpin" : "Pin"}
-                aria-pressed={note.pinned}
-                disabled={readOnly}
-                onClick={() => void setPinned({ id: note._id, pinned: !note.pinned })}
-              >
-                {note.pinned ? <PinOff /> : <Pin />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{note.pinned ? "Unpin" : "Pin to top"}</TooltipContent>
-          </Tooltip>
+          {isOwner && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-xl"
+                  aria-label="Share"
+                  disabled={offlineReadOnly}
+                  onClick={() => setShareOpen(true)}
+                >
+                  <Share2 />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Share</TooltipContent>
+            </Tooltip>
+          )}
+          {isOwner && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("rounded-xl", note.pinned && "text-hanko")}
+                  aria-label={note.pinned ? "Unpin" : "Pin"}
+                  aria-pressed={note.pinned}
+                  disabled={readOnly}
+                  onClick={() =>
+                    void setPinned({ id: note._id, pinned: !note.pinned }).catch((err: unknown) =>
+                      toast.error(mutationErrorMessage(err)),
+                    )
+                  }
+                >
+                  {note.pinned ? <PinOff /> : <Pin />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{note.pinned ? "Unpin" : "Pin to top"}</TooltipContent>
+            </Tooltip>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -274,15 +370,34 @@ function Editor({ note }: { note: Doc<"notes"> }) {
                 size="icon"
                 className="rounded-xl"
                 aria-label="More"
-                disabled={readOnly}
+                disabled={offlineReadOnly}
               >
                 <MoreHorizontal />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
-                <Trash2 /> Delete note
+              <DropdownMenuItem onSelect={() => void makeCopy()}>
+                <Copy /> Make a copy
               </DropdownMenuItem>
+              {isOwner && (
+                <DropdownMenuItem onSelect={() => void (note.archived ? unarchive() : archive())}>
+                  {note.archived ? <ArchiveRestore /> : <Archive />}
+                  {note.archived ? "Unarchive" : "Archive"}
+                </DropdownMenuItem>
+              )}
+              {!isOwner && (
+                <DropdownMenuItem onSelect={() => void leaveSharedNote()}>
+                  <LogOut /> Leave shared note
+                </DropdownMenuItem>
+              )}
+              {isOwner && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
+                    <Trash2 /> Delete note
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -342,6 +457,21 @@ function Editor({ note }: { note: Doc<"notes"> }) {
           </div>
         )}
       </div>
+
+      {note.archived && isOwner && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+          <Archive className="size-4 shrink-0" />
+          <span className="flex-1">This note is archived.</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-lg"
+            onClick={() => void unarchive()}
+          >
+            Unarchive
+          </Button>
+        </div>
+      )}
 
       <fieldset disabled={readOnly} className="contents">
         <input
@@ -407,9 +537,13 @@ function Editor({ note }: { note: Doc<"notes"> }) {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
-                await navigate({ to: "/" });
-                await remove({ id: note._id });
-                toast("Note deleted");
+                try {
+                  await navigate({ to: "/" });
+                  await remove({ id: note._id });
+                  toast("Note deleted");
+                } catch (err) {
+                  toast.error(mutationErrorMessage(err));
+                }
               }}
             >
               Delete
@@ -417,8 +551,13 @@ function Editor({ note }: { note: Doc<"notes"> }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {isOwner && <ShareDialog noteId={note._id} open={shareOpen} onOpenChange={setShareOpen} />}
     </div>
   );
+}
+
+function mutationErrorMessage(err: unknown) {
+  return err instanceof ConvexError ? String(err.data) : "Something went wrong";
 }
 
 function SaveIndicator({ state, onRetry }: { state: SaveState; onRetry: () => void }) {
