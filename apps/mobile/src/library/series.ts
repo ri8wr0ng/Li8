@@ -142,6 +142,42 @@ export function acronym(title: string): string {
     : "";
 }
 
+/**
+ * Parse commands like "btth 352", "Battle Through The Heavens ch 348", "btth +10".
+ * Returns null when the text doesn't end with a chapter number or delta. Same as the web.
+ */
+export function parseChapterCommand(
+  input: string,
+):
+  | { name: string; chapter: number; delta?: undefined }
+  | { name: string; delta: number; chapter?: undefined }
+  | null {
+  const text = input.trim();
+  const delta = /^(.+?)\s+([+-]\d+)$/.exec(text);
+  if (delta) return { name: delta[1].trim(), delta: Number(delta[2]) };
+  const set = /^(.+?)\s+(?:ch(?:apter)?\.?\s*)?(\d+(?:\.\d+)?)$/i.exec(text);
+  if (set) return { name: set[1].trim(), chapter: Number(set[2]) };
+  return null;
+}
+
+const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+
+/** The series a command names: an exact title, alt name or acronym, else the best search hit. */
+export function findSeries<T extends { title: string; altNames: string[] }>(
+  name: string,
+  series: T[],
+): T | null {
+  const n = norm(name);
+  const exact = series.find(
+    (s) =>
+      norm(s.title) === n ||
+      s.altNames.some((a) => norm(a) === n) ||
+      acronym(s.title) === n ||
+      s.altNames.some((a) => acronym(a) === n),
+  );
+  return exact ?? series[0] ?? null;
+}
+
 /** Every kind for pickers, grouped Read / Watch. */
 export const KIND_OPTIONS: { value: SeriesKind; label: string; group: string }[] = KIND_ORDER.map(
   (k) => ({ value: k, label: KIND_LABEL[k], group: isWatchKind(k) ? "Watch" : "Read" }),

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import { PressableScale } from "../components/pressable-scale";
 import { useRouter } from "expo-router";
@@ -30,11 +29,21 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
   const router = useRouter();
   const { colors, radii, typography } = useTheme();
 
-  const bump = useMutation(api.series.bump);
+  // Optimistic, so the number moves on every tap and rapid taps stack up.
+  const bump = useMutation(api.series.bump).withOptimisticUpdate((store, { id, delta }) => {
+    const move = (s: Doc<"series">) =>
+      s._id === id ? { ...s, chapter: Math.max(0, s.chapter + delta) } : s;
+    for (const { args, value } of store.getAllQueries(api.library.listPage)) {
+      if (!value || !value.page.some((s) => s._id === id)) continue;
+      store.setQuery(api.library.listPage, args, { ...value, page: value.page.map(move) });
+    }
+    for (const { args, value } of store.getAllQueries(api.library.search)) {
+      if (!value || !value.some((s) => s._id === id)) continue;
+      store.setQuery(api.library.search, args, value.map(move));
+    }
+  });
   const update = useMutation(api.series.update);
   const setChapter = useMutation(api.series.setChapter);
-
-  const [isBumping, setIsBumping] = useState(false);
 
   const episodic = isEpisodic(series.kind);
   const isMovie = series.kind === "movie";
@@ -49,32 +58,13 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     });
   };
 
-  const handleBumpPlus = async (e: { stopPropagation?: () => void }) => {
+  // The steppers are never `disabled`: a disabled Pressable lets the tap fall
+  // through to the card, which opened the details page on quick repeat taps.
+  const handleBump = (delta: 1 | -1) => (e: { stopPropagation?: () => void }) => {
     e.stopPropagation?.();
-    if (isBumping) return;
+    if (delta < 0 && series.chapter <= 0) return;
     haptics.tap();
-    setIsBumping(true);
-    try {
-      await bump({ id: series._id, delta: 1 });
-    } catch (err) {
-      console.error("Bump error:", err);
-    } finally {
-      setIsBumping(false);
-    }
-  };
-
-  const handleBumpMinus = async (e: { stopPropagation?: () => void }) => {
-    e.stopPropagation?.();
-    if (isBumping || series.chapter <= 0) return;
-    haptics.tap();
-    setIsBumping(true);
-    try {
-      await bump({ id: series._id, delta: -1 });
-    } catch (err) {
-      console.error("Bump minus error:", err);
-    } finally {
-      setIsBumping(false);
-    }
+    bump({ id: series._id, delta }).catch((err: unknown) => console.error("Bump error:", err));
   };
 
   const handleMarkWatched = async (e: { stopPropagation?: () => void }) => {
@@ -235,8 +225,8 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`One back on ${series.title}`}
-              disabled={series.chapter <= 0 || isBumping}
-              onPress={handleBumpMinus}
+              accessibilityState={{ disabled: series.chapter <= 0 }}
+              onPress={handleBump(-1)}
               style={({ pressed }) => [
                 styles.stepMinusButton,
                 {
@@ -253,8 +243,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`One forward on ${series.title}`}
-              disabled={isBumping}
-              onPress={handleBumpPlus}
+              onPress={handleBump(1)}
               style={({ pressed }) => [
                 styles.stepPlusButton,
                 {
