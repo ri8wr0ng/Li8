@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +27,16 @@ import {
 } from "../src/library/series";
 import { UpdateSettings } from "../src/updates/update-settings";
 import { PressableScale } from "../src/components/pressable-scale";
+import { SvgXml } from "react-native-svg";
+import {
+  AVATAR_STYLES,
+  AVATAR_STYLE_KEYS,
+  DEFAULT_AVATAR_STYLE,
+  UserAvatar,
+  avatarSvg,
+  isAvatarStyle,
+  type AvatarStyle,
+} from "../src/components/user-avatar";
 
 const number = (n: number) => new Intl.NumberFormat().format(n);
 
@@ -137,59 +147,133 @@ function Identity({ user }: { user: User }) {
     <View
       style={[
         styles.card,
-        styles.identity,
+        styles.identityCard,
         { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radii.card },
       ]}
     >
-      <View style={[styles.avatar, { backgroundColor: colors.surfaceHighlight }]}>
-        <Text style={[styles.avatarInitial, typography.display, { color: colors.hanko }]}>
-          {(user.name?.[0] || user.email?.[0] || "U").toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.flex}>
-        {editing ? (
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            onSubmitEditing={() => void save()}
-            onBlur={() => void save()}
-            autoFocus
-            maxLength={80}
-            returnKeyType="done"
-            accessibilityLabel="Your name"
-            editable={!saving}
-            style={[
-              styles.nameInput,
-              typography.display,
-              { color: colors.ink, borderColor: colors.border, borderRadius: radii.controls },
-            ]}
-          />
-        ) : (
-          <Pressable
-            onPress={() => setEditing(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Edit your name"
-            style={styles.nameRow}
-          >
-            <Text
-              numberOfLines={1}
-              style={[styles.name, typography.display, { color: colors.ink }]}
+      <View style={styles.identity}>
+        <UserAvatar user={user} size={56} />
+        <View style={styles.flex}>
+          {editing ? (
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              onSubmitEditing={() => void save()}
+              onBlur={() => void save()}
+              autoFocus
+              maxLength={80}
+              returnKeyType="done"
+              accessibilityLabel="Your name"
+              editable={!saving}
+              style={[
+                styles.nameInput,
+                typography.display,
+                { color: colors.ink, borderColor: colors.border, borderRadius: radii.controls },
+              ]}
+            />
+          ) : (
+            <Pressable
+              onPress={() => setEditing(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Edit your name"
+              style={styles.nameRow}
             >
-              {user.name || "Reader"}
+              <Text
+                numberOfLines={1}
+                style={[styles.name, typography.display, { color: colors.ink }]}
+              >
+                {user.name || "Reader"}
+              </Text>
+              <Feather name="edit-2" size={14} color={colors.muted} />
+            </Pressable>
+          )}
+          {user.email && (
+            <Text numberOfLines={1} style={[typography.bodySm, { color: colors.muted }]}>
+              {user.email}
             </Text>
-            <Feather name="edit-2" size={14} color={colors.muted} />
-          </Pressable>
-        )}
-        {user.email && (
-          <Text numberOfLines={1} style={[typography.bodySm, { color: colors.muted }]}>
-            {user.email}
-          </Text>
-        )}
-        <Text style={[styles.joined, { color: colors.muted }]}>Member since {joined}</Text>
+          )}
+          <Text style={[styles.joined, { color: colors.muted }]}>Member since {joined}</Text>
+        </View>
       </View>
+      <AvatarPicker user={user} />
     </View>
   );
 }
+
+/** Pick a DiceBear style or shuffle the seed, like the web profile. Previews use the current seed. */
+function AvatarPicker({ user }: { user: User }) {
+  const { colors, radii } = useTheme();
+  const update = useMutation(api.users.updateProfile);
+  const style: AvatarStyle = isAvatarStyle(user.avatarStyle)
+    ? user.avatarStyle
+    : DEFAULT_AVATAR_STYLE;
+  const seed = user.avatarSeed ?? user.id;
+  const previews = useMemo(
+    () => AVATAR_STYLE_KEYS.map((key) => ({ key, xml: avatarSvg(key, seed) })),
+    [seed],
+  );
+
+  const save = (patch: { avatarStyle?: string; avatarSeed?: string }) =>
+    update(patch).catch((error: unknown) => {
+      console.error(error);
+      Alert.alert("Couldn't save your avatar", "Try again.");
+    });
+
+  return (
+    <View style={styles.picker}>
+      <Text style={[styles.pickerLabel, { color: colors.muted }]}>Avatar</Text>
+      <View
+        style={styles.pickerRow}
+        accessibilityRole="radiogroup"
+        accessibilityLabel="Avatar style"
+      >
+        {previews.map(({ key, xml }) => {
+          const selected = style === key;
+          return (
+            <PressableScale
+              key={key}
+              accessibilityRole="radio"
+              accessibilityLabel={AVATAR_STYLES[key].label}
+              accessibilityState={{ checked: selected }}
+              scale={0.92}
+              onPress={() => {
+                if (selected) return;
+                haptics.select();
+                void save({ avatarStyle: key });
+              }}
+              style={[
+                styles.swatch,
+                {
+                  borderColor: selected ? colors.hanko : "transparent",
+                  opacity: selected ? 1 : 0.8,
+                },
+              ]}
+            >
+              <View style={[styles.swatchInner, { backgroundColor: colors.surfaceHighlight }]}>
+                <SvgXml xml={xml} width={40} height={40} />
+              </View>
+            </PressableScale>
+          );
+        })}
+      </View>
+      <PressableScale
+        accessibilityRole="button"
+        accessibilityLabel="Shuffle avatar"
+        onPress={() => {
+          haptics.select();
+          void save({ avatarSeed: newSeed() });
+        }}
+        style={[styles.shuffle, { borderColor: colors.border, borderRadius: radii.controls }]}
+      >
+        <Feather name="shuffle" size={14} color={colors.ink} />
+        <Text style={[styles.shuffleText, { color: colors.ink }]}>Shuffle</Text>
+      </PressableScale>
+    </View>
+  );
+}
+
+/** Hermes has no crypto.randomUUID; a random seed only needs to differ, not be secret. */
+const newSeed = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 
 function Totals({ stats }: { stats: Stats }) {
   const { colors, radii, typography } = useTheme();
@@ -425,15 +509,23 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 24 },
   flex: { flex: 1 },
   card: { padding: 16, borderWidth: 1 },
-  identity: { flexDirection: "row", alignItems: "center", gap: 16, padding: 20 },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
+  identityCard: { padding: 20, gap: 18 },
+  identity: { flexDirection: "row", alignItems: "center", gap: 16 },
+  picker: { gap: 10 },
+  pickerLabel: { fontSize: 13, fontWeight: "500" },
+  pickerRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  swatch: { padding: 2, borderWidth: 2, borderRadius: 24 },
+  swatchInner: { width: 40, height: 40, borderRadius: 20, overflow: "hidden" },
+  shuffle: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 34,
   },
-  avatarInitial: { fontSize: 24 },
+  shuffleText: { fontSize: 13, fontWeight: "500" },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   name: { fontSize: 20, letterSpacing: -0.3, flexShrink: 1 },
   nameInput: { fontSize: 18, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 },
