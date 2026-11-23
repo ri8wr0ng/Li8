@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   FlatList,
   Pressable,
   RefreshControl,
@@ -18,6 +19,7 @@ import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc, Id } from "@inkmark/backend/convex/_generated/dataModel";
 import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
 import { useTheme } from "../../../src/theme";
+import { HeaderActions, HeaderIconButton } from "../../../src/components/profile-button";
 import { SeriesCard } from "../../../src/library/series-card";
 import { LabelFilterModal, TypeFilterModal } from "../../../src/library/filter-sheet";
 import { STATUS_LABEL } from "../../../src/library/series";
@@ -32,24 +34,6 @@ const STATUS_CHIPS: FilterStatus[] = [
   "dropped",
   "all",
 ];
-
-function HeaderRightButton({ onPress, color }: { onPress: () => void; color: string }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Add to library"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.headerBtn,
-        {
-          opacity: pressed ? 0.7 : 1,
-        },
-      ]}
-    >
-      <Feather name="plus" size={22} color={color} />
-    </Pressable>
-  );
-}
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -86,14 +70,18 @@ export default function LibraryScreen() {
     router.push("/library/new");
   }, [router]);
 
-  // Set header right add button
+  // iOS: "Add to library" in the header. Android has it in the bottom bar.
   useEffect(() => {
-    // oxlint-disable-next-line react/no-unstable-nested-components
+    if (Platform.OS !== "ios") return;
     navigation.setOptions({
       // oxlint-disable-next-line react/no-unstable-nested-components
-      headerRight: () => <HeaderRightButton onPress={handleNavigateNew} color={colors.hanko} />,
+      headerRight: () => (
+        <HeaderActions>
+          <HeaderIconButton icon="plus" label="Add to library" onPress={handleNavigateNew} />
+        </HeaderActions>
+      ),
     });
-  }, [navigation, colors.hanko, handleNavigateNew]);
+  }, [navigation, handleNavigateNew]);
 
   // Debounce search query
   useEffect(() => {
@@ -495,10 +483,6 @@ const styles = StyleSheet.create({
   },
   listHeaderContainer: {
     marginBottom: 12,
-  },
-  headerBtn: {
-    padding: 8,
-    marginRight: 6,
   },
   searchContainer: {
     flexDirection: "row",

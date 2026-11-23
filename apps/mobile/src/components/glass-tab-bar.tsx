@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Animated, Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Animated, Keyboard, Pressable, StyleSheet, View } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { useTheme } from "../theme";
@@ -8,10 +8,26 @@ import { GLASS_BAR_GAP, GLASS_BAR_HEIGHT, GlassSurface } from "./glass";
 import { PressableScale, useReducedMotion } from "./pressable-scale";
 
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
-export type GlassTab = { name: string; title: string; icon: FeatherName };
+/** Icon-only tabs; `title` is the accessibility label. `ionicon` swaps in an Ionicons glyph. */
+export type GlassAction = {
+  label: string;
+  icon: FeatherName;
+  onPress: () => void;
+  busy?: boolean;
+  /** Turn the icon 45°: a plus becomes a ×, so "add" morphs into "cancel". */
+  turned?: boolean;
+};
 
-const INSET = 5;
+export type GlassTab = {
+  name: string;
+  title: string;
+  icon: FeatherName;
+  ionicon?: { default: IoniconName; active: IoniconName };
+};
+
+const INSET = 4;
 /** Tabs are square: as wide as they are tall, so the lit lens is a circle. */
 const ITEM_WIDTH = GLASS_BAR_HEIGHT - INSET * 2;
 /** Critically damped, ~0.35s: a tap carries no momentum, so the lens glides without overshoot. */
@@ -19,7 +35,7 @@ const SPRING = { stiffness: 320, damping: 36, mass: 1, useNativeDriver: true } a
 
 /**
  * Android's navigation, matching the web's phone bar: a glass pill of tabs whose
- * lit lens glides to the current one, then search and Ask AI as round glass
+ * lit lens glides to the current one, then search and New note as round glass
  * buttons beside it. The lens moves on touch-down, before the next screen
  * renders, so a tap feels instant.
  */
@@ -29,8 +45,16 @@ export function GlassTabBar({
   insets,
   tabs,
   searchRoute,
-  onAskAi,
-}: BottomTabBarProps & { tabs: GlassTab[]; searchRoute: string; onAskAi?: () => void }) {
+  action,
+  onSettings,
+}: BottomTabBarProps & {
+  tabs: GlassTab[];
+  searchRoute: string;
+  /** The round button at the end: what "create" means on the current tab. */
+  action?: GlassAction;
+  /** Settings sits at the end of the pill but opens a screen; it never takes the lens. */
+  onSettings?: () => void;
+}) {
   const { colors, isDark } = useTheme();
   const reduced = useReducedMotion();
   const [pressed, setPressed] = useState<string | null>(null);
@@ -67,7 +91,13 @@ export function GlassTabBar({
       style={[styles.wrap, { bottom: Math.max(insets.bottom, GLASS_BAR_GAP) }]}
     >
       {/* Tabs. Shadow on the outside, glass clipped to the pill on the inside. */}
-      <View style={[styles.pill, shadow, { width: routes.length * ITEM_WIDTH + INSET * 2 }]}>
+      <View
+        style={[
+          styles.pill,
+          shadow,
+          { width: (routes.length + (onSettings ? 1 : 0)) * ITEM_WIDTH + INSET * 2 },
+        ]}
+      >
         <GlassSurface style={styles.pillGlass}>
           <View style={styles.row} accessibilityRole="tablist">
             {active >= 0 && (
@@ -104,16 +134,31 @@ export function GlassTabBar({
                   onPress={() => navigateToTab(route.key)}
                   style={styles.item}
                 >
-                  <Feather name={tab.icon} size={20} color={color} />
-                  <Text
-                    style={[styles.label, { color }, selected && styles.labelSelected]}
-                    numberOfLines={1}
-                  >
-                    {tab.title}
-                  </Text>
+                  {tab.ionicon ? (
+                    <Ionicons
+                      name={selected ? tab.ionicon.active : tab.ionicon.default}
+                      size={20}
+                      color={color}
+                    />
+                  ) : (
+                    <Feather name={tab.icon} size={20} color={color} />
+                  )}
                 </Pressable>
               );
             })}
+            {onSettings && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+                onPress={() => {
+                  haptics.select();
+                  onSettings();
+                }}
+                style={styles.item}
+              >
+                <Feather name="settings" size={20} color={colors.muted} />
+              </Pressable>
+            )}
           </View>
         </GlassSurface>
       </View>
@@ -122,7 +167,7 @@ export function GlassTabBar({
         <RoundGlassButton
           label="Search"
           icon={
-            <Feather name="search" size={21} color={searchActive ? colors.hanko : colors.ink} />
+            <Feather name="search" size={19} color={searchActive ? colors.hanko : colors.ink} />
           }
           shadow={shadow}
           onPress={() => {
@@ -131,18 +176,49 @@ export function GlassTabBar({
           }}
         />
       )}
-      {onAskAi && (
+      {action && (
         <RoundGlassButton
-          label="Ask AI"
-          icon={<Ionicons name="sparkles-outline" size={21} color={colors.hanko} />}
+          label={action.label}
+          icon={
+            action.busy ? (
+              <ActivityIndicator size="small" color={colors.hanko} />
+            ) : (
+              <TurningIcon name={action.icon} turned={!!action.turned} color={colors.hanko} />
+            )
+          }
           shadow={shadow}
           onPress={() => {
+            if (action.busy) return;
             haptics.tap();
-            onAskAi();
+            action.onPress();
           }}
         />
       )}
     </View>
+  );
+}
+
+/** Springs between 0° and 45° when `turned` flips, so + and × morph into each other. */
+function TurningIcon({
+  name,
+  turned,
+  color,
+}: {
+  name: FeatherName;
+  turned: boolean;
+  color: string;
+}) {
+  const reduced = useReducedMotion();
+  const [turn] = useState(() => new Animated.Value(turned ? 1 : 0));
+  useEffect(() => {
+    if (reduced) turn.setValue(turned ? 1 : 0);
+    else Animated.spring(turn, { toValue: turned ? 1 : 0, ...SPRING }).start();
+  }, [turned, reduced, turn]);
+  const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] });
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <Feather name={name} size={19} color={color} />
+    </Animated.View>
   );
 }
 
@@ -217,10 +293,7 @@ const styles = StyleSheet.create({
     height: ITEM_WIDTH,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
   },
-  label: { fontSize: 10, fontWeight: "500" },
-  labelSelected: { fontWeight: "700" },
   round: { width: GLASS_BAR_HEIGHT, height: GLASS_BAR_HEIGHT, borderRadius: RADIUS },
   roundGlass: { flex: 1, borderRadius: RADIUS },
   roundIcon: { flex: 1, alignItems: "center", justifyContent: "center" },

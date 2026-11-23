@@ -27,13 +27,8 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Notes</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="ask" hidden={!showAsk}>
-        <NativeTabs.Trigger.Icon
-          sf={{
-            default: "bubble.left.and.text.bubble.right",
-            selected: "bubble.left.and.text.bubble.right.fill",
-          }}
-        />
-        <NativeTabs.Trigger.Label>Ask</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="sparkles" />
+        <NativeTabs.Trigger.Label>AI</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="library">
         <NativeTabs.Trigger.Icon

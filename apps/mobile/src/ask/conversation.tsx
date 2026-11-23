@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +25,8 @@ import { haptics } from "../haptics";
 import { useTabBarInset } from "../components/glass";
 import { Markdown } from "./markdown";
 import { PressableScale } from "../components/pressable-scale";
+import { HeaderActions, HeaderIconButton } from "../components/profile-button";
+import { useNewChatRequest } from "./new-chat";
 
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
 
@@ -94,23 +96,20 @@ export function AskScreen() {
   const remove = useMutation(api.chat.remove);
   const [threadId, setThreadId] = useState<string | undefined>();
 
-  // "New chat" in the header, like the web's button.
+  // "New chat": the Android bottom bar's button, or the header on iOS.
+  const startNewChat = useCallback(() => setThreadId(undefined), []);
+  useNewChatRequest(startNewChat);
   /* oxlint-disable react/no-unstable-nested-components */
   useEffect(() => {
+    if (Platform.OS !== "ios") return;
     navigation.setOptions({
       headerRight: () => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="New chat"
-          onPress={() => setThreadId(undefined)}
-          hitSlop={8}
-          style={({ pressed }) => [styles.headerBtn, { opacity: pressed ? 0.6 : 1 }]}
-        >
-          <Feather name="plus" size={22} color={colors.hanko} />
-        </Pressable>
+        <HeaderActions>
+          <HeaderIconButton icon="plus" label="New chat" onPress={startNewChat} />
+        </HeaderActions>
       ),
     });
-  }, [navigation, colors.hanko]);
+  }, [navigation, startNewChat]);
   /* oxlint-enable react/no-unstable-nested-components */
 
   function confirmDelete(thread: { id: string; title: string }) {
@@ -444,7 +443,6 @@ function SmoothPart({ text, streaming }: { text: string; streaming: boolean }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
-  headerBtn: { paddingHorizontal: 16 },
   threads: { gap: 6, paddingHorizontal: 12, paddingVertical: 10 },
   thread: {
     flexDirection: "row",
