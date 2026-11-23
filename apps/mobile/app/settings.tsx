@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +22,10 @@ const THEMES: { value: ThemePreference; label: string; icon: "sun" | "moon" | "s
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { isLoading, isAuthenticated } = useConvexAuth();
+
+  // Sign out happens here; the tabs' own redirect only runs once they're focused again.
+  if (!isLoading && !isAuthenticated) return <Redirect href="/sign-in" />;
 
   return (
     <ScrollView
