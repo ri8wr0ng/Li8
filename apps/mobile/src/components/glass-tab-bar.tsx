@@ -11,6 +11,13 @@ type FeatherName = React.ComponentProps<typeof Feather>["name"];
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
 /** Icon-only tabs; `title` is the accessibility label. `ionicon` swaps in an Ionicons glyph. */
+export type GlassAction = {
+  label: string;
+  icon: FeatherName;
+  onPress: () => void;
+  busy?: boolean;
+};
+
 export type GlassTab = {
   name: string;
   title: string;
@@ -36,14 +43,13 @@ export function GlassTabBar({
   insets,
   tabs,
   searchRoute,
-  onCreate,
-  creating,
+  action,
   onSettings,
 }: BottomTabBarProps & {
   tabs: GlassTab[];
   searchRoute: string;
-  onCreate?: () => void;
-  creating?: boolean;
+  /** The round button at the end: what "create" means on the current tab. */
+  action?: GlassAction;
   /** Settings sits at the end of the pill but opens a screen; it never takes the lens. */
   onSettings?: () => void;
 }) {
@@ -168,21 +174,21 @@ export function GlassTabBar({
           }}
         />
       )}
-      {onCreate && (
+      {action && (
         <RoundGlassButton
-          label="New note"
+          label={action.label}
           icon={
-            creating ? (
+            action.busy ? (
               <ActivityIndicator size="small" color={colors.hanko} />
             ) : (
-              <Feather name="edit-3" size={19} color={colors.hanko} />
+              <Feather name={action.icon} size={19} color={colors.hanko} />
             )
           }
           shadow={shadow}
           onPress={() => {
-            if (creating) return;
+            if (action.busy) return;
             haptics.tap();
-            onCreate();
+            action.onPress();
           }}
         />
       )}

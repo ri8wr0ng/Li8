@@ -4,7 +4,8 @@ import { Tabs, type BottomTabBarProps } from "expo-router/js-tabs";
 import { useMutation } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { GlassProvider, GlassTarget } from "../../src/components/glass";
-import { GlassTabBar, type GlassTab } from "../../src/components/glass-tab-bar";
+import { GlassTabBar, type GlassAction, type GlassTab } from "../../src/components/glass-tab-bar";
+import { requestNewChat } from "../../src/ask/new-chat";
 import { useTabsGate } from "../../src/navigation";
 
 const ALL_TABS: GlassTab[] = [
@@ -29,8 +30,9 @@ function GlassScreenLayout({
 }
 
 /**
- * Android: draws the web's phone navigation. A glass pill of tabs, then search
- * and New note as round glass buttons. Profile lives in each header's top-left.
+ * Android: draws the web's phone navigation. A glass pill of icon tabs plus
+ * Settings, then search and a create button that fits the current tab (new
+ * note, add to Library, new chat). Profile is the avatar in each header.
  */
 export default function TabsLayout() {
   const router = useRouter();
@@ -54,13 +56,23 @@ export default function TabsLayout() {
   if (signedOut) return <Redirect href="/sign-in" />;
 
   const tabs = showAsk ? ALL_TABS : ALL_TABS.filter((t) => t.name !== "ask");
+  const actionFor = (tab: string | undefined): GlassAction => {
+    if (tab === "library")
+      return { label: "Add to library", icon: "plus", onPress: () => router.push("/library/new") };
+    if (tab === "ask") return { label: "New chat", icon: "plus", onPress: requestNewChat };
+    return {
+      label: "New note",
+      icon: "edit-3",
+      onPress: () => void handleCreate(),
+      busy: creating,
+    };
+  };
   const renderTabBar = (props: BottomTabBarProps) => (
     <GlassTabBar
       {...props}
       tabs={tabs}
       searchRoute="search"
-      onCreate={() => void handleCreate()}
-      creating={creating}
+      action={actionFor(props.state.routes[props.state.index]?.name)}
       onSettings={() => router.push("/settings")}
     />
   );

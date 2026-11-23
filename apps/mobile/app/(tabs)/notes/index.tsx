@@ -16,6 +16,7 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../../../src/theme";
+import { HeaderActions, HeaderIconButton } from "../../../src/components/profile-button";
 import { useTabBarInset } from "../../../src/components/glass";
 import { EmptyState } from "../../../src/notes/empty-state";
 import { NoteCard } from "../../../src/notes/note-card";
@@ -60,34 +61,23 @@ export default function NotesScreen() {
     }
   }, [createNote, isCreating, router]);
 
-  // Set tab header right button
+  // iOS: "New note" in the header. Android has it in the bottom bar.
   /* oxlint-disable react/no-unstable-nested-components */
   useEffect(() => {
     if (Platform.OS !== "ios") return;
     navigation.setOptions({
       headerRight: () => (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="New note"
-          onPress={handleCreateNote}
-          disabled={isCreating}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.headerBtn,
-            {
-              opacity: pressed || isCreating ? 0.6 : 1,
-            },
-          ]}
-        >
-          {isCreating ? (
-            <ActivityIndicator size="small" color={colors.hanko} />
-          ) : (
-            <Feather name="edit-3" size={20} color={colors.hanko} />
-          )}
-        </Pressable>
+        <HeaderActions>
+          <HeaderIconButton
+            icon="edit-3"
+            label="New note"
+            onPress={handleCreateNote}
+            busy={isCreating}
+          />
+        </HeaderActions>
       ),
     });
-  }, [navigation, colors.hanko, handleCreateNote, isCreating]);
+  }, [navigation, handleCreateNote, isCreating]);
   /* oxlint-enable react/no-unstable-nested-components */
 
   // Debounce search query
@@ -451,12 +441,6 @@ export default function NotesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  headerBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    justifyContent: "center",
-    alignItems: "center",
   },
   searchHeader: {
     paddingHorizontal: 16,
