@@ -58,11 +58,14 @@ export default function TabsLayout() {
 
   const tabs = showAsk ? ALL_TABS : ALL_TABS.filter((t) => t.name !== "ask");
   const actionFor = (tab: string | undefined): GlassAction | undefined => {
-    // Only from the Library list: on a series or the Add form it would stack another form.
-    if (tab === "library")
+    // On the Add form the button closes it, so it never stacks a second form.
+    if (tab === "library") {
+      if (pathname === "/library/new")
+        return { label: "Cancel", icon: "x", onPress: () => router.back() };
       return pathname === "/library"
         ? { label: "Add to library", icon: "plus", onPress: () => router.push("/library/new") }
         : undefined;
+    }
     if (tab === "ask") return { label: "New chat", icon: "plus", onPress: requestNewChat };
     return {
       label: "New note",
