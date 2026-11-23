@@ -5,7 +5,7 @@ import { useStackScreenOptions } from "../../../src/navigation";
 export default function AskLayout() {
   return (
     <Stack screenOptions={useStackScreenOptions()}>
-      <Stack.Screen name="index" options={{ title: "Ask", headerLeft: ProfileButton }} />
+      <Stack.Screen name="index" options={{ title: "AI", headerLeft: ProfileButton }} />
     </Stack>
   );
 }
