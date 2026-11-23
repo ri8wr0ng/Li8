@@ -31,6 +31,17 @@ function RootStack() {
           }}
         />
         <Stack.Screen
+          name="settings"
+          options={{
+            headerShown: true,
+            title: "Settings",
+            animation: "default",
+            headerStyle: { backgroundColor: colors.paper },
+            headerTintColor: colors.ink,
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen
           name="ask-ai"
           options={{
             presentation: "modal",

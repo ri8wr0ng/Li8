@@ -6,7 +6,7 @@ import { useTheme } from "../theme";
 import { PressableScale } from "./pressable-scale";
 import { UserAvatar } from "./user-avatar";
 
-/** The signed-in reader's avatar, top-left in every tab's header. Opens Profile. */
+/** The signed-in reader's avatar, top-left in every tab's header. Opens Settings. */
 export function ProfileButton() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -15,10 +15,10 @@ export function ProfileButton() {
   return (
     <PressableScale
       accessibilityRole="button"
-      accessibilityLabel="Profile and settings"
+      accessibilityLabel="Settings"
       hitSlop={8}
       scale={0.9}
-      onPress={() => router.push("/profile")}
+      onPress={() => router.push("/settings")}
       containerStyle={styles.target}
     >
       <UserAvatar user={me} size={32} style={[styles.avatar, { borderColor: colors.border }]} />
