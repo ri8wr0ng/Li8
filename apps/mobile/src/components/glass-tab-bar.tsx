@@ -16,6 +16,8 @@ export type GlassAction = {
   icon: FeatherName;
   onPress: () => void;
   busy?: boolean;
+  /** Turn the icon 45°: a plus becomes a ×, so "add" morphs into "cancel". */
+  turned?: boolean;
 };
 
 export type GlassTab = {
@@ -181,7 +183,7 @@ export function GlassTabBar({
             action.busy ? (
               <ActivityIndicator size="small" color={colors.hanko} />
             ) : (
-              <Feather name={action.icon} size={19} color={colors.hanko} />
+              <TurningIcon name={action.icon} turned={!!action.turned} color={colors.hanko} />
             )
           }
           shadow={shadow}
@@ -193,6 +195,30 @@ export function GlassTabBar({
         />
       )}
     </View>
+  );
+}
+
+/** Springs between 0° and 45° when `turned` flips, so + and × morph into each other. */
+function TurningIcon({
+  name,
+  turned,
+  color,
+}: {
+  name: FeatherName;
+  turned: boolean;
+  color: string;
+}) {
+  const reduced = useReducedMotion();
+  const [turn] = useState(() => new Animated.Value(turned ? 1 : 0));
+  useEffect(() => {
+    if (reduced) turn.setValue(turned ? 1 : 0);
+    else Animated.spring(turn, { toValue: turned ? 1 : 0, ...SPRING }).start();
+  }, [turned, reduced, turn]);
+  const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] });
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <Feather name={name} size={19} color={color} />
+    </Animated.View>
   );
 }
 

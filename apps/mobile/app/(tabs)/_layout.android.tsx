@@ -61,7 +61,7 @@ export default function TabsLayout() {
     // On the Add form the button closes it, so it never stacks a second form.
     if (tab === "library") {
       if (pathname === "/library/new")
-        return { label: "Cancel", icon: "x", onPress: () => router.back() };
+        return { label: "Cancel", icon: "plus", turned: true, onPress: () => router.back() };
       return pathname === "/library"
         ? { label: "Add to library", icon: "plus", onPress: () => router.push("/library/new") }
         : undefined;
