@@ -9,7 +9,12 @@ import { useTabsGate } from "../../src/navigation";
 
 const ALL_TABS: GlassTab[] = [
   { name: "notes", title: "Notes", icon: "file-text" },
-  { name: "ask", title: "AI", icon: "message-circle" },
+  {
+    name: "ask",
+    title: "AI",
+    icon: "zap",
+    ionicon: { default: "sparkles-outline", active: "sparkles" },
+  },
   { name: "library", title: "Library", icon: "book-open" },
 ];
 

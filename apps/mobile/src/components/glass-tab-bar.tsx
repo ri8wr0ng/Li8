@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Keyboard,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { ActivityIndicator, Animated, Keyboard, Pressable, StyleSheet, View } from "react-native";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { useTheme } from "../theme";
 import { haptics } from "../haptics";
@@ -16,10 +8,17 @@ import { GLASS_BAR_GAP, GLASS_BAR_HEIGHT, GlassSurface } from "./glass";
 import { PressableScale, useReducedMotion } from "./pressable-scale";
 
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
-export type GlassTab = { name: string; title: string; icon: FeatherName };
+/** Icon-only tabs; `title` is the accessibility label. `ionicon` swaps in an Ionicons glyph. */
+export type GlassTab = {
+  name: string;
+  title: string;
+  icon: FeatherName;
+  ionicon?: { default: IoniconName; active: IoniconName };
+};
 
-const INSET = 5;
+const INSET = 4;
 /** Tabs are square: as wide as they are tall, so the lit lens is a circle. */
 const ITEM_WIDTH = GLASS_BAR_HEIGHT - INSET * 2;
 /** Critically damped, ~0.35s: a tap carries no momentum, so the lens glides without overshoot. */
@@ -118,13 +117,15 @@ export function GlassTabBar({
                   onPress={() => navigateToTab(route.key)}
                   style={styles.item}
                 >
-                  <Feather name={tab.icon} size={20} color={color} />
-                  <Text
-                    style={[styles.label, { color }, selected && styles.labelSelected]}
-                    numberOfLines={1}
-                  >
-                    {tab.title}
-                  </Text>
+                  {tab.ionicon ? (
+                    <Ionicons
+                      name={selected ? tab.ionicon.active : tab.ionicon.default}
+                      size={20}
+                      color={color}
+                    />
+                  ) : (
+                    <Feather name={tab.icon} size={20} color={color} />
+                  )}
                 </Pressable>
               );
             })}
@@ -136,7 +137,7 @@ export function GlassTabBar({
         <RoundGlassButton
           label="Search"
           icon={
-            <Feather name="search" size={21} color={searchActive ? colors.hanko : colors.ink} />
+            <Feather name="search" size={19} color={searchActive ? colors.hanko : colors.ink} />
           }
           shadow={shadow}
           onPress={() => {
@@ -152,7 +153,7 @@ export function GlassTabBar({
             creating ? (
               <ActivityIndicator size="small" color={colors.hanko} />
             ) : (
-              <Feather name="edit-3" size={20} color={colors.hanko} />
+              <Feather name="edit-3" size={19} color={colors.hanko} />
             )
           }
           shadow={shadow}
@@ -238,10 +239,7 @@ const styles = StyleSheet.create({
     height: ITEM_WIDTH,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
   },
-  label: { fontSize: 10, fontWeight: "500" },
-  labelSelected: { fontWeight: "700" },
   round: { width: GLASS_BAR_HEIGHT, height: GLASS_BAR_HEIGHT, borderRadius: RADIUS },
   roundGlass: { flex: 1, borderRadius: RADIUS },
   roundIcon: { flex: 1, alignItems: "center", justifyContent: "center" },

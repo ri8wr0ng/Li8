@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 
 /** Android's floating tab bar: a capsule this tall, floating this far above the bottom edge. */
-export const GLASS_BAR_HEIGHT = 64;
+export const GLASS_BAR_HEIGHT = 52;
 export const GLASS_BAR_GAP = 12;
 /** The height of iOS's own tab bar above the home indicator. */
 const IOS_TAB_BAR_HEIGHT = 49;
