@@ -24,7 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
-import { type AniListFill, type AniListMedia, fillFrom } from "#/lib/anilist";
+import {
+  type AniListFill,
+  type AniListMedia,
+  AniListError,
+  catalogName,
+  errorMessage,
+  fillFrom,
+  resolveMatch,
+} from "#/lib/anilist";
 import { useOnline, useReadOnly } from "#/lib/offline";
 import {
   KIND_OPTIONS,
@@ -33,6 +41,7 @@ import {
   isEpisodic,
   isSeriesKind,
   isSeriesStatus,
+  isWatchKind,
   parseChapterCommand,
   progressLabel,
 } from "#/lib/series";
@@ -72,7 +81,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
   const [active, setActive] = useState(-1);
   const [pending, setPending] = useState(false);
 
-  // After a pick the title is AniList's, so don't read "Kaiju No. 8" as chapter 8.
+  // After a pick the title is the catalog's, so don't read "Kaiju No. 8" as chapter 8.
   const linked = fill !== null && title === fill.title ? fill : null;
   // Typing "Battle Through The Heavens 348" fills both fields.
   const parsed = kind !== "movie" && !chapter && !linked ? parseChapterCommand(title) : null;
@@ -81,17 +90,27 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
 
   // Search by the name part only, and stop once a pick has filled the title.
   const searchTerm = parsed?.chapter !== undefined ? parsed.name : title;
-  const anilist = useAniListSearch(searchTerm, !linked);
+  const anilist = useAniListSearch(searchTerm, kind, !linked);
   const results = "results" in anilist ? anilist.results : [];
 
-  function pick(media: AniListMedia) {
-    const next = fillFrom(media);
+  async function pick(media: AniListMedia) {
+    setActive(-1);
+    let full: AniListMedia;
+    try {
+      // TVmaze search leaves out seasons and other names; fetch the show first.
+      full = await resolveMatch(media);
+    } catch (err) {
+      if (!(err instanceof AniListError)) console.error(err);
+      toast.error(errorMessage(err, media.source));
+      return;
+    }
+    const next = fillFrom(full);
     setFill(next);
     if (parsed?.chapter !== undefined) setChapter(String(parsed.chapter));
     setTitle(next.title);
     setAltNames(next.altNames.join(", "));
     setKind(next.kind);
-    setActive(-1);
+    if (next.totalSeasons && !totalSeasons) setTotalSeasons(String(next.totalSeasons));
   }
 
   function unlink() {
@@ -116,6 +135,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
         ...(linked
           ? {
               anilistId: linked.anilistId,
+              tvmazeId: linked.tvmazeId,
               description: linked.description,
               genres: linked.genres,
               ...(linked.totalChapters ? { totalChapters: linked.totalChapters } : {}),
@@ -157,7 +177,7 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
             setActive(-1);
           }}
           onKeyDown={(e) =>
-            handleListKey(e, results.length, active, setActive, (i) => pick(results[i]))
+            handleListKey(e, results.length, active, setActive, (i) => void pick(results[i]))
           }
           placeholder="Battle Through The Heavens"
           autoComplete="off"
@@ -176,9 +196,10 @@ function AddSeriesForm({ onDone }: { onDone: () => void }) {
         {!linked && (
           <AniListResults
             id="anilist-add-results"
+            kind={kind}
             state={anilist}
             active={active}
-            onPick={pick}
+            onPick={(media) => void pick(media)}
             onHover={setActive}
           />
         )}
@@ -329,10 +350,11 @@ function LinkedCard({ fill, onUnlink }: { fill: AniListFill; onUnlink: () => voi
   return (
     <div className="relative rounded-xl border border-dashed bg-secondary/50 p-3 pr-10 text-sm">
       <div className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider text-muted-foreground uppercase">
-        <Sparkles className="size-3" /> Filled from AniList
+        <Sparkles className="size-3" /> Filled from {catalogName(fill.source)}
         {fill.totalChapters ? (
           <span className="ml-1 font-mono tracking-normal normal-case tabular-nums">
-            · {fill.totalChapters} ch
+            · {fill.totalChapters} {isWatchKind(fill.kind) ? "ep" : "ch"}
+            {fill.totalSeasons && fill.totalSeasons > 1 ? ` · ${fill.totalSeasons} seasons` : ""}
           </span>
         ) : null}
       </div>
@@ -351,7 +373,7 @@ function LinkedCard({ fill, onUnlink }: { fill: AniListFill; onUnlink: () => voi
       <button
         type="button"
         onClick={onUnlink}
-        aria-label="Don't use AniList details"
+        aria-label={`Don't use ${catalogName(fill.source)} details`}
         className="absolute top-2 right-2 grid size-7 place-items-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
       >
         <X className="size-3.5" />

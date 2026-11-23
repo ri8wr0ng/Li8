@@ -1,1 +1,1 @@
-export const PUBLIC_PATHS = ["/login", "/privacy", "/terms", "/support"];
+export const PUBLIC_PATHS = ["/login", "/privacy", "/terms", "/support", "/download"];

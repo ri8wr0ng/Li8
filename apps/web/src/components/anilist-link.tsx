@@ -12,76 +12,44 @@ import {
   DialogTitle,
 } from "#/components/ui/dialog";
 import { Input } from "#/components/ui/input";
-import { type AniListMedia, AniListError, errorMessage, fillFrom, getAniList } from "#/lib/anilist";
+import {
+  type AniListMedia,
+  AniListError,
+  catalogFor,
+  catalogName,
+  errorMessage,
+  getCatalog,
+  linkedSource,
+  patchFrom,
+  resolveMatch,
+  samePatch,
+  snapshotOf,
+} from "#/lib/anilist";
 import { useReadOnly } from "#/lib/offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
-type Patch = {
-  anilistId: number | null;
-  altNames: string[];
-  description: string;
-  genres: string[];
-  kind: Doc<"series">["kind"];
-  totalChapters: number | null;
-};
-
-function merge(existing: string[], incoming: (string | null | undefined)[]) {
-  const seen = new Set(existing.map((v) => v.toLowerCase()));
-  const out = [...existing];
-  for (const v of incoming) {
-    if (v && !seen.has(v.toLowerCase())) {
-      seen.add(v.toLowerCase());
-      out.push(v);
-    }
-  }
-  return out;
-}
-
-function snapshot(series: Doc<"series">): Patch {
-  return {
-    anilistId: series.anilistId ?? null,
-    altNames: series.altNames,
-    description: series.description,
-    genres: series.genres,
-    kind: series.kind,
-    totalChapters: series.totalChapters ?? null,
-  };
-}
-
 /**
- * Pull details from AniList into a series. Your own names and genres are kept
- * and AniList's are added; description, type and chapter count follow AniList.
- * Your title is left alone. Every apply can be undone from the toast.
+ * Fill in a series from AniList (reading kinds, anime, films) or TVmaze (TV and reality),
+ * whichever covers its type. Your own names and genres are kept and the catalog's are added;
+ * description, type and counts follow the catalog. Your title is left alone. Every apply can be
+ * undone from the toast.
  */
-function patchFrom(series: Doc<"series">, media: AniListMedia): Patch {
-  const fill = fillFrom(media);
-  const names = [fill.title, ...fill.altNames].filter(
-    (n) => n.toLowerCase() !== series.title.toLowerCase(),
-  );
-  return {
-    anilistId: fill.anilistId,
-    altNames: merge(series.altNames, names),
-    description: fill.description || series.description,
-    genres: merge(series.genres, fill.genres),
-    kind: fill.kind,
-    totalChapters: fill.totalChapters ?? series.totalChapters ?? null,
-  };
-}
-
-const same = (a: Patch, b: Patch) => JSON.stringify(a) === JSON.stringify(b);
-
 export function AniListControls({ series }: { series: Doc<"series"> }) {
   const update = useMutation(api.series.update);
+  const linked = linkedSource(series);
+  // Linked series refresh from where they came from; otherwise search what covers the type.
+  const source = linked?.source ?? catalogFor(series.kind);
+  const name = catalogName(source);
   const readOnly = useReadOnly();
   const [busy, setBusy] = useState(false);
   const [finding, setFinding] = useState(false);
 
   async function apply(media: AniListMedia, verb: string) {
-    const before = snapshot(series);
-    const after = patchFrom(series, media);
-    if (same(before, after)) {
-      toast("Already up to date with AniList");
+    const before = snapshotOf(series);
+    const after = patchFrom(series, await resolveMatch(media));
+    if (samePatch(before, after)) {
+      toast(`Already up to date with ${catalogName(media.source)}`);
       return;
     }
     await update({ id: series._id, ...after });
@@ -91,13 +59,13 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
   }
 
   async function refresh() {
-    if (!series.anilistId) return;
+    if (!linked) return;
     setBusy(true);
     try {
-      await apply(await getAniList(series.anilistId), "Updated from AniList");
+      await apply(await getCatalog(linked.source, linked.id), `Updated from ${name}`);
     } catch (err) {
       if (!(err instanceof AniListError)) console.error(err);
-      toast.error(errorMessage(err), {
+      toast.error(errorMessage(err, source), {
         action:
           err instanceof AniListError && err.kind === "not_found"
             ? { label: "Find again", onClick: () => setFinding(true) }
@@ -109,18 +77,16 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
   }
 
   async function unlink() {
-    await update({ id: series._id, anilistId: null });
-    toast("Unlinked from AniList", {
-      action: {
-        label: "Undo",
-        onClick: () => void update({ id: series._id, anilistId: series.anilistId ?? null }),
-      },
+    const before = { anilistId: series.anilistId ?? null, tvmazeId: series.tvmazeId ?? null };
+    await update({ id: series._id, anilistId: null, tvmazeId: null });
+    toast(`Unlinked from ${name}`, {
+      action: { label: "Undo", onClick: () => void update({ id: series._id, ...before }) },
     });
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {series.anilistId ? (
+      {linked ? (
         <>
           <Button
             variant="outline"
@@ -128,7 +94,7 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
             onClick={refresh}
             disabled={busy || readOnly}
           >
-            {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />} Refresh from AniList
+            {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />} Refresh from {name}
           </Button>
           <Button
             variant="ghost"
@@ -141,7 +107,7 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Unlink from AniList"
+            aria-label={`Unlink from ${name}`}
             className="rounded-xl text-muted-foreground"
             onClick={() => void unlink()}
             disabled={readOnly}
@@ -156,7 +122,7 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
           onClick={() => setFinding(true)}
           disabled={readOnly}
         >
-          <Sparkles /> Fill in from AniList
+          <Sparkles /> Fill in from {name}
         </Button>
       )}
 
@@ -165,13 +131,20 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
           {finding && (
             <FindOnAniList
               initial={series.title}
-              selectedId={series.anilistId}
+              kind={series.kind}
+              selectedId={linked?.id}
               onPick={(media) => {
                 setFinding(false);
-                apply(media, "Filled in from AniList").catch((err: unknown) => {
-                  console.error(err);
-                  toast.error("Couldn't save. Please try again.");
-                });
+                apply(media, `Filled in from ${catalogName(media.source)}`).catch(
+                  (err: unknown) => {
+                    if (!(err instanceof AniListError)) console.error(err);
+                    toast.error(
+                      err instanceof AniListError
+                        ? errorMessage(err, media.source)
+                        : "Couldn't save. Please try again.",
+                    );
+                  },
+                );
               }}
             />
           )}
@@ -183,25 +156,29 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
 
 function FindOnAniList({
   initial,
+  kind,
   selectedId,
   onPick,
 }: {
   initial: string;
+  kind: Doc<"series">["kind"];
   selectedId?: number;
   onPick: (media: AniListMedia) => void;
 }) {
   const [query, setQuery] = useState(initial);
   const [active, setActive] = useState(-1);
-  const state = useAniListSearch(query);
+  const state = useAniListSearch(query, kind);
+  const name = catalogName(catalogFor(kind));
   const results = "results" in state ? state.results : [];
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <DialogHeader>
-        <DialogTitle className="font-display text-xl">Find on AniList</DialogTitle>
+        <DialogTitle className="font-display text-xl">Find on {name}</DialogTitle>
         <DialogDescription>
-          Adds names and genres, and fills in the description, type and chapter count. Your title
-          stays as it is.
+          Adds names and genres, and fills in the description, type and{" "}
+          {kind === "tv" || kind === "reality" || kind === "anime" ? "episode" : "chapter"} count.
+          Your title stays as it is.
         </DialogDescription>
       </DialogHeader>
       <Input
@@ -214,7 +191,7 @@ function FindOnAniList({
         onKeyDown={(e) =>
           handleListKey(e, results.length, active, setActive, (i) => onPick(results[i]))
         }
-        placeholder="Search AniList"
+        placeholder={`Search ${name}`}
         autoComplete="off"
         enterKeyHint="search"
         role="combobox"
@@ -224,6 +201,7 @@ function FindOnAniList({
       />
       <AniListResults
         id="anilist-find-results"
+        kind={kind}
         state={state}
         active={active}
         selectedId={selectedId}

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as DownloadRouteImport } from './routes/download'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
@@ -25,6 +26,11 @@ import { Route as AppNotesNoteIdRouteImport } from './routes/_app/notes.$noteId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadRoute = DownloadRouteImport.update({
+  id: '/download',
+  path: '/download',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -90,6 +96,7 @@ const AppNotesNoteIdRoute = AppNotesNoteIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/library/': typeof AppLibraryIndexRoute
 }
 export interface FileRoutesByTo {
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
@@ -119,6 +127,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/download': typeof DownloadRoute
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/download'
     | '/login'
     | '/privacy'
     | '/support'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/library/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/download'
     | '/login'
     | '/privacy'
     | '/support'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/download'
     | '/login'
     | '/privacy'
     | '/support'
@@ -180,6 +192,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  DownloadRoute: typeof DownloadRoute
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/download': {
+      id: '/download'
+      path: '/download'
+      fullPath: '/download'
+      preLoaderRoute: typeof DownloadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -307,6 +327,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  DownloadRoute: DownloadRoute,
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,

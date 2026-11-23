@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
 import { ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
+import { useState, type PointerEvent } from "react";
 import { toast } from "sonner";
 import {
   Card,
@@ -41,7 +42,17 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
     }
   });
   const update = useMutation(api.series.update);
-  const setChapter = useMutation(api.series.setChapter);
+  const setChapter = useMutation(api.series.setChapter).withOptimisticUpdate(
+    (store, { id, chapter }) => {
+      for (const { args, value } of store.getAllQueries(api.library.listPage)) {
+        if (!value || !value.page.some((s) => s._id === id)) continue;
+        store.setQuery(api.library.listPage, args, {
+          ...value,
+          page: value.page.map((s) => (s._id === id ? { ...s, chapter } : s)),
+        });
+      }
+    },
+  );
   const allLabels = useQuery(api.labels.list);
   const next = series.chapter + 1;
   const nextUrl = nextReadUrl(series, next);
@@ -102,7 +113,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
       <Card
         ref={attachSurface}
         {...swipeHandlers}
-        className="group relative min-w-0 touch-pan-y gap-0 rounded-2xl py-4 shadow-none select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:py-5"
+        className="group relative h-full min-w-0 touch-pan-y gap-0 rounded-2xl py-4 shadow-none select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:py-5"
       >
         {/* minmax(0,1fr): the header is a grid too, so its column must be allowed to shrink for truncate to work. */}
         <CardHeader className="grid-cols-[minmax(0,1fr)] gap-1 px-4 has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
@@ -119,7 +130,7 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
               to="/library/$seriesId"
               params={{ seriesId: series._id }}
               aria-label={`Open ${series.title}`}
-              className="-mt-1 -mr-1 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
+              className="-mt-1 mr-1.5 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
             >
               <ChevronRight className="size-5" />
             </Link>
@@ -177,7 +188,22 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
                 )}
                 <span className="font-mono text-4xl leading-none font-semibold tabular-nums">
                   {episodic && <span className="text-2xl text-muted-foreground">E</span>}
-                  {formatChapter(series.chapter)}
+                  <ChapterField
+                    value={series.chapter}
+                    label={`Set ${episodic ? "episode" : "chapter"} for ${series.title}`}
+                    disabled={readOnly}
+                    onCommit={(chapter) => {
+                      const previous = series.chapter;
+                      void setChapter({ id: series._id, chapter }).then(() =>
+                        toast(`${progressLabel(series.kind)} ${formatChapter(chapter)}`, {
+                          action: {
+                            label: "Undo",
+                            onClick: () => void setChapter({ id: series._id, chapter: previous }),
+                          },
+                        }),
+                      );
+                    }}
+                  />
                 </span>
                 {series.totalChapters && (
                   <span className="font-mono text-sm text-muted-foreground tabular-nums">
@@ -240,5 +266,70 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
         )}
       </Card>
     </div>
+  );
+}
+
+// Swipe-to-bump listens on the card; keep pointer gestures on the chapter field to itself.
+const stop = (e: PointerEvent) => e.stopPropagation();
+
+/**
+ * The big chapter number. Click it to type a new one in place: Enter or leaving the field saves,
+ * Escape cancels. Opening the details page stays on the chevron.
+ */
+function ChapterField({
+  value,
+  label,
+  disabled,
+  onCommit,
+}: {
+  value: number;
+  label: string;
+  disabled: boolean;
+  onCommit: (chapter: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = formatChapter(value);
+
+  function commit() {
+    if (draft === null) return;
+    const n = Number(draft.trim().replace(",", "."));
+    setDraft(null);
+    if (draft.trim() === "" || !Number.isFinite(n) || n < 0 || n === value) return;
+    onCommit(n);
+  }
+
+  if (draft !== null) {
+    return (
+      <input
+        aria-label={label}
+        inputMode="decimal"
+        autoFocus
+        value={draft}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") setDraft(null);
+        }}
+        onPointerDown={stop}
+        style={{ width: `${Math.max(2, draft.length) + 1}ch` }}
+        className="-mx-1 rounded-lg bg-secondary px-1 font-mono text-4xl leading-none font-semibold tabular-nums outline-none select-text focus-visible:ring-2 focus-visible:ring-hanko/60"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title="Click to change"
+      disabled={disabled}
+      onPointerDown={stop}
+      onClick={() => setDraft(text)}
+      className="-mx-1 cursor-text rounded-lg px-1 transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none disabled:cursor-default disabled:hover:bg-transparent"
+    >
+      {text}
+    </button>
   );
 }

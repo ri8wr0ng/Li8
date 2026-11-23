@@ -46,10 +46,18 @@ export async function scheduleNoteEmbedding(ctx: MutationCtx, noteId: Id<"notes"
   await ctx.scheduler.runAfter(NOTE_EMBED_DELAY_MS, internal.embeddings.embedOne, { noteId, at });
 }
 
+/**
+ * Queue (re-)embedding after a series' text changes. The job carries the hash of the text it
+ * was queued for, so when a later edit queues another, the earlier one stands down instead of
+ * racing it to write the same embedding row (that race showed up as write-conflict retries).
+ */
 export async function scheduleSeriesEmbedding(ctx: MutationCtx, seriesId: Id<"series">) {
   const series = await ctx.db.get("series", seriesId);
   if (!series || !(await aiAllowedFor(ctx, series.userId))) return;
-  await ctx.scheduler.runAfter(2_000, internal.embeddings.embedOne, { seriesId });
+  const hash = textHash(seriesText(series));
+  const existing = await findEmbedding(ctx, { seriesId });
+  if (existing?.hash === hash) return;
+  await ctx.scheduler.runAfter(2_000, internal.embeddings.embedOne, { seriesId, hash });
 }
 
 export async function deleteEmbedding(ctx: MutationCtx, target: Target) {
@@ -89,8 +97,8 @@ async function pendingFor(
 // Embedding one document
 
 export const pendingOne = internalQuery({
-  args: { ...vTarget, at: v.optional(v.number()) },
-  handler: async (ctx, { noteId, seriesId, at }): Promise<Pending | null> => {
+  args: { ...vTarget, at: v.optional(v.number()), hash: v.optional(v.string()) },
+  handler: async (ctx, { noteId, seriesId, at, hash }): Promise<Pending | null> => {
     const doc = noteId
       ? await ctx.db.get("notes", noteId)
       : seriesId
@@ -99,12 +107,15 @@ export const pendingOne = internalQuery({
     if (!doc) return null;
     // A later edit scheduled its own job.
     if (at !== undefined && doc.updatedAt > at) return null;
-    return await pendingFor(ctx, doc);
+    const pending = await pendingFor(ctx, doc);
+    // The text changed again after this job was queued; that edit queued its own job.
+    if (pending && hash !== undefined && pending.hash !== hash) return null;
+    return pending;
   },
 });
 
 export const embedOne = internalAction({
-  args: { ...vTarget, at: v.optional(v.number()) },
+  args: { ...vTarget, at: v.optional(v.number()), hash: v.optional(v.string()) },
   handler: async (ctx, args) => {
     if (!aiEnabled()) return;
     const pending = await ctx.runQuery(internal.embeddings.pendingOne, args);
@@ -147,6 +158,8 @@ export const save = internalMutation({
         if (existing) await ctx.db.delete("embeddings", existing._id);
         continue;
       }
+      // Another job already stored this exact text; writing it again only invites conflicts.
+      if (existing?.hash === hash) continue;
       if (existing) await ctx.db.patch("embeddings", existing._id, { hash, embedding });
       else await ctx.db.insert("embeddings", { userId, ...target, hash, embedding });
     }

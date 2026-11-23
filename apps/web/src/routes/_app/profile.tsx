@@ -300,6 +300,30 @@ function ActivityGrid({ activity }: { activity: number[] }) {
   const level = (n: number) => (n === 0 ? 0 : Math.min(4, Math.ceil((n / max) * 4)));
   const shades = ["bg-secondary", "bg-hanko/25", "bg-hanko/50", "bg-hanko/75", "bg-hanko"];
 
+  // The grid is only 13 squares wide, so the numbers that matter sit beside it.
+  const thisWeek = activity
+    .slice(activity.length - 1 - ((pad + activity.length - 1) % 7))
+    .reduce((a, b) => a + b, 0);
+  let streak = 0;
+  // A streak isn't broken until today ends: start from yesterday when today is still empty.
+  for (let i = activity.length - (activity.at(-1) ? 1 : 2); i >= 0 && activity[i] > 0; i--)
+    streak++;
+  const bestIndex = activity.indexOf(max);
+  const bestDate = new Date(first);
+  bestDate.setDate(first.getDate() + bestIndex);
+  const facts = [
+    { label: "This week", value: number(thisWeek), note: thisWeek === 1 ? "update" : "updates" },
+    { label: "Streak", value: number(streak), note: streak === 1 ? "day" : "days" },
+    {
+      label: "Best day",
+      value: total === 0 ? "0" : number(max),
+      note:
+        total === 0
+          ? "updates"
+          : bestDate.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    },
+  ];
+
   return (
     <div className="mt-3 rounded-2xl border bg-card p-4 sm:p-5">
       <p className="text-sm text-muted-foreground">
@@ -307,34 +331,49 @@ function ActivityGrid({ activity }: { activity: number[] }) {
           ? "No chapters or episodes logged in the last 12 weeks. Bump a series and it shows up here."
           : `${number(total)} ${total === 1 ? "update" : "updates"} on ${activeDays} ${activeDays === 1 ? "day" : "days"} in the last 12 weeks.`}
       </p>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        <div
-          aria-hidden
-          className="grid grid-rows-7 gap-1 pr-1 text-[0.65rem] text-muted-foreground"
-        >
-          {DAY_NAMES.map((d, i) => (
-            <span key={d} className="flex h-3.5 items-center sm:h-4">
-              {i % 2 === 1 ? d : ""}
-            </span>
+      <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <div
+            aria-hidden
+            className="grid grid-rows-7 gap-1 pr-1 text-[0.65rem] text-muted-foreground"
+          >
+            {DAY_NAMES.map((d, i) => (
+              <span key={d} className="flex h-4 items-center sm:h-[18px]">
+                {i % 2 === 1 ? d : ""}
+              </span>
+            ))}
+          </div>
+          <div
+            role="img"
+            aria-label={`Activity over the last 12 weeks: ${total} updates`}
+            className="grid grid-flow-col grid-rows-7 gap-1"
+          >
+            {cells.map((cell, i) =>
+              cell ? (
+                <span
+                  key={i}
+                  title={`${cell.date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${cell.count} ${cell.count === 1 ? "update" : "updates"}`}
+                  className={cn("size-4 rounded-[4px] sm:size-[18px]", shades[level(cell.count)])}
+                />
+              ) : (
+                <span key={i} className="size-4 sm:size-[18px]" />
+              ),
+            )}
+          </div>
+        </div>
+        <dl className="grid grid-cols-3 gap-4 border-t pt-4 sm:min-w-40 sm:grid-cols-1 sm:gap-3 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6">
+          {facts.map((f) => (
+            <div key={f.label}>
+              <dt className="text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+                {f.label}
+              </dt>
+              <dd className="mt-0.5 flex items-baseline gap-1.5">
+                <span className="font-mono text-xl font-semibold tabular-nums">{f.value}</span>
+                <span className="text-xs text-muted-foreground">{f.note}</span>
+              </dd>
+            </div>
           ))}
-        </div>
-        <div
-          role="img"
-          aria-label={`Activity over the last 12 weeks: ${total} updates`}
-          className="grid grid-flow-col grid-rows-7 gap-1"
-        >
-          {cells.map((cell, i) =>
-            cell ? (
-              <span
-                key={i}
-                title={`${cell.date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${cell.count} ${cell.count === 1 ? "update" : "updates"}`}
-                className={cn("size-3.5 rounded-[4px] sm:size-4", shades[level(cell.count)])}
-              />
-            ) : (
-              <span key={i} className="size-3.5 sm:size-4" />
-            ),
-          )}
-        </div>
+        </dl>
       </div>
     </div>
   );

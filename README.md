@@ -53,6 +53,15 @@ bun dev:backend         # convex dev: log in, create the project, keep it runnin
 bun dev                 # http://localhost:3000 (keep `bun dev:backend` running too)
 ```
 
+## Development
+
+- `bun dev` — start the web app.
+- `bun dev:backend` — start the Convex backend.
+- `bun dev:mobile` — start the Expo mobile app.
+- `bun dev:mobile-web` — start Convex and the mobile app in a web browser.
+- `bun android:emulator` — launch the first Android virtual device with host GPU rendering.
+- `bun dev:android` — launch the Android emulator and run the mobile app on it.
+
 ## AI features
 
 Optional, and off until a key is set.

@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
 import { ConvexAuthProvider, type TokenStorage } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { loadThemePreference } from "./theme-preference";
 import { UpdaterProvider } from "./updates/updater";
+import { deleteItemAsync, getItemAsync, setItemAsync } from "./storage";
 
 void loadThemePreference();
 
@@ -20,21 +20,21 @@ function getConvexUrl(): string {
 export const secureStorage: TokenStorage = {
   getItem: async (key: string) => {
     try {
-      return await SecureStore.getItemAsync(key);
+      return await getItemAsync(key);
     } catch {
       return null;
     }
   },
   setItem: async (key: string, value: string) => {
     try {
-      await SecureStore.setItemAsync(key, value);
+      await setItemAsync(key, value);
     } catch {
       // ignore write errors in restricted environments
     }
   },
   removeItem: async (key: string) => {
     try {
-      await SecureStore.deleteItemAsync(key);
+      await deleteItemAsync(key);
     } catch {
       // ignore delete errors
     }

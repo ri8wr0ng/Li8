@@ -3,6 +3,7 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { seriesText } from "./aiModels";
 import { deleteEmbedding, scheduleSeriesEmbedding } from "./embeddings";
 import { cleanList, requireUserId } from "./lib";
 import { vSeriesKind, vSeriesLink, vSeriesStatus, type SeriesLink } from "./validators";
@@ -198,6 +199,7 @@ const vCreateArgs = v.object({
   genres: v.optional(v.array(v.string())),
   totalChapters: v.optional(v.number()),
   anilistId: v.optional(v.number()),
+  tvmazeId: v.optional(v.number()),
 });
 
 export const create = mutation({
@@ -243,6 +245,7 @@ export async function insertSeries(
     ...(validLabelIds && validLabelIds.length > 0 ? { labelIds: validLabelIds } : {}),
     searchText,
     ...(args.anilistId !== undefined ? { anilistId: args.anilistId } : {}),
+    ...(args.tvmazeId !== undefined ? { tvmazeId: args.tvmazeId } : {}),
     lastReadAt: now,
     updatedAt: now,
   });
@@ -275,6 +278,7 @@ export const update = mutation({
     readUrlTemplate: v.optional(v.union(v.string(), v.null())),
     links: v.optional(v.array(vSeriesLink)),
     anilistId: v.optional(v.union(v.number(), v.null())),
+    tvmazeId: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (
     ctx,
@@ -289,6 +293,7 @@ export const update = mutation({
       readUrlTemplate,
       links,
       anilistId,
+      tvmazeId,
       title,
       ...rest
     },
@@ -322,10 +327,22 @@ export const update = mutation({
       // Saving links replaces the legacy single reading link.
       ...(links !== undefined ? { links: cleanLinks(links), readUrlTemplate: undefined } : {}),
       ...(anilistId !== undefined ? { anilistId: anilistId ?? undefined } : {}),
+      ...(tvmazeId !== undefined ? { tvmazeId: tvmazeId ?? undefined } : {}),
       searchText,
       updatedAt: Date.now(),
     });
-    await scheduleSeriesEmbedding(ctx, id);
+    // Labels, links, status and counts aren't embedded; only re-embed when the text changes.
+    const embeddedBefore = seriesText(series);
+    const embeddedAfter = seriesText({
+      title: nextTitle,
+      altNames: nextAltNames,
+      genres: nextGenres,
+      kind: nextKind,
+      description: rest.description ?? series.description,
+      season: season === undefined ? series.season : (season ?? undefined),
+      totalSeasons: totalSeasons === undefined ? series.totalSeasons : (totalSeasons ?? undefined),
+    });
+    if (embeddedAfter !== embeddedBefore) await scheduleSeriesEmbedding(ctx, id);
   },
 });
 

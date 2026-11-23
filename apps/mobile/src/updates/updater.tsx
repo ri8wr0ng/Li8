@@ -10,9 +10,7 @@ import {
 } from "react";
 import { Alert, AppState, Platform } from "react-native";
 import * as Application from "expo-application";
-import * as SecureStore from "expo-secure-store";
-import * as IntentLauncher from "expo-intent-launcher";
-import { File, Paths } from "expo-file-system";
+import { getItemAsync, setItemAsync } from "../storage";
 import {
   channelOfVersion,
   formatBytes,
@@ -97,7 +95,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
   const installingRef = useRef(false);
 
   useEffect(() => {
-    SecureStore.getItemAsync(CHANNEL_KEY)
+    getItemAsync(CHANNEL_KEY)
       .then((saved) => {
         if (saved === "stable" || saved === "nightly") {
           channelRef.current = saved;
@@ -133,6 +131,10 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
     setInstall({ phase: "downloading", progress: null });
     try {
       // One fixed file, overwritten each time, so old downloads don't pile up in the cache.
+      const [{ File, Paths }, IntentLauncher] = await Promise.all([
+        import("expo-file-system"),
+        import("expo-intent-launcher"),
+      ]);
       const destination = new File(Paths.cache, "inkmark-update.apk");
       const file = await File.downloadFileAsync(build.apkUrl, destination, {
         idempotent: true,
@@ -168,7 +170,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
       if (next === channelRef.current) return;
       channelRef.current = next;
       setChannelState(next);
-      SecureStore.setItemAsync(CHANNEL_KEY, next).catch(() => {});
+      setItemAsync(CHANNEL_KEY, next).catch(() => {});
       if (updatesSupported) void checkForUpdates();
     },
     [checkForUpdates],
@@ -182,9 +184,9 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
       const status = await checkForUpdates();
       if (status?.kind !== "available") return;
       const { build } = status;
-      const prompted = await SecureStore.getItemAsync(PROMPTED_KEY).catch(() => null);
+      const prompted = await getItemAsync(PROMPTED_KEY).catch(() => null);
       if (prompted === build.tag) return;
-      await SecureStore.setItemAsync(PROMPTED_KEY, build.tag).catch(() => {});
+      await setItemAsync(PROMPTED_KEY, build.tag).catch(() => {});
       Alert.alert(
         "Update available",
         `li8 ${build.version} is ready (${formatBytes(build.apkSize)}).`,

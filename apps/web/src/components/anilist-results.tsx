@@ -3,13 +3,16 @@ import { useEffect, useState } from "react";
 import {
   type AniListMedia,
   AniListError,
+  catalogFor,
+  catalogName,
   describeMedia,
   displayTitle,
   errorMessage,
-  searchAniList,
+  searchCatalog,
 } from "#/lib/anilist";
 import { KIND_LABEL } from "#/lib/series";
 import { useOnline } from "#/lib/offline";
+import type { SeriesKind } from "@inkmark/backend/convex/validators";
 import { cn } from "#/lib/utils";
 
 export type AniListSearchState =
@@ -19,16 +22,27 @@ export type AniListSearchState =
   | { status: "error"; message: string; results: AniListMedia[] }
   | { status: "offline" };
 
-/** Debounced search-as-you-type. Keeps the previous results visible while the next request runs. */
-export function useAniListSearch(query: string, enabled = true): AniListSearchState {
+/**
+ * Debounced search-as-you-type in the catalog for `kind` (AniList or TVmaze). Keeps the previous
+ * results visible while the next request runs.
+ */
+export function useAniListSearch(
+  query: string,
+  kind: SeriesKind,
+  enabled = true,
+): AniListSearchState {
   const online = useOnline();
   const q = query.trim();
+  const source = catalogFor(kind);
+  const searchKind = kind;
   // The last finished request. Loading is derived: it's whenever that request was for another query.
   const [fetched, setFetched] = useState<{
     q: string;
     results: AniListMedia[];
     error?: string;
   } | null>(null);
+  // Results are per catalog and type: anime and manga searches differ for the same words.
+  const key = `${source}:${searchKind}:${q}`;
 
   const idle = !enabled || q.length < 2;
 
@@ -36,12 +50,16 @@ export function useAniListSearch(query: string, enabled = true): AniListSearchSt
     if (idle || !online) return undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchAniList(q, controller.signal).then(
-        (results) => setFetched({ q, results }),
+      searchCatalog(q, searchKind, controller.signal).then(
+        (results) => setFetched({ q: key, results }),
         (err: unknown) => {
           if (controller.signal.aborted) return;
           if (!(err instanceof AniListError)) console.error(err);
-          setFetched((f) => ({ q, results: f?.results ?? [], error: errorMessage(err) }));
+          setFetched((f) => ({
+            q: key,
+            results: f?.results ?? [],
+            error: errorMessage(err, source),
+          }));
         },
       );
     }, 350);
@@ -49,12 +67,12 @@ export function useAniListSearch(query: string, enabled = true): AniListSearchSt
       clearTimeout(timer);
       controller.abort();
     };
-  }, [q, idle, online]);
+  }, [q, key, searchKind, source, idle, online]);
 
   if (idle) return { status: "idle" };
   if (!online) return { status: "offline" };
   const results = fetched?.results ?? [];
-  if (fetched?.q !== q) return { status: "loading", results };
+  if (fetched?.q !== key) return { status: "loading", results };
   if (fetched.error !== undefined) return { status: "error", message: fetched.error, results };
   return { status: "done", results };
 }
@@ -62,6 +80,7 @@ export function useAniListSearch(query: string, enabled = true): AniListSearchSt
 /** The list of matches. Keyboard focus stays in the input; `active` is driven by arrow keys there. */
 export function AniListResults({
   id,
+  kind,
   state,
   active,
   selectedId,
@@ -70,6 +89,7 @@ export function AniListResults({
   className,
 }: {
   id: string;
+  kind: SeriesKind;
   state: AniListSearchState;
   active: number;
   selectedId?: number;
@@ -77,11 +97,12 @@ export function AniListResults({
   onHover?: (index: number) => void;
   className?: string;
 }) {
+  const name = catalogName(catalogFor(kind));
   if (state.status === "idle") return null;
   if (state.status === "offline") {
     return (
       <p className={cn("flex items-center gap-2 px-1 text-xs text-muted-foreground", className)}>
-        <WifiOff className="size-3.5" /> AniList suggestions need a connection.
+        <WifiOff className="size-3.5" /> {name} suggestions need a connection.
       </p>
     );
   }
@@ -92,7 +113,7 @@ export function AniListResults({
         <div
           id={id}
           role="listbox"
-          aria-label="AniList matches"
+          aria-label={`${name} matches`}
           className="max-h-64 overflow-y-auto overscroll-contain rounded-xl border bg-card p-1"
         >
           {results.map((media, i) => {
@@ -134,14 +155,14 @@ export function AniListResults({
       >
         {state.status === "loading" ? (
           <>
-            <Loader2 className="size-3 animate-spin" /> Searching AniList…
+            <Loader2 className="size-3 animate-spin" /> Searching {name}…
           </>
         ) : state.status === "error" ? (
           <span className="text-destructive">{state.message}</span>
         ) : results.length === 0 ? (
-          "No AniList match. You can still add it by hand."
+          `No ${name} match. You can still add it by hand.`
         ) : (
-          "Pick one to fill in the details from AniList."
+          `Pick one to fill in the details from ${name}.`
         )}
       </p>
     </div>
