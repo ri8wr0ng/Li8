@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Redirect, useRouter } from "expo-router";
 import { Tabs, type BottomTabBarProps } from "expo-router/js-tabs";
+import { useMutation } from "convex/react";
+import { api } from "@inkmark/backend/convex/_generated/api";
 import { GlassProvider, GlassTarget } from "../../src/components/glass";
 import { GlassTabBar, type GlassTab } from "../../src/components/glass-tab-bar";
 import { useTabsGate } from "../../src/navigation";
@@ -22,11 +25,27 @@ function GlassScreenLayout({
 
 /**
  * Android: draws the web's phone navigation. A glass pill of tabs, then search
- * and Ask AI as round glass buttons. Profile lives in each header's top-left.
+ * and New note as round glass buttons. Profile lives in each header's top-left.
  */
 export default function TabsLayout() {
   const router = useRouter();
   const { signedOut, showAsk } = useTabsGate();
+  const createNote = useMutation(api.notes.create);
+  const [creating, setCreating] = useState(false);
+
+  async function handleCreate() {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const noteId = await createNote({});
+      router.push({ pathname: "/(tabs)/notes/[noteId]", params: { noteId } });
+    } catch (err) {
+      console.error("Failed to create note:", err);
+    } finally {
+      setCreating(false);
+    }
+  }
+
   if (signedOut) return <Redirect href="/sign-in" />;
 
   const tabs = showAsk ? ALL_TABS : ALL_TABS.filter((t) => t.name !== "ask");
@@ -35,7 +54,8 @@ export default function TabsLayout() {
       {...props}
       tabs={tabs}
       searchRoute="search"
-      onAskAi={showAsk ? () => router.push("/ask-ai") : undefined}
+      onCreate={() => void handleCreate()}
+      creating={creating}
     />
   );
 

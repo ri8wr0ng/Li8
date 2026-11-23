@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -62,6 +63,7 @@ export default function NotesScreen() {
   // Set tab header right button
   /* oxlint-disable react/no-unstable-nested-components */
   useEffect(() => {
+    if (Platform.OS !== "ios") return;
     navigation.setOptions({
       headerRight: () => (
         <Pressable

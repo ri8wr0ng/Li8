@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
-import { Animated, Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import {
+  ActivityIndicator,
+  Animated,
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { useTheme } from "../theme";
 import { haptics } from "../haptics";
@@ -19,7 +27,7 @@ const SPRING = { stiffness: 320, damping: 36, mass: 1, useNativeDriver: true } a
 
 /**
  * Android's navigation, matching the web's phone bar: a glass pill of tabs whose
- * lit lens glides to the current one, then search and Ask AI as round glass
+ * lit lens glides to the current one, then search and New note as round glass
  * buttons beside it. The lens moves on touch-down, before the next screen
  * renders, so a tap feels instant.
  */
@@ -29,8 +37,14 @@ export function GlassTabBar({
   insets,
   tabs,
   searchRoute,
-  onAskAi,
-}: BottomTabBarProps & { tabs: GlassTab[]; searchRoute: string; onAskAi?: () => void }) {
+  onCreate,
+  creating,
+}: BottomTabBarProps & {
+  tabs: GlassTab[];
+  searchRoute: string;
+  onCreate?: () => void;
+  creating?: boolean;
+}) {
   const { colors, isDark } = useTheme();
   const reduced = useReducedMotion();
   const [pressed, setPressed] = useState<string | null>(null);
@@ -131,14 +145,21 @@ export function GlassTabBar({
           }}
         />
       )}
-      {onAskAi && (
+      {onCreate && (
         <RoundGlassButton
-          label="Ask AI"
-          icon={<Ionicons name="sparkles-outline" size={21} color={colors.hanko} />}
+          label="New note"
+          icon={
+            creating ? (
+              <ActivityIndicator size="small" color={colors.hanko} />
+            ) : (
+              <Feather name="edit-3" size={20} color={colors.hanko} />
+            )
+          }
           shadow={shadow}
           onPress={() => {
+            if (creating) return;
             haptics.tap();
-            onAskAi();
+            onCreate();
           }}
         />
       )}
