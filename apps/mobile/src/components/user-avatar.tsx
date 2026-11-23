@@ -12,30 +12,40 @@ import { useTheme } from "../theme";
 
 /** Keep in sync with AVATAR_STYLES in apps/web/src/components/user-avatar.tsx and convex/users.ts. */
 const draw = { size: 128 };
+
+/**
+ * react-native-svg draws some styles (lorelei) blank because of DiceBear's full-viewbox mask.
+ * The mask only clips to the square, which the round container already does, so drop it.
+ */
+const forNative = (svg: string) =>
+  svg
+    .replace(/<metadata.*?<\/metadata>/s, "")
+    .replace(/<mask id="viewboxMask">.*?<\/mask>/s, "")
+    .replace(' mask="url(#viewboxMask)"', "");
 export const AVATAR_STYLES = {
   notionistsNeutral: {
     label: "Sketch",
-    svg: (seed: string) => createAvatar(notionistsNeutral, { ...draw, seed }).toString(),
+    svg: (seed: string) => forNative(createAvatar(notionistsNeutral, { ...draw, seed }).toString()),
   },
   lorelei: {
     label: "Portrait",
-    svg: (seed: string) => createAvatar(lorelei, { ...draw, seed }).toString(),
+    svg: (seed: string) => forNative(createAvatar(lorelei, { ...draw, seed }).toString()),
   },
   adventurerNeutral: {
     label: "Adventurer",
-    svg: (seed: string) => createAvatar(adventurerNeutral, { ...draw, seed }).toString(),
+    svg: (seed: string) => forNative(createAvatar(adventurerNeutral, { ...draw, seed }).toString()),
   },
   thumbs: {
     label: "Thumbs",
-    svg: (seed: string) => createAvatar(thumbs, { ...draw, seed }).toString(),
+    svg: (seed: string) => forNative(createAvatar(thumbs, { ...draw, seed }).toString()),
   },
   shapes: {
     label: "Shapes",
-    svg: (seed: string) => createAvatar(shapes, { ...draw, seed }).toString(),
+    svg: (seed: string) => forNative(createAvatar(shapes, { ...draw, seed }).toString()),
   },
   glass: {
     label: "Glass",
-    svg: (seed: string) => createAvatar(glass, { ...draw, seed }).toString(),
+    svg: (seed: string) => forNative(createAvatar(glass, { ...draw, seed }).toString()),
   },
 } as const;
 
