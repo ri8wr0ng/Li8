@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
@@ -45,7 +45,8 @@ export function HeaderIconButton({
 
 /**
  * Right side of every tab's header: the screen's own action (if any), then the
- * gear for Settings, then the reader's avatar for Profile.
+ * reader's avatar for Profile. On iOS a gear for Settings sits between them;
+ * Android has Settings in its bottom bar instead.
  */
 export function HeaderActions({ children }: { children?: ReactNode }) {
   const router = useRouter();
@@ -55,16 +56,18 @@ export function HeaderActions({ children }: { children?: ReactNode }) {
   return (
     <View style={styles.row}>
       {children}
-      <PressableScale
-        accessibilityRole="button"
-        accessibilityLabel="Settings"
-        hitSlop={4}
-        scale={0.9}
-        onPress={() => router.push("/settings")}
-        style={[styles.round, { backgroundColor: colors.card, borderColor: colors.border }]}
-      >
-        <Feather name="settings" size={18} color={colors.ink} />
-      </PressableScale>
+      {Platform.OS === "ios" && (
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          hitSlop={4}
+          scale={0.9}
+          onPress={() => router.push("/settings")}
+          style={[styles.round, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <Feather name="settings" size={18} color={colors.ink} />
+        </PressableScale>
+      )}
       <PressableScale
         accessibilityRole="button"
         accessibilityLabel="Profile"

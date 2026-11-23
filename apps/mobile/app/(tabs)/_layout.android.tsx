@@ -61,6 +61,7 @@ export default function TabsLayout() {
       searchRoute="search"
       onCreate={() => void handleCreate()}
       creating={creating}
+      onSettings={() => router.push("/settings")}
     />
   );
 

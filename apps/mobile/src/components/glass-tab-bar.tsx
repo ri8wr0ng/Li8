@@ -38,11 +38,14 @@ export function GlassTabBar({
   searchRoute,
   onCreate,
   creating,
+  onSettings,
 }: BottomTabBarProps & {
   tabs: GlassTab[];
   searchRoute: string;
   onCreate?: () => void;
   creating?: boolean;
+  /** Settings sits at the end of the pill but opens a screen; it never takes the lens. */
+  onSettings?: () => void;
 }) {
   const { colors, isDark } = useTheme();
   const reduced = useReducedMotion();
@@ -80,7 +83,13 @@ export function GlassTabBar({
       style={[styles.wrap, { bottom: Math.max(insets.bottom, GLASS_BAR_GAP) }]}
     >
       {/* Tabs. Shadow on the outside, glass clipped to the pill on the inside. */}
-      <View style={[styles.pill, shadow, { width: routes.length * ITEM_WIDTH + INSET * 2 }]}>
+      <View
+        style={[
+          styles.pill,
+          shadow,
+          { width: (routes.length + (onSettings ? 1 : 0)) * ITEM_WIDTH + INSET * 2 },
+        ]}
+      >
         <GlassSurface style={styles.pillGlass}>
           <View style={styles.row} accessibilityRole="tablist">
             {active >= 0 && (
@@ -129,6 +138,19 @@ export function GlassTabBar({
                 </Pressable>
               );
             })}
+            {onSettings && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Settings"
+                onPress={() => {
+                  haptics.select();
+                  onSettings();
+                }}
+                style={styles.item}
+              >
+                <Feather name="settings" size={20} color={colors.muted} />
+              </Pressable>
+            )}
           </View>
         </GlassSurface>
       </View>
