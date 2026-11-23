@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +18,24 @@ import { useMutation } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
 import { useTheme } from "../../../src/theme";
-import { isEpisodic, KIND_OPTIONS, STATUS_ORDER, statusLabel } from "../../../src/library/series";
+import {
+  isEpisodic,
+  isWatchKind,
+  KIND_LABEL,
+  KIND_OPTIONS,
+  STATUS_ORDER,
+  statusLabel,
+} from "../../../src/library/series";
+import {
+  type AniListFill,
+  type AniListMedia,
+  catalogFor,
+  catalogName,
+  errorMessage,
+  fillFrom,
+  resolveMatch,
+} from "../../../src/library/anilist";
+import { AniListResults, useAniListSearch } from "../../../src/library/anilist-results";
 
 export default function NewSeriesScreen() {
   const router = useRouter();
@@ -35,11 +53,44 @@ export default function NewSeriesScreen() {
   const [altNames, setAltNames] = useState("");
   const [genres, setGenres] = useState("");
   const [description, setDescription] = useState("");
+  const [fill, setFill] = useState<AniListFill | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [titleError, setTitleError] = useState("");
 
   const episodic = isEpisodic(kind);
+  const linked = fill !== null && title === fill.title ? fill : null;
+  const selectedAniListId = linked?.anilistId;
+  const anilist = useAniListSearch(title, kind, !linked);
+
+  const pick = async (media: AniListMedia) => {
+    Keyboard.dismiss();
+    let full: AniListMedia;
+    try {
+      full = await resolveMatch(media);
+    } catch (err) {
+      Alert.alert(catalogName(media.source), errorMessage(err, media.source));
+      return;
+    }
+
+    const next = fillFrom(full);
+    setFill(next);
+    setTitle(next.title);
+    setAltNames(next.altNames.join(", "));
+    setGenres(next.genres.join(", "));
+    setDescription(next.description);
+    setKind(next.kind);
+    if (next.totalChapters) setTotalChapters(String(next.totalChapters));
+    setTitleError("");
+  };
+
+  const unlink = () => {
+    setFill(null);
+    setAltNames("");
+    setGenres("");
+    setDescription("");
+    setTotalChapters("");
+  };
 
   const handleKindSelect = (selectedKind: SeriesKind) => {
     setKind(selectedKind);
@@ -90,9 +141,12 @@ export default function NewSeriesScreen() {
         chapter: chapNum,
         season: seasonNum,
         totalChapters: totalChaptersVal,
+        totalSeasons: episodic ? (linked?.totalSeasons ?? undefined) : undefined,
         altNames: altNamesArr.length > 0 ? altNamesArr : undefined,
         genres: genresArr.length > 0 ? genresArr : undefined,
         description: description.trim() || undefined,
+        anilistId: linked?.anilistId,
+        tvmazeId: linked?.tvmazeId,
       });
 
       if (newId) {
@@ -137,7 +191,7 @@ export default function NewSeriesScreen() {
                 setTitle(text);
                 if (titleError) setTitleError("");
               }}
-              placeholder="e.g. Solo Leveling, Frieren, Arcane…"
+              placeholder={`Search ${catalogName(catalogFor(kind))} or type a title`}
               placeholderTextColor={colors.muted}
               style={[
                 styles.input,
@@ -153,6 +207,55 @@ export default function NewSeriesScreen() {
             {titleError ? (
               <Text style={[styles.errorText, { color: colors.destructive }]}>{titleError}</Text>
             ) : null}
+            {linked ? (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surfaceHighlight,
+                  borderRadius: radii.controls,
+                  padding: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Feather name="star" size={14} color={colors.hanko} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "600", color: colors.ink }}>
+                    Filled from {catalogName(linked.source)}
+                  </Text>
+                  <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>
+                    {[
+                      KIND_LABEL[linked.kind],
+                      linked.totalChapters
+                        ? `${linked.totalChapters} ${isWatchKind(linked.kind) ? "ep" : "ch"}`
+                        : null,
+                      linked.totalSeasons && linked.totalSeasons > 1
+                        ? `${linked.totalSeasons} seasons`
+                        : null,
+                      linked.genres.slice(0, 3).join(", ") || null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityLabel={`Don't use ${catalogName(linked.source)} details`}
+                  hitSlop={8}
+                  onPress={unlink}
+                >
+                  <Feather name="x" size={16} color={colors.muted} />
+                </Pressable>
+              </View>
+            ) : (
+              <AniListResults
+                kind={kind}
+                state={anilist}
+                selectedId={selectedAniListId}
+                onPick={(media) => void pick(media)}
+              />
+            )}
           </View>
 
           {/* Type / Kind Selector */}

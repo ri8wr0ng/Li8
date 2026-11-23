@@ -74,6 +74,7 @@ function Landing({ signIn }: { signIn: ReactNode }) {
       <footer className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-6 pt-4 pb-8 text-sm text-muted-foreground sm:px-10">
         <span className="mr-auto">{SITE_NAME}</span>
         <nav aria-label="Legal and help" className="flex flex-wrap gap-x-5 gap-y-2">
+          <FooterLink to="/download">Download the app</FooterLink>
           <FooterLink to="/privacy">Privacy policy</FooterLink>
           <FooterLink to="/terms">Terms of service</FooterLink>
           <FooterLink to="/support">Support</FooterLink>
@@ -166,7 +167,7 @@ function FooterLink({
   to,
   children,
 }: {
-  to: "/privacy" | "/terms" | "/support";
+  to: "/privacy" | "/terms" | "/support" | "/download";
   children: ReactNode;
 }) {
   return (

@@ -16,6 +16,9 @@ export function PublicDocument({ title, children }: { title: string; children: R
       </main>
       <footer className="border-t py-6 text-sm text-muted-foreground">
         <nav aria-label="About li8" className="flex flex-wrap gap-x-6 gap-y-3">
+          <Link to="/download" activeProps={{ className: "text-foreground underline" }}>
+            Download the app
+          </Link>
           <Link to="/privacy" activeProps={{ className: "text-foreground underline" }}>
             Privacy policy
           </Link>

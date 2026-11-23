@@ -49,6 +49,7 @@ All fonts are self-hosted through `@fontsource-variable`, so they work offline a
 
 - Radius is 12px (`rounded-xl`) for controls, 16px (`rounded-2xl`) for cards, and fully round for the chapter buttons.
 - Press feedback is a scale-down (`active:scale-90`/`95`), with no bounce.
+- Library cards: text sits 20px in (16px on phones). The chevron and the + button share one trailing centre line, 24px in from the right edge. Cards in a row are the same height, so their chapter rows line up. (Set 2026-11-23.)
 - Shadows are soft and warm (`rgba(28,26,23,…)`) and used sparingly. Cards gain a shadow on hover.
 
 ## Voice

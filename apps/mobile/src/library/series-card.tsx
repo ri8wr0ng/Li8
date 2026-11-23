@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, Pressable } from "react-native";
+import { useState } from "react";
+import { StyleSheet, Text, TextInput, View, Pressable } from "react-native";
 import { PressableScale } from "../components/pressable-scale";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -43,7 +44,23 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     }
   });
   const update = useMutation(api.series.update);
-  const setChapter = useMutation(api.series.setChapter);
+  // Optimistic too, so a typed chapter shows at once instead of flicking back while it saves.
+  const setChapter = useMutation(api.series.setChapter).withOptimisticUpdate(
+    (store, { id, chapter }) => {
+      const set = (s: Doc<"series">) => (s._id === id ? { ...s, chapter } : s);
+      for (const { args, value } of store.getAllQueries(api.library.listPage)) {
+        if (!value || !value.page.some((s) => s._id === id)) continue;
+        store.setQuery(api.library.listPage, args, { ...value, page: value.page.map(set) });
+      }
+      for (const { args, value } of store.getAllQueries(api.library.search)) {
+        if (!value || !value.some((s) => s._id === id)) continue;
+        store.setQuery(api.library.search, args, value.map(set));
+      }
+    },
+  );
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
 
   const episodic = isEpisodic(series.kind);
   const isMovie = series.kind === "movie";
@@ -93,6 +110,17 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     void setChapter({ id: series._id, chapter: next });
   };
 
+  const commit = () => {
+    if (!editing) return;
+    const n = Number(draft.replace(",", "."));
+    setEditing(false);
+    if (!Number.isFinite(n) || n < 0 || n === series.chapter) return;
+    haptics.success();
+    setChapter({ id: series._id, chapter: n }).catch((err: unknown) =>
+      console.error("Set chapter error:", err),
+    );
+  };
+
   const seriesLabels =
     series.labelIds && labelsMap
       ? series.labelIds
@@ -104,6 +132,13 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     <PressableScale
       accessibilityRole="button"
       accessibilityLabel={`Open series ${series.title}`}
+      // The card is one accessibility element, so the chapter field is reached as an action.
+      accessibilityActions={isMovie ? undefined : [{ name: "setChapter", label: "Set chapter" }]}
+      onAccessibilityAction={(e) => {
+        if (e.nativeEvent.actionName !== "setChapter") return;
+        setDraft(formatChapter(series.chapter));
+        setEditing(true);
+      }}
       onPress={handlePressCard}
       scale={0.98}
       style={[
@@ -203,9 +238,40 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
                   S{series.season ?? 1} ·{" "}
                 </Text>
               )}
-              <Text style={[styles.chapterValue, typography.number, { color: colors.ink }]}>
-                {formatChapter(series.chapter)}
-              </Text>
+              {editing ? (
+                <TextInput
+                  autoFocus
+                  selectTextOnFocus
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  value={draft}
+                  onChangeText={setDraft}
+                  onSubmitEditing={commit}
+                  onBlur={commit}
+                  style={[
+                    styles.chapterValue,
+                    styles.chapterInput,
+                    typography.number,
+                    { color: colors.ink, borderColor: colors.hanko },
+                  ]}
+                />
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set ${episodic ? "episode" : "chapter"} for ${series.title}`}
+                  hitSlop={8}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    haptics.tap();
+                    setDraft(formatChapter(series.chapter));
+                    setEditing(true);
+                  }}
+                >
+                  <Text style={[styles.chapterValue, typography.number, { color: colors.ink }]}>
+                    {formatChapter(series.chapter)}
+                  </Text>
+                </Pressable>
+              )}
               {series.totalChapters ? (
                 <Text
                   style={[styles.totalChapterValue, typography.number, { color: colors.muted }]}
@@ -388,6 +454,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     lineHeight: 36,
     fontWeight: "700",
+  },
+  chapterInput: {
+    minWidth: 64,
+    paddingVertical: 0,
+    paddingHorizontal: 6,
+    marginLeft: -6,
+    borderBottomWidth: 2,
   },
   totalChapterValue: {
     fontSize: 16,

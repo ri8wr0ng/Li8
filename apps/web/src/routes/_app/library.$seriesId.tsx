@@ -289,13 +289,14 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
                       placeholder="?"
                       inputMode="decimal"
                       aria-label="Total episodes this season"
+                      title="Episodes in this season"
                       onCommit={(v) => {
                         const n = Number(v);
                         void save({
                           totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
                         });
                       }}
-                      className="w-20 bg-transparent font-mono tabular-nums outline-none placeholder:text-muted-foreground/60"
+                      className="w-16 border-b border-dashed border-muted-foreground/40 bg-transparent font-mono tabular-nums outline-none placeholder:text-muted-foreground/60 hover:border-foreground/60 focus:border-hanko"
                     />
                   </span>
                 </div>
@@ -340,6 +341,23 @@ function SeriesDetail({ series }: { series: Doc<"series"> }) {
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-4 border-t pt-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span>Episodes this season:</span>
+                <BlurField
+                  value={series.totalChapters ? formatChapter(series.totalChapters) : ""}
+                  placeholder="—"
+                  inputMode="decimal"
+                  disabled={readOnly}
+                  aria-label="Episodes this season"
+                  onCommit={(v) => {
+                    const n = Number(v);
+                    void save({
+                      totalChapters: v.trim() && Number.isFinite(n) && n > 0 ? n : null,
+                    });
+                  }}
+                  className="w-12 rounded border bg-background px-1.5 py-0.5 text-center font-mono text-foreground"
+                />
+              </div>
               <div className="flex items-center gap-1.5">
                 <span>Current season:</span>
                 <BlurField

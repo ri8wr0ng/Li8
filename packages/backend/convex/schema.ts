@@ -71,6 +71,8 @@ export default defineSchema({
     links: v.optional(v.array(vSeriesLink)),
     // AniList media id, when the series was filled in from AniList. No cover art is stored.
     anilistId: v.optional(v.number()),
+    // TVmaze show id, when a TV or reality series was filled in from TVmaze.
+    tvmazeId: v.optional(v.number()),
     lastReadAt: v.number(),
     updatedAt: v.number(),
   })

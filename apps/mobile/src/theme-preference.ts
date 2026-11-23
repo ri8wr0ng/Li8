@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Appearance } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import { getItemAsync, setItemAsync } from "./storage";
 
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -16,7 +16,7 @@ function apply(value: ThemePreference) {
 /** Restores the saved choice. Called once at startup. */
 export async function loadThemePreference() {
   try {
-    const saved = await SecureStore.getItemAsync(KEY);
+    const saved = await getItemAsync(KEY);
     if (saved === "light" || saved === "dark" || saved === "system") {
       current = saved;
       apply(saved);
@@ -31,7 +31,7 @@ export function setThemePreference(value: ThemePreference) {
   current = value;
   apply(value);
   for (const listener of listeners) listener(value);
-  void SecureStore.setItemAsync(KEY, value).catch(() => {});
+  void setItemAsync(KEY, value).catch(() => {});
 }
 
 export function useThemePreference() {

@@ -21,6 +21,7 @@ import type { Id } from "@inkmark/backend/convex/_generated/dataModel";
 import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
 import { useTheme } from "../../../src/theme";
 import { haptics } from "../../../src/haptics";
+import { AniListControls } from "../../../src/library/anilist-controls";
 import {
   formatChapter,
   isEpisodic,
@@ -746,6 +747,8 @@ export default function SeriesDetailScreen() {
             </ScrollView>
           </View>
         </View>
+
+        <AniListControls series={series} />
 
         {/* Description */}
         {series.description ? (

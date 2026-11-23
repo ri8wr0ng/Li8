@@ -39,8 +39,8 @@ function PrivacyPage() {
         notes and Library so you can view them offline.
       </p>
       <p>
-        When you look up a title with AniList, your browser sends the title search or media ID to
-        AniList.
+        When you look up a title, your browser or the app sends the title search or media ID to
+        AniList (manga, novels, anime and anime films) or TVmaze (TV series and reality shows).
       </p>
 
       <h2>Optional AI features</h2>

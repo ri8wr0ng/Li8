@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useConvexAuth, useQuery } from "convex/react";
-import * as SecureStore from "expo-secure-store";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "./theme";
+import { getItem, setItemAsync } from "./storage";
 
 const AI_KEY = "inkmark.aiEnabled";
 
@@ -15,7 +15,7 @@ let lastAiEnabled = readAiEnabled();
 
 function readAiEnabled() {
   try {
-    return SecureStore.getItem(AI_KEY) === "1";
+    return getItem(AI_KEY) === "1";
   } catch {
     return false;
   }
@@ -45,7 +45,7 @@ export function useTabsGate() {
   useEffect(() => {
     if (live === undefined || live === lastAiEnabled) return;
     lastAiEnabled = live;
-    void SecureStore.setItemAsync(AI_KEY, live ? "1" : "0").catch(() => {});
+    void setItemAsync(AI_KEY, live ? "1" : "0").catch(() => {});
   }, [live]);
 
   return {
