@@ -237,8 +237,7 @@ function AvatarPicker({ user }: { user: User }) {
               accessibilityState={{ checked: selected }}
               scale={0.92}
               onPress={() => {
-                if (selected) return;
-                haptics.select();
+                if (!selected) haptics.select();
                 void save({ avatarStyle: key });
               }}
               style={[
