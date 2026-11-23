@@ -12,12 +12,10 @@ import {
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "../src/theme";
 import { haptics } from "../src/haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useThemePreference, type ThemePreference } from "../src/theme-preference";
 import {
   STATUS_LABEL,
   STATUS_ORDER,
@@ -25,7 +23,6 @@ import {
   isSeriesKind,
   progressLabel,
 } from "../src/library/series";
-import { UpdateSettings } from "../src/updates/update-settings";
 import { PressableScale } from "../src/components/pressable-scale";
 import { SvgXml } from "react-native-svg";
 import {
@@ -39,12 +36,6 @@ import {
 } from "../src/components/user-avatar";
 
 const number = (n: number) => new Intl.NumberFormat().format(n);
-
-const THEMES: { value: ThemePreference; label: string; icon: "sun" | "moon" | "smartphone" }[] = [
-  { value: "light", label: "Light", icon: "sun" },
-  { value: "dark", label: "Dark", icon: "moon" },
-  { value: "system", label: "Match device", icon: "smartphone" },
-];
 
 export default function ProfileScreen() {
   const user = useQuery(api.users.me);
@@ -96,14 +87,6 @@ export default function ProfileScreen() {
           )}
         </>
       ) : null}
-
-      <Section title="Appearance">
-        <ThemePicker />
-      </Section>
-
-      <UpdateSettings />
-
-      <SignOut />
     </ScrollView>
   );
 }
@@ -413,86 +396,6 @@ function InProgress({ current }: { current: Stats["current"] }) {
   );
 }
 
-function ThemePicker() {
-  const { colors, radii } = useTheme();
-  const [theme, setTheme] = useThemePreference();
-  return (
-    <View style={styles.themes} accessibilityRole="radiogroup" accessibilityLabel="Theme">
-      {THEMES.map((t) => {
-        const selected = theme === t.value;
-        return (
-          <PressableScale
-            key={t.value}
-            containerStyle={styles.flex}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: selected }}
-            onPress={() => {
-              if (t.value !== theme) haptics.select();
-              setTheme(t.value);
-            }}
-            style={[
-              styles.theme,
-              {
-                backgroundColor: colors.card,
-                borderColor: selected ? colors.ink : colors.border,
-                borderRadius: radii.card,
-              },
-            ]}
-          >
-            <Feather name={t.icon} size={20} color={selected ? colors.ink : colors.muted} />
-            <Text style={[styles.themeLabel, { color: selected ? colors.ink : colors.muted }]}>
-              {t.label}
-            </Text>
-          </PressableScale>
-        );
-      })}
-    </View>
-  );
-}
-
-function SignOut() {
-  const { signOut } = useAuthActions();
-  const { colors, radii, typography } = useTheme();
-  const [busy, setBusy] = useState(false);
-
-  async function handle() {
-    setBusy(true);
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
-      setBusy(false);
-    }
-  }
-
-  return (
-    <PressableScale
-      onPress={() => void handle()}
-      disabled={busy}
-      style={[
-        styles.signOut,
-        {
-          borderColor: colors.border,
-          borderRadius: radii.controls,
-          backgroundColor: colors.card,
-          opacity: busy ? 0.7 : 1,
-        },
-      ]}
-    >
-      {busy ? (
-        <ActivityIndicator size="small" color={colors.destructive} />
-      ) : (
-        <>
-          <Feather name="log-out" size={16} color={colors.destructive} />
-          <Text style={[styles.signOutText, typography.display, { color: colors.destructive }]}>
-            Sign out
-          </Text>
-        </>
-      )}
-    </PressableScale>
-  );
-}
-
 function Section({ title, children }: { title: string; children: ReactNode }) {
   const { colors, typography } = useTheme();
   return (
@@ -543,16 +446,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, height: 48 },
   rowTitle: { fontWeight: "500" },
   mono: { fontVariant: ["tabular-nums"], fontSize: 13 },
-  themes: { flexDirection: "row", gap: 8 },
-  theme: { alignItems: "center", gap: 8, paddingVertical: 16, borderWidth: 1 },
-  themeLabel: { fontSize: 13, fontWeight: "500" },
-  signOut: {
-    height: 48,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  signOutText: { fontSize: 15 },
 });
