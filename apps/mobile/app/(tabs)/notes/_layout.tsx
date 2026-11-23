@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { ProfileButton } from "../../../src/components/profile-button";
+import { tabRootHeader } from "../../../src/components/profile-button";
 import { useTheme } from "../../../src/theme";
 
 export default function NotesLayout() {
@@ -26,7 +26,7 @@ export default function NotesLayout() {
         name="index"
         options={{
           title: "Notes",
-          headerLeft: ProfileButton,
+          ...tabRootHeader,
         }}
       />
       <Stack.Screen
