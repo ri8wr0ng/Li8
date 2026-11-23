@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Redirect, useRouter } from "expo-router";
+import { Redirect, usePathname, useRouter } from "expo-router";
 import { Tabs, type BottomTabBarProps } from "expo-router/js-tabs";
 import { useMutation } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -36,6 +36,7 @@ function GlassScreenLayout({
  */
 export default function TabsLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const { signedOut, showAsk } = useTabsGate();
   const createNote = useMutation(api.notes.create);
   const [creating, setCreating] = useState(false);
@@ -56,9 +57,12 @@ export default function TabsLayout() {
   if (signedOut) return <Redirect href="/sign-in" />;
 
   const tabs = showAsk ? ALL_TABS : ALL_TABS.filter((t) => t.name !== "ask");
-  const actionFor = (tab: string | undefined): GlassAction => {
+  const actionFor = (tab: string | undefined): GlassAction | undefined => {
+    // Only from the Library list: on a series or the Add form it would stack another form.
     if (tab === "library")
-      return { label: "Add to library", icon: "plus", onPress: () => router.push("/library/new") };
+      return pathname === "/library"
+        ? { label: "Add to library", icon: "plus", onPress: () => router.push("/library/new") }
+        : undefined;
     if (tab === "ask") return { label: "New chat", icon: "plus", onPress: requestNewChat };
     return {
       label: "New note",
