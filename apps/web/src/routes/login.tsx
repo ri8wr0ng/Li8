@@ -4,6 +4,7 @@ import { useConvexAuth } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Wordmark } from "#/components/brand";
+import { DownloadAppButton, OtherDownloadsLink } from "#/components/download-app";
 import { Button } from "#/components/ui/button";
 import { clearCache } from "#/lib/offline";
 import { HOME_TITLE, SITE_NAME, SITE_URL, absoluteUrl } from "#/lib/seo";
@@ -53,7 +54,13 @@ function Landing({ signIn }: { signIn: ReactNode }) {
             title and a chapter or episode to save your place.
           </p>
 
-          <div className="mt-9">{signIn}</div>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div>{signIn}</div>
+            <DownloadAppButton />
+          </div>
+          <div className="mt-4">
+            <OtherDownloadsLink />
+          </div>
 
           <ul className="mt-12 space-y-3 text-[0.95rem] leading-relaxed">
             <Point title="Track progress.">
