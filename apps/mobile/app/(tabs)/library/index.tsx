@@ -151,6 +151,8 @@ export default function LibraryScreen() {
       >
         <Feather name="search" size={18} color={colors.muted} style={styles.searchIcon} />
         <TextInput
+          selectionColor={colors.hanko}
+          cursorColor={colors.hanko}
           accessibilityLabel="Search titles and alternative names"
           value={searchQuery}
           onChangeText={setSearchQuery}

@@ -258,6 +258,8 @@ export function LabelFilterModal({
           {/* Create new label input */}
           <View style={styles.createLabelRow}>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={newLabelName}
               onChangeText={setNewLabelName}
               placeholder="Create or search label…"

@@ -123,6 +123,8 @@ export default function SearchScreen() {
       >
         <Feather name="search" size={18} color={colors.muted} />
         <TextInput
+          selectionColor={colors.hanko}
+          cursorColor={colors.hanko}
           ref={inputRef}
           value={query}
           onChangeText={setQuery}

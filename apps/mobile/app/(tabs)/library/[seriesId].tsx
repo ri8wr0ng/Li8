@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { dialog } from "../../../src/components/dialog";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useTabBarInset } from "../../../src/components/glass";
 import * as WebBrowser from "expo-web-browser";
@@ -173,7 +173,7 @@ export default function SeriesDetailScreen() {
   const handleSaveChapter = async () => {
     const num = Number(chapterInputVal.trim());
     if (!Number.isFinite(num) || num < 0) {
-      Alert.alert("Invalid number", "Please enter a valid non-negative number like 12 or 12.5");
+      dialog.alert("Invalid number", "Please enter a valid non-negative number like 12 or 12.5");
       return;
     }
     setIsSettingChapter(true);
@@ -182,7 +182,7 @@ export default function SeriesDetailScreen() {
       setChapterModalVisible(false);
     } catch (err) {
       console.error("Set chapter error:", err);
-      Alert.alert("Error", "Could not update chapter. Please try again.");
+      dialog.alert("Error", "Could not update chapter. Please try again.");
     } finally {
       setIsSettingChapter(false);
     }
@@ -238,7 +238,10 @@ export default function SeriesDetailScreen() {
     try {
       const canOpen = await Linking.canOpenURL(url);
       if (canOpen) {
-        await WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url));
+        await WebBrowser.openBrowserAsync(url, {
+          toolbarColor: colors.paper,
+          controlsColor: colors.hanko,
+        }).catch(() => Linking.openURL(url));
       } else {
         await Linking.openURL(url);
       }
@@ -254,11 +257,11 @@ export default function SeriesDetailScreen() {
     const url = newLinkUrl.trim();
     if (!url) return;
     if (!isHttpUrl(url)) {
-      Alert.alert("Invalid URL", "Links must start with http:// or https://");
+      dialog.alert("Invalid URL", "Links must start with http:// or https://");
       return;
     }
     if (links.some((l) => l.url === url)) {
-      Alert.alert("Duplicate Link", "That link is already saved.");
+      dialog.alert("Duplicate Link", "That link is already saved.");
       return;
     }
     const label = newLinkLabel.trim();
@@ -270,7 +273,7 @@ export default function SeriesDetailScreen() {
       setAddLinkModalVisible(false);
     } catch (err) {
       console.error("Add link error:", err);
-      Alert.alert("Error", "Could not save link.");
+      dialog.alert("Error", "Could not save link.");
     }
   };
 
@@ -286,7 +289,7 @@ export default function SeriesDetailScreen() {
   const handleSaveDetails = async () => {
     const titleTrimmed = editTitle.trim();
     if (!titleTrimmed) {
-      Alert.alert("Required", "Title is required");
+      dialog.alert("Required", "Title is required");
       return;
     }
     const altNamesArr = editAltNames
@@ -313,13 +316,13 @@ export default function SeriesDetailScreen() {
       setEditDetailsVisible(false);
     } catch (err) {
       console.error("Save details error:", err);
-      Alert.alert("Error", "Could not save series details.");
+      dialog.alert("Error", "Could not save series details.");
     }
   };
 
   const handleConfirmDelete = () => {
     haptics.warning();
-    Alert.alert(`Remove ${series.title}?`, "Its history goes too. This can't be undone.", [
+    dialog.alert(`Remove ${series.title}?`, "Its history goes too. This can't be undone.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
@@ -988,6 +991,8 @@ export default function SeriesDetailScreen() {
               Set {episodic ? "Episode" : "Chapter"}
             </Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={chapterInputVal}
               onChangeText={setChapterInputVal}
               keyboardType="decimal-pad"
@@ -1077,6 +1082,8 @@ export default function SeriesDetailScreen() {
             {/* Create new label */}
             <View style={styles.createLabelInputRow}>
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
                 value={newLabelText}
                 onChangeText={setNewLabelText}
                 placeholder="New label name…"
@@ -1191,6 +1198,8 @@ export default function SeriesDetailScreen() {
 
             <Text style={[styles.inputFieldLabel, { color: colors.muted }]}>URL</Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={newLinkUrl}
               onChangeText={setNewLinkUrl}
               placeholder="https://example.com/ch-{n}"
@@ -1215,6 +1224,8 @@ export default function SeriesDetailScreen() {
               Name (optional)
             </Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={newLinkLabel}
               onChangeText={setNewLinkLabel}
               placeholder="Site Name"
@@ -1299,6 +1310,8 @@ export default function SeriesDetailScreen() {
             <ScrollView style={styles.editDetailsScroll}>
               <Text style={[styles.inputFieldLabel, { color: colors.muted }]}>Title *</Text>
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
                 value={editTitle}
                 onChangeText={setEditTitle}
                 placeholder="Title"
@@ -1318,6 +1331,8 @@ export default function SeriesDetailScreen() {
                 Alternative Names (comma-separated)
               </Text>
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
                 value={editAltNames}
                 onChangeText={setEditAltNames}
                 placeholder="BTTH, 斗破苍穹…"
@@ -1337,6 +1352,8 @@ export default function SeriesDetailScreen() {
                 Total Chapters / Episodes
               </Text>
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
                 value={editTotalChapters}
                 onChangeText={setEditTotalChapters}
                 keyboardType="decimal-pad"
@@ -1357,6 +1374,8 @@ export default function SeriesDetailScreen() {
                 Genres (comma-separated)
               </Text>
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
                 value={editGenres}
                 onChangeText={setEditGenres}
                 placeholder="Action, Fantasy, Romance…"
@@ -1376,6 +1395,8 @@ export default function SeriesDetailScreen() {
                 Description
               </Text>
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
                 value={editDescription}
                 onChangeText={setEditDescription}
                 multiline
@@ -1485,6 +1506,8 @@ function PastSeasonRow({
           last E
         </Text>
         <TextInput
+          selectionColor={colors.hanko}
+          cursorColor={colors.hanko}
           value={value}
           onChangeText={setValue}
           onEndEditing={() => void handleSave()}

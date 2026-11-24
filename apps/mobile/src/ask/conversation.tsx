@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { dialog } from "../components/dialog";
 import { useNavigation } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { Feather } from "@expo/vector-icons";
@@ -114,7 +114,7 @@ export function AskScreen() {
 
   function confirmDelete(thread: { id: string; title: string }) {
     haptics.warning();
-    Alert.alert("Delete this chat?", `“${thread.title}” and its messages will be deleted.`, [
+    dialog.alert("Delete this chat?", `“${thread.title}” and its messages will be deleted.`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete chat",
@@ -124,7 +124,7 @@ export function AskScreen() {
             .then(() => {
               if (threadId === thread.id) setThreadId(undefined);
             })
-            .catch((error: unknown) => Alert.alert("Couldn't delete chat", errorMessage(error)));
+            .catch((error: unknown) => dialog.alert("Couldn't delete chat", errorMessage(error)));
         },
       },
     ]);
@@ -244,7 +244,7 @@ export function Conversation({
       setPrompt("");
       if (id !== threadId) onThread(id);
     } catch (error) {
-      Alert.alert("Couldn't send", errorMessage(error));
+      dialog.alert("Couldn't send", errorMessage(error));
     } finally {
       setSending(false);
     }
@@ -316,6 +316,8 @@ export function Conversation({
           ]}
         >
           <TextInput
+            selectionColor={colors.hanko}
+            cursorColor={colors.hanko}
             value={prompt}
             onChangeText={setPrompt}
             placeholder="Ask about your notes or Library…"

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { dialog } from "../components/dialog";
 import { Feather } from "@expo/vector-icons";
 import { useMutation } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -50,12 +50,12 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
     const before = snapshotOf(series);
     const after = patchFrom(series, await resolveMatch(media));
     if (samePatch(before, after)) {
-      Alert.alert(`Already up to date with ${catalogName(media.source)}`);
+      dialog.alert(`Already up to date with ${catalogName(media.source)}`);
       return;
     }
     await update({ id: series._id, ...after });
     haptics.success();
-    Alert.alert(verb, undefined, [
+    dialog.alert(verb, undefined, [
       {
         text: "Undo",
         style: "cancel",
@@ -72,11 +72,14 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
       await apply(await getCatalog(linked.source, linked.id), `Updated from ${name}`);
     } catch (err) {
       if (!(err instanceof AniListError)) console.error(err);
-      Alert.alert(
+      dialog.alert(
         name,
         errorMessage(err, source),
         err instanceof AniListError && err.kind === "not_found"
-          ? [{ text: "Find again", onPress: () => setFinding(true) }, { text: "OK" }]
+          ? [
+              { text: "OK", style: "cancel" },
+              { text: "Find again", onPress: () => setFinding(true) },
+            ]
           : undefined,
       );
     } finally {
@@ -87,7 +90,7 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
   async function unlink() {
     const before = { anilistId: series.anilistId ?? null, tvmazeId: series.tvmazeId ?? null };
     await update({ id: series._id, anilistId: null, tvmazeId: null });
-    Alert.alert(`Unlinked from ${name}`, undefined, [
+    dialog.alert(`Unlinked from ${name}`, undefined, [
       {
         text: "Undo",
         style: "cancel",
@@ -169,7 +172,7 @@ export function AniListControls({ series }: { series: Doc<"series"> }) {
               setFinding(false);
               apply(media, `Filled in from ${catalogName(media.source)}`).catch((err: unknown) => {
                 if (!(err instanceof AniListError)) console.error(err);
-                Alert.alert(
+                dialog.alert(
                   catalogName(media.source),
                   err instanceof AniListError
                     ? errorMessage(err, media.source)
@@ -228,6 +231,9 @@ function Finder({
       </Text>
 
       <TextInput
+        selectionColor={colors.hanko}
+        cursorColor={colors.hanko}
+
         autoFocus
         value={query}
         onChangeText={setQuery}

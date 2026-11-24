@@ -81,6 +81,8 @@ export function ChipInput({
         </View>
       ))}
       <TextInput
+        selectionColor={colors.hanko}
+        cursorColor={colors.hanko}
         value={draft}
         onChangeText={(text) => {
           if (text.includes(",")) {
