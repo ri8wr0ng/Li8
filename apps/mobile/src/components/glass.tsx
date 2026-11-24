@@ -43,6 +43,12 @@ const GlassContext = createContext<{
   setTarget: (target: Target) => void;
 }>({ target: null, setTarget: () => {} });
 
+/**
+ * True inside a tab screen's blur target. Glass there must not blur the target: a BlurView
+ * drawing the view it sits in recurses in Android's RenderThread until the app crashes.
+ */
+const InsideTargetContext = createContext(false);
+
 /** Lets the floating tab bar blur whichever tab is showing. */
 export function GlassProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<Target | null>(null);
@@ -73,7 +79,7 @@ export function GlassTarget({
 
   return (
     <BlurTargetView ref={ref} style={styles.screen}>
-      {children}
+      <InsideTargetContext.Provider value>{children}</InsideTargetContext.Provider>
     </BlurTargetView>
   );
 }
@@ -101,7 +107,8 @@ export function GlassSurface({
   children?: ReactNode;
 }) {
   const { colors, isDark } = useTheme();
-  const { target } = useContext(GlassContext);
+  const { target: sharedTarget } = useContext(GlassContext);
+  const target = useContext(InsideTargetContext) ? null : sharedTarget;
   const reduced = useReducedTransparency();
   const radius = StyleSheet.flatten(style)?.borderRadius ?? 0;
 
