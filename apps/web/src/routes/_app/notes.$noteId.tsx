@@ -316,7 +316,10 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-8">
       {/* Toolbar */}
-      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 flex h-14 items-center gap-1 bg-background/85 px-4 backdrop-blur-md sm:-mx-8 sm:px-8 lg:top-0">
+      <div
+        data-sticky-chrome
+        className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 flex h-14 items-center gap-1 bg-background/85 px-4 backdrop-blur-md sm:-mx-8 sm:px-8 lg:top-0"
+      >
         <Button
           asChild
           variant="ghost"

@@ -13,6 +13,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   PenLine,
+  Plus,
+  RotateCw,
   Search,
   Settings,
   Sparkles,
@@ -29,6 +31,14 @@ import { HelpDialog } from "#/components/help-dialog";
 import { InstallBanner, IosInstallHelp } from "#/components/install-prompt";
 import { MobileNav } from "#/components/mobile-nav";
 import { Button } from "#/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuTrigger,
+} from "#/components/ui/context-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "#/components/ui/tooltip";
 import { UserAvatar } from "#/components/user-avatar";
 import {
@@ -81,6 +91,8 @@ function Shell({ children }: { children: ReactNode }) {
   const { openPalette } = useCommandPalette();
   const panel = useAiPanel();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const [contextDisabled, setContextDisabled] = useState(false);
   const newNote = useNewNote();
   const { isMobile, setOpenMobile } = useSidebar();
 
@@ -210,7 +222,10 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 flex-1">
         <SidebarInset className="min-w-0">
           {/* Mobile top bar */}
-          <header className="pt-safe sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md lg:hidden">
+          <header
+            data-sticky-chrome
+            className="pt-safe sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md lg:hidden"
+          >
             <div className="flex h-14 items-center gap-1 pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))]">
               <SidebarTrigger className="-ml-1 size-9" />
               <Link to="/">
@@ -224,9 +239,50 @@ function Shell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <div className="min-w-0 flex-1 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
-            {children}
-          </div>
+          <ContextMenu>
+            <ContextMenuTrigger
+              asChild
+              disabled={contextDisabled}
+              onPointerDownCapture={(e) => {
+                if (e.button !== 2) {
+                  setContextDisabled(false);
+                  return;
+                }
+                const target = e.target;
+                const editing =
+                  target instanceof Element &&
+                  Boolean(target.closest('input, textarea, [contenteditable="true"]'));
+                setContextDisabled(editing || Boolean(window.getSelection()?.toString()));
+              }}
+            >
+              <div className="min-w-0 flex-1 pr-[env(safe-area-inset-right)] pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] lg:pb-0">
+                {children}
+              </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-52">
+              <ContextMenuItem onSelect={() => void newNote()}>
+                <Plus /> New note
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={openPalette}>
+                <Search /> Search <ContextMenuShortcut>{modKey} K</ContextMenuShortcut>
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => void navigate({ to: "/" })}>
+                <FileText /> Notes
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => void navigate({ to: "/library" })}>
+                <Library /> Library
+              </ContextMenuItem>
+              {panel.available && (
+                <ContextMenuItem onSelect={() => void navigate({ to: "/ask" })}>
+                  <MessageCircle /> Ask AI
+                </ContextMenuItem>
+              )}
+              <ContextMenuSeparator />
+              <ContextMenuItem onSelect={() => location.reload()}>
+                <RotateCw /> Reload
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         </SidebarInset>
 
         <AiPanel />

@@ -20,6 +20,21 @@ import { cn } from "#/lib/utils";
 const MOD =
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
 
+/** The viewport below any sticky chrome (`data-sticky-chrome`) that covers the top of the page. */
+function visibleArea() {
+  let top = 0;
+  for (const el of document.querySelectorAll<HTMLElement>("[data-sticky-chrome]")) {
+    const rect = el.getBoundingClientRect();
+    if (rect.height > 0 && rect.top < window.innerHeight / 2) top = Math.max(top, rect.bottom);
+  }
+  return {
+    x: 0,
+    y: top,
+    width: window.innerWidth,
+    height: Math.max(0, window.innerHeight - top),
+  };
+}
+
 /**
  * Formatting for the selected text, floating just above it. Shows for a text selection outside
  * code blocks; the link button swaps the buttons for an address field in place.
@@ -43,7 +58,14 @@ export function NoteBubbleMenu({ controller }: { controller: NoteEditorControlle
   return (
     <BubbleMenu
       editor={editor}
-      options={{ placement: "top", offset: 8, flip: true, shift: { padding: 8 } }}
+      options={{
+        placement: "top",
+        offset: 8,
+        // Treat the sticky header and toolbars as off-screen, so a selection on the first lines
+        // flips the menu below the text instead of sliding it under (or over) the toolbar.
+        flip: () => ({ rootBoundary: visibleArea(), padding: 8 }),
+        shift: () => ({ rootBoundary: visibleArea(), padding: 8 }),
+      }}
       shouldShow={({ editor: instance, view, from, to }) => {
         if (linkingRef.current) return true;
         if (!instance.isEditable || from === to || !view.hasFocus()) return false;

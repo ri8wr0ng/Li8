@@ -7,7 +7,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useNavigation, useRouter } from "expo-router";
@@ -17,7 +16,7 @@ import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../../../src/theme";
 import { HeaderActions, HeaderIconButton } from "../../../src/components/profile-button";
-import { useTabBarInset } from "../../../src/components/glass";
+import { BottomSearchBar, useBottomSearchInset } from "../../../src/components/bottom-search-bar";
 import { EmptyState } from "../../../src/notes/empty-state";
 import { NoteCard } from "../../../src/notes/note-card";
 
@@ -34,7 +33,7 @@ type ListItem =
 export default function NotesScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const tabBarInset = useTabBarInset();
+  const bottomInset = useBottomSearchInset();
   const { colors, radii, typography } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -332,42 +331,6 @@ export default function NotesScreen() {
     <View style={[styles.container, { backgroundColor: colors.paper }]}>
       {/* Search Header */}
       <View style={styles.searchHeader}>
-        <View
-          style={[
-            styles.searchField,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              borderRadius: radii.controls,
-            },
-          ]}
-        >
-          <Feather name="search" size={18} color={colors.muted} style={styles.searchIcon} />
-          <TextInput
-            selectionColor={colors.hanko}
-            cursorColor={colors.hanko}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search notes…"
-            placeholderTextColor={colors.muted}
-            style={[styles.searchInput, { color: colors.ink }]}
-            autoCapitalize="none"
-            autoCorrect={false}
-            clearButtonMode="while-editing"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              onPress={() => setSearchQuery("")}
-              style={styles.clearBtn}
-            >
-              <Feather name="x" size={16} color={colors.muted} />
-            </Pressable>
-          )}
-        </View>
-
         {searchQuery.length === 0 && (
           <View
             style={[
@@ -420,7 +383,7 @@ export default function NotesScreen() {
         contentContainerStyle={[
           styles.listContent,
           {
-            paddingBottom: tabBarInset + 16,
+            paddingBottom: bottomInset,
           },
         ]}
         refreshControl={
@@ -436,6 +399,12 @@ export default function NotesScreen() {
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
       />
+
+      <BottomSearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search notes…"
+      />
     </View>
   );
 }
@@ -449,26 +418,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
   },
-  searchField: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    height: 44,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: "100%",
-    fontSize: 15,
-  },
-  clearBtn: {
-    padding: 4,
-  },
   segmentedControl: {
-    marginTop: 10,
     height: 34,
     borderWidth: 1,
     padding: 2,
