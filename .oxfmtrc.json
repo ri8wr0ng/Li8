@@ -2,6 +2,7 @@
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "ignorePatterns": [
     "**/routeTree.gen.ts",
+    "apps/web/src/styles/typeset.css",
     "**/convex/_generated/**",
     "pnpm-lock.yaml",
     "bun.lock",

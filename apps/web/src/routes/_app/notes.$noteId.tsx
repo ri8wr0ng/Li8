@@ -262,7 +262,8 @@ function Editor({ note }: { note: Doc<"notes"> }) {
       save.queue({ body: markdown });
     },
     editable: !readOnly,
-    placeholder: "Start writing…",
+    placeholder: "Start writing, or type / for blocks…",
+    slashCommands: true,
     find: findOpen ? find : "",
     activeIndex: active,
   });

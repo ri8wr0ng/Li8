@@ -29,6 +29,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { NoteBubbleMenu } from "#/components/editor/bubble-menu";
+import { SlashMenu } from "#/components/editor/slash-menu";
 import { Button } from "#/components/ui/button";
 import {
   DropdownMenu,
@@ -289,7 +291,7 @@ export function NoteToolbar({
           </TooltipTrigger>
           <TooltipContent>Alignment</TooltipContent>
         </Tooltip>
-        <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuContent align="end" className="w-60">
           <DropdownMenuRadioGroup
             value={toolbar.align}
             onValueChange={(value) => {
@@ -298,9 +300,9 @@ export function NoteToolbar({
             }}
           >
             {ALIGN_OPTIONS.map(({ value, label, icon: Icon, keys }) => (
-              <DropdownMenuRadioItem key={value} value={value}>
+              <DropdownMenuRadioItem key={value} value={value} className="whitespace-nowrap">
                 <Icon /> {label}
-                <span className="ml-auto text-[0.7rem] text-muted-foreground">
+                <span className="ml-auto pl-4 text-[0.7rem] text-muted-foreground">
                   {MOD} {keys}
                 </span>
               </DropdownMenuRadioItem>
@@ -438,7 +440,7 @@ function LinkButton({
   );
 }
 
-/** The editable note body. Styles live under `.note-editor` in styles.css. */
+/** The editable note body. Styles live under `.note-editor` in styles/index.css. */
 export function NoteEditorContent({
   controller,
   className,
@@ -446,11 +448,20 @@ export function NoteEditorContent({
   controller: NoteEditorController;
   className?: string;
 }): ReactNode {
+  const { editor } = controller;
   return (
-    <EditorContent
-      editor={controller.editor}
-      className={cn("prose dark:prose-invert max-w-none", className)}
-    />
+    <>
+      <EditorContent
+        editor={editor}
+        className={cn("typeset typeset-docs max-w-[37em]", className)}
+      />
+      {editor && (
+        <>
+          <NoteBubbleMenu controller={controller} />
+          <SlashMenu editor={editor} />
+        </>
+      )}
+    </>
   );
 }
 

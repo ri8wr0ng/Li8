@@ -19,6 +19,7 @@ export type EditorCommand =
   | { type: "taskList" }
   | { type: "blockquote" }
   | { type: "codeBlock" }
+  | { type: "horizontalRule" }
   | { type: "align"; value: Alignment }
   /** An empty `href` removes the link. */
   | { type: "link"; href: string };
@@ -94,6 +95,8 @@ export function runEditorCommand(editor: Editor, command: EditorCommand): boolea
       return chain.toggleBlockquote().run();
     case "codeBlock":
       return chain.toggleCodeBlock().run();
+    case "horizontalRule":
+      return chain.setHorizontalRule().run();
     case "align":
       return chain.setTextAlign(command.value).run();
     case "link": {
