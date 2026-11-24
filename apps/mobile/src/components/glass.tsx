@@ -2,8 +2,10 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ComponentRef,
   type ReactNode,
   type RefObject,
@@ -18,6 +20,7 @@ import {
 } from "react-native";
 import { BlurTargetView, BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useIsFocused } from "expo-router/react-navigation";
 import { useTheme } from "../theme";
 
 /** Android's floating tab bar: a capsule this tall, floating this far above the bottom edge. */
@@ -49,6 +52,58 @@ const GlassContext = createContext<{
  */
 const InsideTargetContext = createContext(false);
 
+/**
+ * A layer beside a tab's blur target (not inside it), where floating glass can sit and still
+ * blur the screen behind it. `GlassOverlay` hands its children over; only the layer re-renders.
+ */
+type OverlayLayer = { node: ReactNode; listeners: Set<() => void> };
+const OverlayContext = createContext<OverlayLayer | null>(null);
+
+function setOverlay(layer: OverlayLayer, node: ReactNode) {
+  layer.node = node;
+  for (const listener of layer.listeners) listener();
+}
+
+function OverlayOutlet({ layer }: { layer: OverlayLayer }) {
+  const node = useSyncExternalStore(
+    (listener) => {
+      layer.listeners.add(listener);
+      return () => {
+        layer.listeners.delete(listener);
+      };
+    },
+    () => layer.node,
+  );
+  if (!node) return null;
+  return (
+    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      {node}
+    </View>
+  );
+}
+
+/**
+ * Floats its children over the current tab screen so their glass can blur it. Renders them in
+ * place where there's no blur target (iOS, or outside the tabs). Hidden while another screen of
+ * the same tab is pushed on top.
+ */
+export function GlassOverlay({ children }: { children: ReactNode }) {
+  const layer = useContext(OverlayContext);
+  const focused = useIsFocused();
+
+  useLayoutEffect(() => {
+    if (layer) setOverlay(layer, focused ? children : null);
+  });
+  useLayoutEffect(
+    () => () => {
+      if (layer) setOverlay(layer, null);
+    },
+    [layer],
+  );
+
+  return layer ? null : children;
+}
+
 /** Lets the floating tab bar blur whichever tab is showing. */
 export function GlassProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<Target | null>(null);
@@ -71,6 +126,7 @@ export function GlassTarget({
 }) {
   const ref = useRef<ComponentRef<typeof View>>(null);
   const { setTarget } = useContext(GlassContext);
+  const [layer] = useState<OverlayLayer>(() => ({ node: null, listeners: new Set() }));
 
   useEffect(() => {
     if (navigation.isFocused()) setTarget(ref);
@@ -78,9 +134,14 @@ export function GlassTarget({
   }, [navigation, setTarget]);
 
   return (
-    <BlurTargetView ref={ref} style={styles.screen}>
-      <InsideTargetContext.Provider value>{children}</InsideTargetContext.Provider>
-    </BlurTargetView>
+    <View style={styles.screen}>
+      <BlurTargetView ref={ref} style={styles.screen}>
+        <InsideTargetContext.Provider value>
+          <OverlayContext.Provider value={layer}>{children}</OverlayContext.Provider>
+        </InsideTargetContext.Provider>
+      </BlurTargetView>
+      <OverlayOutlet layer={layer} />
+    </View>
   );
 }
 
@@ -111,10 +172,13 @@ export function GlassSurface({
   const target = useContext(InsideTargetContext) ? null : sharedTarget;
   const reduced = useReducedTransparency();
   const radius = StyleSheet.flatten(style)?.borderRadius ?? 0;
+  // Android only blurs through a target. Without one, a see-through wash just shows the content
+  // behind it unblurred (and the elevation shadow through it), so go solid instead.
+  const solid = reduced || (Platform.OS === "android" && !target);
 
   return (
     <View style={[styles.surface, style]}>
-      {reduced ? (
+      {solid ? (
         <View style={[styles.fill, { backgroundColor: colors.card }]} />
       ) : (
         <>

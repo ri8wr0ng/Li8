@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../theme";
-import { GlassSurface, useTabBarInset } from "./glass";
+import { GlassOverlay, GlassSurface, useTabBarInset } from "./glass";
 
 export const SEARCH_BAR_HEIGHT = 48;
 const GAP = 8;
@@ -45,9 +45,15 @@ function useBarBottom() {
   return (Platform.OS === "ios" ? keyboard : 0) + GAP;
 }
 
-/** Bottom padding for a list scrolling under the search bar, so its last row clears it. */
-export function useBottomSearchInset(extra = 0) {
-  return useBarBottom() + SEARCH_BAR_HEIGHT + GAP * 2 + extra;
+/**
+ * Bottom padding for a list scrolling under the search bar, so its last row clears it. With the
+ * bar hidden it only clears the tab bar.
+ */
+export function useBottomSearchInset(extra = 0, visible = true) {
+  const tabBarInset = useTabBarInset();
+  const barBottom = useBarBottom();
+  if (!visible) return tabBarInset + GAP * 2 + extra;
+  return barBottom + SEARCH_BAR_HEIGHT + GAP * 2 + extra;
 }
 
 /**
@@ -76,41 +82,44 @@ export function BottomSearchBar({
   const { colors, typography } = useTheme();
   const bottom = useBarBottom();
 
+  // In the overlay beside the screen, so its glass can blur the list scrolling under it.
   return (
-    <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
-      {accessory}
-      <GlassSurface style={styles.field}>
-        <View style={styles.row}>
-          <Feather name="search" size={18} color={colors.muted} />
-          <TextInput
-            ref={inputRef}
-            value={value}
-            onChangeText={onChangeText}
-            placeholder={placeholder}
-            placeholderTextColor={colors.muted}
-            selectionColor={colors.hanko}
-            cursorColor={colors.hanko}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel={placeholder}
-            {...inputProps}
-            style={[styles.input, typography.body, { color: colors.ink }]}
-          />
-          {trailing}
-          {value.length > 0 && (
-            <Pressable
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              onPress={() => onChangeText("")}
-            >
-              <Feather name="x-circle" size={18} color={colors.muted} />
-            </Pressable>
-          )}
-        </View>
-      </GlassSurface>
-    </View>
+    <GlassOverlay>
+      <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
+        {accessory}
+        <GlassSurface style={styles.field}>
+          <View style={styles.row}>
+            <Feather name="search" size={18} color={colors.muted} />
+            <TextInput
+              ref={inputRef}
+              value={value}
+              onChangeText={onChangeText}
+              placeholder={placeholder}
+              placeholderTextColor={colors.muted}
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel={placeholder}
+              {...inputProps}
+              style={[styles.input, typography.body, { color: colors.ink }]}
+            />
+            {trailing}
+            {value.length > 0 && (
+              <Pressable
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                onPress={() => onChangeText("")}
+              >
+                <Feather name="x-circle" size={18} color={colors.muted} />
+              </Pressable>
+            )}
+          </View>
+        </GlassSurface>
+      </View>
+    </GlassOverlay>
   );
 }
 

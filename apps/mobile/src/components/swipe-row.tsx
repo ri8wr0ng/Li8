@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable";
+import Animated, { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
 import { haptics } from "../haptics";
 
 type FeatherIconName = ComponentProps<typeof Feather>["name"];
@@ -22,6 +23,11 @@ type SwipeRowProps = {
   leading?: SwipeAction[];
   trailing?: SwipeAction[];
   borderRadius: number;
+  /**
+   * Space below the row. It sits outside the swipeable area: a margin on the card itself would
+   * leave a strip of the action colours showing underneath it.
+   */
+  spacing?: number;
   accessibilityLabel?: string;
   accessibilityActions?: ComponentProps<typeof View>["accessibilityActions"];
   onAccessibilityAction?: ComponentProps<typeof View>["onAccessibilityAction"];
@@ -35,6 +41,7 @@ export function SwipeRow({
   leading = [],
   trailing = [],
   borderRadius,
+  spacing = 0,
   accessibilityLabel,
   accessibilityActions: childAccessibilityActions = [],
   onAccessibilityAction: onChildAccessibilityAction,
@@ -60,8 +67,13 @@ export function SwipeRow({
     ...actions.map((action) => ({ name: `swipe-${action.key}`, label: action.label })),
   ];
 
-  const renderActions = (items: SwipeAction[], side: "leading" | "trailing") => (
-    <View
+  const renderActions = (
+    items: SwipeAction[],
+    side: "leading" | "trailing",
+    translation: SharedValue<number>,
+  ) => (
+    <ActionGroup
+      translation={translation}
       style={[
         styles.actionGroup,
         side === "leading"
@@ -95,13 +107,14 @@ export function SwipeRow({
           </Pressable>
         );
       })}
-    </View>
+    </ActionGroup>
   );
 
-  if (actions.length === 0) return children;
+  if (actions.length === 0) return <View style={{ marginBottom: spacing }}>{children}</View>;
 
   return (
     <ReanimatedSwipeable
+      containerStyle={{ marginBottom: spacing }}
       ref={swipeableRef}
       friction={2}
       overshootLeft={false}
@@ -110,8 +123,16 @@ export function SwipeRow({
       rightThreshold={40}
       dragOffsetFromLeft={20}
       dragOffsetFromRight={-20}
-      renderLeftActions={leading.length ? () => renderActions(leading, "leading") : undefined}
-      renderRightActions={trailing.length ? () => renderActions(trailing, "trailing") : undefined}
+      renderLeftActions={
+        leading.length
+          ? (_, translation) => renderActions(leading, "leading", translation)
+          : undefined
+      }
+      renderRightActions={
+        trailing.length
+          ? (_, translation) => renderActions(trailing, "trailing", translation)
+          : undefined
+      }
       onSwipeableOpen={() => {
         if (openSwipeable && openSwipeable !== swipeableRef.current) openSwipeable.close();
         openSwipeable = swipeableRef.current;
@@ -140,6 +161,23 @@ export function SwipeRow({
       </View>
     </ReanimatedSwipeable>
   );
+}
+
+/**
+ * The actions sit behind the card. Hidden until the card moves, or their colours would bleed
+ * through the card's anti-aliased rounded corners at rest.
+ */
+function ActionGroup({
+  translation,
+  style,
+  children,
+}: {
+  translation: SharedValue<number>;
+  style: ComponentProps<typeof View>["style"];
+  children: ReactNode;
+}) {
+  const visible = useAnimatedStyle(() => ({ opacity: translation.value === 0 ? 0 : 1 }));
+  return <Animated.View style={[style, visible]}>{children}</Animated.View>;
 }
 
 const styles = StyleSheet.create({

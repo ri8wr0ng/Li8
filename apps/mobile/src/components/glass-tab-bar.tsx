@@ -45,11 +45,17 @@ export function GlassTabBar({
   insets,
   tabs,
   searchRoute,
+  onSearch,
+  searchOpen,
   action,
   onSettings,
 }: BottomTabBarProps & {
   tabs: GlassTab[];
   searchRoute: string;
+  /** Replaces going to the search tab, e.g. to open the current screen's own search field. */
+  onSearch?: () => void;
+  /** Lights the search button while that field is open. */
+  searchOpen?: boolean;
   /** The round button at the end: what "create" means on the current tab. */
   action?: GlassAction;
   /** Settings sits at the end of the pill but opens a screen; it never takes the lens. */
@@ -68,7 +74,7 @@ export function GlassTabBar({
   const current = pressed ?? focusedName;
   const active = routes.findIndex((t) => t.route.name === current);
   const search = state.routes.find((r) => r.name === searchRoute);
-  const searchActive = focusedName === searchRoute;
+  const searchActive = searchOpen || focusedName === searchRoute;
 
   useEffect(() => {
     if (active < 0) return;
@@ -171,8 +177,9 @@ export function GlassTabBar({
           }
           shadow={shadow}
           onPress={() => {
-            if (!searchActive) haptics.select();
-            navigateToTab(search.key);
+            haptics.select();
+            if (onSearch) onSearch();
+            else navigateToTab(search.key);
           }}
         />
       )}

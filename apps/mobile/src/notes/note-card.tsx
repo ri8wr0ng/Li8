@@ -130,6 +130,7 @@ export function NoteCard({
       leading={swipeable ? leading : []}
       trailing={swipeable ? trailing : []}
       borderRadius={radii.card}
+      spacing={10}
       accessibilityLabel={note.title.trim() || "Untitled note"}
       onAccessibilityTap={handlePress}
     >
@@ -240,7 +241,6 @@ const styles = StyleSheet.create({
   card: {
     padding: 14,
     borderWidth: 1,
-    marginBottom: 10,
   },
   headerRow: {
     flexDirection: "row",

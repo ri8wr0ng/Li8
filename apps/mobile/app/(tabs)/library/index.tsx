@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter, useNavigation } from "expo-router";
 import { BottomSearchBar, useBottomSearchInset } from "../../../src/components/bottom-search-bar";
+import { useScreenSearch } from "../../../src/components/screen-search";
 import { Feather } from "@expo/vector-icons";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -37,7 +38,6 @@ const STATUS_CHIPS: FilterStatus[] = [
 export default function LibraryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const bottomInset = useBottomSearchInset();
   const { colors, radii, typography } = useTheme();
 
   // Filters state
@@ -53,6 +53,9 @@ export default function LibraryScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const clearQuery = useCallback(() => setSearchQuery(""), []);
+  const { visible: searchVisible, close: closeSearch } = useScreenSearch("library", clearQuery);
+  const bottomInset = useBottomSearchInset(0, searchVisible);
 
   // Labels map
   const allLabels = useQuery(api.labels.list);
@@ -96,7 +99,7 @@ export default function LibraryScreen() {
   // Search query
   const searchResults = useQuery(
     api.library.search,
-    isSearchActive && debouncedQuery.length > 0 ? { query: debouncedQuery } : "skip",
+    isSearchActive && debouncedQuery.length > 0 ? { query: debouncedQuery, limit: 50 } : "skip",
   );
 
   // Paginated list query
@@ -129,7 +132,20 @@ export default function LibraryScreen() {
     }, 600);
   }, []);
 
-  const displayItems: Doc<"series">[] = isSearchActive ? (searchResults ?? []) : paginatedResults;
+  // Search keeps the screen's filters: matches are narrowed by status, type and label too.
+  const filteredResults = useMemo(
+    () =>
+      searchResults?.filter(
+        (series) =>
+          (statusFilter === "all" || series.status === statusFilter) &&
+          (selectedKinds.length === 0 || selectedKinds.includes(series.kind)) &&
+          (selectedLabelIds.length === 0 ||
+            selectedLabelIds.some((id) => series.labelIds?.includes(id))),
+      ),
+    [searchResults, statusFilter, selectedKinds, selectedLabelIds],
+  );
+
+  const displayItems: Doc<"series">[] = isSearchActive ? (filteredResults ?? []) : paginatedResults;
 
   const isLoading = isSearchActive
     ? searchResults === undefined
@@ -137,161 +153,159 @@ export default function LibraryScreen() {
 
   const renderHeader = () => (
     <View style={styles.listHeaderContainer}>
-      {/* Filter Row (hidden during active search) */}
-      {!isSearchActive && (
-        <View style={styles.filterSection}>
-          {/* Status chips scroll */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.statusChipsContainer}
-          >
-            {STATUS_CHIPS.map((chip) => {
-              const isSelected = statusFilter === chip;
-              const chipLabel = chip === "all" ? "All" : STATUS_LABEL[chip];
-              return (
-                <Pressable
-                  key={chip}
-                  accessibilityRole="tab"
-                  accessibilityLabel={`Filter by ${chipLabel}`}
-                  accessibilityState={{ selected: isSelected }}
-                  onPress={() => setStatusFilter(chip)}
+      {/* Filters stay put while searching; they narrow the matches too. */}
+      <View style={styles.filterSection}>
+        {/* Status chips scroll */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statusChipsContainer}
+        >
+          {STATUS_CHIPS.map((chip) => {
+            const isSelected = statusFilter === chip;
+            const chipLabel = chip === "all" ? "All" : STATUS_LABEL[chip];
+            return (
+              <Pressable
+                key={chip}
+                accessibilityRole="tab"
+                accessibilityLabel={`Filter by ${chipLabel}`}
+                accessibilityState={{ selected: isSelected }}
+                onPress={() => setStatusFilter(chip)}
+                style={[
+                  styles.statusChip,
+                  {
+                    backgroundColor: isSelected ? colors.hanko : colors.card,
+                    borderColor: isSelected ? colors.hanko : colors.border,
+                  },
+                ]}
+              >
+                <Text
                   style={[
-                    styles.statusChip,
+                    styles.statusChipText,
                     {
-                      backgroundColor: isSelected ? colors.hanko : colors.card,
-                      borderColor: isSelected ? colors.hanko : colors.border,
+                      color: isSelected ? "#FFFFFF" : colors.muted,
+                      fontWeight: isSelected ? "600" : "500",
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.statusChipText,
-                      {
-                        color: isSelected ? "#FFFFFF" : colors.muted,
-                        fontWeight: isSelected ? "600" : "500",
-                      },
-                    ]}
-                  >
-                    {chipLabel}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Type & Label Filter Buttons */}
-          <View style={styles.secondaryFilterRow}>
-            {/* Type Filter */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Filter by type. ${selectedKinds.length} selected`}
-              onPress={() => setTypeModalVisible(true)}
-              style={[
-                styles.filterPill,
-                {
-                  backgroundColor: selectedKinds.length > 0 ? colors.hanko : colors.card,
-                  borderColor: selectedKinds.length > 0 ? colors.hanko : colors.border,
-                  borderRadius: radii.full,
-                },
-              ]}
-            >
-              <Feather
-                name="filter"
-                size={13}
-                color={selectedKinds.length > 0 ? "#FFFFFF" : colors.muted}
-              />
-              <Text
-                style={[
-                  styles.filterPillText,
-                  {
-                    color: selectedKinds.length > 0 ? "#FFFFFF" : colors.ink,
-                  },
-                ]}
-              >
-                {selectedKinds.length === 0
-                  ? "All types"
-                  : selectedKinds.length === 1
-                    ? selectedKinds[0]
-                    : `Types (${selectedKinds.length})`}
-              </Text>
-              <Feather
-                name="chevron-down"
-                size={14}
-                color={selectedKinds.length > 0 ? "#FFFFFF" : colors.muted}
-              />
-            </Pressable>
-
-            {/* Label Filter */}
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Filter by label. ${selectedLabelIds.length} selected`}
-              onPress={() => setLabelModalVisible(true)}
-              style={[
-                styles.filterPill,
-                {
-                  backgroundColor: selectedLabelIds.length > 0 ? colors.hanko : colors.card,
-                  borderColor: selectedLabelIds.length > 0 ? colors.hanko : colors.border,
-                  borderRadius: radii.full,
-                },
-              ]}
-            >
-              <Feather
-                name="tag"
-                size={13}
-                color={selectedLabelIds.length > 0 ? "#FFFFFF" : colors.muted}
-              />
-              <Text
-                style={[
-                  styles.filterPillText,
-                  {
-                    color: selectedLabelIds.length > 0 ? "#FFFFFF" : colors.ink,
-                  },
-                ]}
-              >
-                {selectedLabelIds.length === 0
-                  ? "All labels"
-                  : selectedLabelIds.length === 1
-                    ? (labelsMap.get(selectedLabelIds[0]) ?? "1 label")
-                    : `Labels (${selectedLabelIds.length})`}
-              </Text>
-              <Feather
-                name="chevron-down"
-                size={14}
-                color={selectedLabelIds.length > 0 ? "#FFFFFF" : colors.muted}
-              />
-            </Pressable>
-
-            {/* Clear filters button */}
-            {(selectedKinds.length > 0 || selectedLabelIds.length > 0) && (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Reset type and label filters"
-                onPress={() => {
-                  setSelectedKinds([]);
-                  setSelectedLabelIds([]);
-                }}
-                style={[
-                  styles.filterPill,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    borderRadius: radii.full,
-                  },
-                ]}
-              >
-                <Feather name="x" size={13} color={colors.destructive} />
-                <Text style={[styles.filterPillText, { color: colors.destructive }]}>Reset</Text>
+                  {chipLabel}
+                </Text>
               </Pressable>
-            )}
-          </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Type & Label Filter Buttons */}
+        <View style={styles.secondaryFilterRow}>
+          {/* Type Filter */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Filter by type. ${selectedKinds.length} selected`}
+            onPress={() => setTypeModalVisible(true)}
+            style={[
+              styles.filterPill,
+              {
+                backgroundColor: selectedKinds.length > 0 ? colors.hanko : colors.card,
+                borderColor: selectedKinds.length > 0 ? colors.hanko : colors.border,
+                borderRadius: radii.full,
+              },
+            ]}
+          >
+            <Feather
+              name="filter"
+              size={13}
+              color={selectedKinds.length > 0 ? "#FFFFFF" : colors.muted}
+            />
+            <Text
+              style={[
+                styles.filterPillText,
+                {
+                  color: selectedKinds.length > 0 ? "#FFFFFF" : colors.ink,
+                },
+              ]}
+            >
+              {selectedKinds.length === 0
+                ? "All types"
+                : selectedKinds.length === 1
+                  ? selectedKinds[0]
+                  : `Types (${selectedKinds.length})`}
+            </Text>
+            <Feather
+              name="chevron-down"
+              size={14}
+              color={selectedKinds.length > 0 ? "#FFFFFF" : colors.muted}
+            />
+          </Pressable>
+
+          {/* Label Filter */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Filter by label. ${selectedLabelIds.length} selected`}
+            onPress={() => setLabelModalVisible(true)}
+            style={[
+              styles.filterPill,
+              {
+                backgroundColor: selectedLabelIds.length > 0 ? colors.hanko : colors.card,
+                borderColor: selectedLabelIds.length > 0 ? colors.hanko : colors.border,
+                borderRadius: radii.full,
+              },
+            ]}
+          >
+            <Feather
+              name="tag"
+              size={13}
+              color={selectedLabelIds.length > 0 ? "#FFFFFF" : colors.muted}
+            />
+            <Text
+              style={[
+                styles.filterPillText,
+                {
+                  color: selectedLabelIds.length > 0 ? "#FFFFFF" : colors.ink,
+                },
+              ]}
+            >
+              {selectedLabelIds.length === 0
+                ? "All labels"
+                : selectedLabelIds.length === 1
+                  ? (labelsMap.get(selectedLabelIds[0]) ?? "1 label")
+                  : `Labels (${selectedLabelIds.length})`}
+            </Text>
+            <Feather
+              name="chevron-down"
+              size={14}
+              color={selectedLabelIds.length > 0 ? "#FFFFFF" : colors.muted}
+            />
+          </Pressable>
+
+          {/* Clear filters button */}
+          {(selectedKinds.length > 0 || selectedLabelIds.length > 0) && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Reset type and label filters"
+              onPress={() => {
+                setSelectedKinds([]);
+                setSelectedLabelIds([]);
+              }}
+              style={[
+                styles.filterPill,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderRadius: radii.full,
+                },
+              ]}
+            >
+              <Feather name="x" size={13} color={colors.destructive} />
+              <Text style={[styles.filterPillText, { color: colors.destructive }]}>Reset</Text>
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Search results summary count */}
-      {isSearchActive && searchResults !== undefined && (
+      {isSearchActive && filteredResults !== undefined && (
         <Text style={[styles.resultsCountText, { color: colors.muted }]}>
-          {searchResults.length} {searchResults.length === 1 ? "match" : "matches"}
+          {filteredResults.length} {filteredResults.length === 1 ? "match" : "matches"}
         </Text>
       )}
     </View>
@@ -306,15 +320,21 @@ export default function LibraryScreen() {
       );
     }
 
+    const isFiltered =
+      statusFilter !== "all" || selectedKinds.length > 0 || selectedLabelIds.length > 0;
+
     if (isSearchActive) {
+      const filteredOut = (searchResults?.length ?? 0) > 0;
       return (
         <View style={styles.emptyContainer}>
           <Feather name="search" size={40} color={colors.muted} style={styles.emptyIcon} />
           <Text style={[styles.emptyTitle, typography.display, { color: colors.ink }]}>
-            Not in your library
+            {filteredOut ? "No matches with these filters" : "Not in your library"}
           </Text>
           <Text style={[styles.emptySubtitle, typography.bodySm, { color: colors.muted }]}>
-            Nothing matches “{q}”.
+            {filteredOut || isFiltered
+              ? `Nothing matches “${q}” here. Try another status, or All.`
+              : `Nothing matches “${q}”.`}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -335,10 +355,7 @@ export default function LibraryScreen() {
       );
     }
 
-    const isFiltered =
-      statusFilter !== "reading" || selectedKinds.length > 0 || selectedLabelIds.length > 0;
-
-    if (isFiltered) {
+    if (statusFilter !== "reading" || selectedKinds.length > 0 || selectedLabelIds.length > 0) {
       const statusTitle = statusFilter === "all" ? "All" : STATUS_LABEL[statusFilter];
       return (
         <View style={styles.emptyContainer}>
@@ -433,11 +450,18 @@ export default function LibraryScreen() {
         onSelectLabelIds={setSelectedLabelIds}
       />
 
-      <BottomSearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="Search titles and alternative names…"
-      />
+      {searchVisible && (
+        <BottomSearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search titles and alternative names…"
+          autoFocus={Platform.OS === "android"}
+          // Dismissing the keyboard with nothing typed puts the field away again.
+          onBlur={() => {
+            if (Platform.OS === "android" && !searchQuery.trim()) closeSearch();
+          }}
+        />
+      )}
     </View>
   );
 }
