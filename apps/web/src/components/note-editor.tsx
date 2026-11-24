@@ -454,7 +454,9 @@ export function NoteEditorContent({
     <>
       <EditorContent
         editor={editor}
-        className={cn("typeset typeset-docs max-w-[37em]", className)}
+        // Full column width, like the title and toolbar, so right and center alignment line up
+        // with their edges. The page column (max-w-3xl) already caps the line length.
+        className={cn("typeset typeset-docs w-full", className)}
       />
       {editor && (
         <>

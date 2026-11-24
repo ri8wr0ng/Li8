@@ -201,6 +201,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
       leading={swipeActions}
       trailing={trailingActions}
       borderRadius={radii.card}
+      spacing={12}
       accessibilityLabel={`Open series ${series.title}`}
       accessibilityActions={isMovie ? undefined : [{ name: "setChapter", label: "Set chapter" }]}
       onAccessibilityTap={handlePressCard}
@@ -447,7 +448,6 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     padding: 16,
-    marginBottom: 12,
     position: "relative",
     overflow: "hidden",
   },

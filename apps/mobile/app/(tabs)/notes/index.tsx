@@ -17,6 +17,7 @@ import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../../../src/theme";
 import { HeaderActions, HeaderIconButton } from "../../../src/components/profile-button";
 import { BottomSearchBar, useBottomSearchInset } from "../../../src/components/bottom-search-bar";
+import { useScreenSearch } from "../../../src/components/screen-search";
 import { EmptyState } from "../../../src/notes/empty-state";
 import { NoteCard } from "../../../src/notes/note-card";
 
@@ -33,7 +34,6 @@ type ListItem =
 export default function NotesScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const bottomInset = useBottomSearchInset();
   const { colors, radii, typography } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,6 +41,9 @@ export default function NotesScreen() {
   const [view, setView] = useState<"all" | "shared" | "archived">("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const clearQuery = useCallback(() => setSearchQuery(""), []);
+  const { visible: searchVisible, close: closeSearch } = useScreenSearch("notes", clearQuery);
+  const bottomInset = useBottomSearchInset(0, searchVisible);
 
   const createNote = useMutation(api.notes.create);
 
@@ -93,7 +96,7 @@ export default function NotesScreen() {
   // Search query
   const searchResults = useQuery(
     api.notes.search,
-    debouncedQuery ? { query: debouncedQuery } : "skip",
+    debouncedQuery && view !== "shared" ? { query: debouncedQuery, limit: 50 } : "skip",
   );
 
   // Paginated lists
@@ -109,6 +112,22 @@ export default function NotesScreen() {
   );
 
   const shared = useQuery(api.notes.sharedWithMe, view === "shared" ? {} : "skip");
+
+  // Search stays inside the chosen tab: Notes skips archived ones, Archived keeps only those,
+  // and Shared (not in the search index) matches every typed word against title and body.
+  const tabResults = useMemo(() => {
+    if (view === "shared") {
+      if (!shared) return undefined;
+      const words = debouncedQuery.toLowerCase().split(/\s+/).filter(Boolean);
+      return shared.filter(({ note }) => {
+        const text = `${note.title} ${note.body}`.toLowerCase();
+        return words.every((word) => text.includes(word));
+      });
+    }
+    return searchResults
+      ?.filter((note) => (view === "archived") === (note.archived === true))
+      .map((note) => ({ note, subtitle: undefined }));
+  }, [view, shared, searchResults, debouncedQuery]);
   const archivedQuery = usePaginatedQuery(
     api.notes.listPage,
     view === "archived" ? { archived: true } : "skip",
@@ -144,11 +163,11 @@ export default function NotesScreen() {
 
   const listItems = useMemo<ListItem[]>(() => {
     if (isSearching) {
-      if (!searchResults) return [];
+      if (!tabResults) return [];
       const items: ListItem[] = [];
-      if (searchResults.length > 0) {
+      if (tabResults.length > 0) {
         items.push({ type: "header", id: "search-header", title: "Search results" });
-        for (const note of searchResults) {
+        for (const { note } of tabResults) {
           items.push({ type: "note", id: note._id, note, terms: searchTerms });
         }
       }
@@ -195,7 +214,7 @@ export default function NotesScreen() {
     return items;
   }, [
     isSearching,
-    searchResults,
+    tabResults,
     searchTerms,
     view,
     shared,
@@ -205,7 +224,7 @@ export default function NotesScreen() {
   ]);
 
   const isLoadingSearch =
-    isSearching && (trimmedQuery !== debouncedQuery || searchResults === undefined);
+    isSearching && (trimmedQuery !== debouncedQuery || tabResults === undefined);
   const isLoadingInitial =
     !isSearching &&
     view === "all" &&
@@ -216,7 +235,7 @@ export default function NotesScreen() {
     !isSearching && view === "archived" && archivedQuery.status === "LoadingFirstPage";
   const isLoading = isLoadingSearch || isLoadingInitial || isLoadingShared || isLoadingArchived;
 
-  const isSearchEmpty = isSearching && !isLoadingSearch && (searchResults?.length ?? 0) === 0;
+  const isSearchEmpty = isSearching && !isLoadingSearch && (tabResults?.length ?? 0) === 0;
   const isFeedEmpty =
     !isSearching &&
     !isLoadingInitial &&
@@ -331,49 +350,47 @@ export default function NotesScreen() {
     <View style={[styles.container, { backgroundColor: colors.paper }]}>
       {/* Search Header */}
       <View style={styles.searchHeader}>
-        {searchQuery.length === 0 && (
-          <View
-            style={[
-              styles.segmentedControl,
-              {
-                borderColor: colors.border,
-                borderRadius: radii.controls,
-                backgroundColor: colors.card,
-              },
-            ]}
-          >
-            {(
-              [
-                ["all", "Notes"],
-                ["shared", "Shared"],
-                ["archived", "Archived"],
-              ] as const
-            ).map(([key, label]) => {
-              const selected = view === key;
-              return (
-                <Pressable
-                  key={key}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected }}
-                  onPress={() => setView(key)}
-                  style={[
-                    styles.segment,
-                    selected && {
-                      backgroundColor: colors.ink,
-                      borderRadius: radii.controls - 2,
-                    },
-                  ]}
+        <View
+          style={[
+            styles.segmentedControl,
+            {
+              borderColor: colors.border,
+              borderRadius: radii.controls,
+              backgroundColor: colors.card,
+            },
+          ]}
+        >
+          {(
+            [
+              ["all", "Notes"],
+              ["shared", "Shared"],
+              ["archived", "Archived"],
+            ] as const
+          ).map(([key, label]) => {
+            const selected = view === key;
+            return (
+              <Pressable
+                key={key}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                onPress={() => setView(key)}
+                style={[
+                  styles.segment,
+                  selected && {
+                    backgroundColor: colors.ink,
+                    borderRadius: radii.controls - 2,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.segmentText, { color: selected ? colors.paper : colors.muted }]}
                 >
-                  <Text
-                    style={[styles.segmentText, { color: selected ? colors.paper : colors.muted }]}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       <FlatList
@@ -400,11 +417,18 @@ export default function NotesScreen() {
         ListEmptyComponent={renderEmpty}
       />
 
-      <BottomSearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="Search notes…"
-      />
+      {searchVisible && (
+        <BottomSearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search notes…"
+          autoFocus={Platform.OS === "android"}
+          // Dismissing the keyboard with nothing typed puts the field away again.
+          onBlur={() => {
+            if (Platform.OS === "android" && !searchQuery.trim()) closeSearch();
+          }}
+        />
+      )}
     </View>
   );
 }

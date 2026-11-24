@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Wordmark } from "../src/components/brand";
 import { useTheme } from "../src/theme";
 import { useMobileGoogleSignIn } from "../src/auth";
+import { UpdateBanner, VersionFootnote } from "../src/updates/update-banner";
 
 export default function SignInScreen() {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -77,6 +78,8 @@ export default function SignInScreen() {
             <Text style={[styles.errorText, { color: colors.destructive }]}>{errorMessage}</Text>
           )}
 
+          <UpdateBanner style={styles.updateBanner} />
+
           <View style={styles.pointsList}>
             <Point
               title="Notes that save as you type"
@@ -92,6 +95,7 @@ export default function SignInScreen() {
             />
           </View>
         </View>
+        <VersionFootnote />
       </ScrollView>
     </SafeAreaView>
   );
@@ -161,6 +165,9 @@ const styles = StyleSheet.create({
   errorText: {
     marginTop: 12,
     fontSize: 14,
+  },
+  updateBanner: {
+    marginTop: 24,
   },
   pointsList: {
     marginTop: 48,

@@ -6,6 +6,11 @@ import { api } from "@inkmark/backend/convex/_generated/api";
 import { GlassProvider, GlassTarget } from "../../src/components/glass";
 import { GlassTabBar, type GlassAction, type GlassTab } from "../../src/components/glass-tab-bar";
 import { requestNewChat } from "../../src/ask/new-chat";
+import {
+  toggleScreenSearch,
+  useScreenSearchOpen,
+  type SearchScreen,
+} from "../../src/components/screen-search";
 import { useTabsGate } from "../../src/navigation";
 
 const ALL_TABS: GlassTab[] = [
@@ -40,6 +45,9 @@ export default function TabsLayout() {
   const { signedOut, showAsk } = useTabsGate();
   const createNote = useMutation(api.notes.create);
   const [creating, setCreating] = useState(false);
+  const searchScreen: SearchScreen | null =
+    pathname === "/notes" ? "notes" : pathname === "/library" ? "library" : null;
+  const searchOpen = useScreenSearchOpen(searchScreen);
 
   async function handleCreate() {
     if (creating) return;
@@ -79,6 +87,9 @@ export default function TabsLayout() {
       {...props}
       tabs={tabs}
       searchRoute="search"
+      // On the Notes and Library lists, search opens their own field in place.
+      onSearch={searchScreen ? () => toggleScreenSearch(searchScreen) : undefined}
+      searchOpen={searchOpen}
       action={actionFor(props.state.routes[props.state.index]?.name)}
       onSettings={() => router.push("/settings")}
     />
