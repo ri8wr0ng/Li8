@@ -15,6 +15,7 @@ import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
 import { StarterKit } from "@tiptap/starter-kit";
 import { FindHighlight } from "./find";
+import { SlashCommand } from "./slash-command";
 import { UndoGrouping } from "./undo-grouping";
 
 export const ALIGNMENTS = ["left", "center", "right", "justify"] as const;
@@ -137,6 +138,8 @@ const LineBreak = HardBreak.extend({
 
 export type NoteExtensionOptions = {
   placeholder?: string;
+  /** The "/" block menu. Off by default: the app has to draw the menu (see `SlashCommand`). */
+  slashCommands?: boolean;
 };
 
 /** Everything the note editor understands. The same list on web, in the mobile WebView, and in tests. */
@@ -169,6 +172,7 @@ export function noteExtensions(options: NoteExtensionOptions = {}): AnyExtension
   if (options.placeholder) {
     extensions.push(Placeholder.configure({ placeholder: options.placeholder }));
   }
+  if (options.slashCommands) extensions.push(SlashCommand);
   schemaExtensions.current = extensions;
   return extensions;
 }

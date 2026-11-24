@@ -14,6 +14,8 @@ export type UseNoteEditorOptions = {
   find?: string;
   activeIndex?: number;
   autofocus?: boolean;
+  /** Turn on the "/" block menu; the app renders it from `editor.storage.slashCommand`. */
+  slashCommands?: boolean;
 };
 
 export type NoteEditorController = {
@@ -32,6 +34,7 @@ export function useNoteEditor({
   find = "",
   activeIndex = 0,
   autofocus = false,
+  slashCommands = false,
 }: UseNoteEditorOptions): NoteEditorController {
   // The Markdown the editor holds right now, so an echo of our own save doesn't reset the cursor.
   const current = useRef(value);
@@ -39,7 +42,10 @@ export function useNoteEditor({
   useLayoutEffect(() => {
     onChangeRef.current = onChange;
   });
-  const extensions = useMemo(() => noteExtensions({ placeholder }), [placeholder]);
+  const extensions = useMemo(
+    () => noteExtensions({ placeholder, slashCommands }),
+    [placeholder, slashCommands],
+  );
 
   const editor = useEditor(
     {
