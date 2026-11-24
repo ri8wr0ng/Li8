@@ -19,6 +19,7 @@
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@fontsource-variable/roboto": "^5.3.0",
     "@inkmark/backend": "workspace:*",
+    "@inkmark/editor": "workspace:*",
     "@shadcn/react": "^0.3.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-router": "1.170.46",

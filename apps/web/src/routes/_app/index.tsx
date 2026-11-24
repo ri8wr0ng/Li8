@@ -14,6 +14,7 @@ import { pageTitle } from "#/lib/seo";
 import { relativeTime } from "#/lib/time";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 
 export const Route = createFileRoute("/_app/")({
   validateSearch: (search: Record<string, unknown>): { new?: "note" } =>
@@ -308,9 +309,12 @@ function NoteList({
                   {relativeTime(note.updatedAt)}
                 </time>
               </div>
-              {note.body.trim() && (
+              {markdownToPlainText(note.body) && (
                 <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                  <Highlight text={snippet(note.body, terms, 90)} terms={terms} />
+                  <Highlight
+                    text={snippet(markdownToPlainText(note.body), terms, 90)}
+                    terms={terms}
+                  />
                 </p>
               )}
               {note.tags.length > 0 && (

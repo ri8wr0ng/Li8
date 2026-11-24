@@ -1,14 +1,25 @@
 import { useState, useCallback } from "react";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
+import { isRunningInExpoGo } from "expo";
+import Constants from "expo-constants";
 import { useSignInWithGoogle } from "@convex-dev/auth/methods/google/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 
 // Ensures any pending web browser redirect is handled
 WebBrowser.maybeCompleteAuthSession();
 
-// Must match the target in apps/web/public/mobile-auth.html and the `scheme` in app.json.
-const APP_RETURN_URL = "inkmark://auth";
+// Where the hand-off page (apps/web/public/mobile-auth.html) sends the browser back to:
+// "inkmark://auth" in the app (the `scheme` in app.json), "exp://<metro>/--/auth" in Expo Go.
+// Linking.createURL returns the app scheme even in Expo Go, where it would open the installed
+// app instead, so build Expo Go's link from the Metro host.
+const appReturnUrl = () => {
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (isRunningInExpoGo() && hostUri) {
+    return `exp://${hostUri}/--/auth`;
+  }
+  return "inkmark://auth";
+};
 // Query params Convex Auth's OAuth callback appends to the redirect (lib/oauthParams in @convex-dev/auth).
 const AUTH_CODE_PARAM = "convexAuthCode";
 const AUTH_ERROR_PARAM = "convexAuthError";
@@ -27,7 +38,8 @@ export function useMobileGoogleSignIn() {
       // browser to the web app's hand-off page (apps/web/public/mobile-auth.html),
       // which forwards ?convexAuthCode=… to the app's deep link that the auth session waits for.
       const siteUrl = process.env.EXPO_PUBLIC_SITE_URL || "http://localhost:3000";
-      const redirectTo = `${siteUrl}/mobile-auth.html`;
+      const returnUrl = appReturnUrl();
+      const redirectTo = `${siteUrl}/mobile-auth.html?return=${encodeURIComponent(returnUrl)}`;
 
       const startResult = await signIn({ redirectTo });
 
@@ -40,7 +52,7 @@ export function useMobileGoogleSignIn() {
       // Open in-app browser session to authenticate with Google
       const authResult = await WebBrowser.openAuthSessionAsync(
         startResult.redirect.toString(),
-        APP_RETURN_URL,
+        returnUrl,
       );
 
       if (authResult.type === "success" && authResult.url) {

@@ -1,0 +1,31 @@
+{
+  "name": "@inkmark/editor",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./plain-text": "./src/plain-text.ts"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.35.0",
+    "@tiptap/extension-hard-break": "3.35.0",
+    "@tiptap/extension-heading": "3.35.0",
+    "@tiptap/extension-link": "3.35.0",
+    "@tiptap/extension-list": "3.35.0",
+    "@tiptap/extension-paragraph": "3.35.0",
+    "@tiptap/extensions": "3.35.0",
+    "@tiptap/markdown": "3.35.0",
+    "@tiptap/pm": "3.35.0",
+    "@tiptap/react": "3.35.0",
+    "@tiptap/starter-kit": "3.35.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.5",
+    "@types/react": "^19.2.0",
+    "happy-dom": "^21.0.4"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}

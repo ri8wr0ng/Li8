@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -26,6 +27,14 @@ import { ChipInput } from "../../../src/notes/chip-input";
 import { EmptyState } from "../../../src/notes/empty-state";
 import { relativeTime } from "../../../src/notes/time";
 import { ShareSheet } from "../../../src/notes/share-sheet";
+import NoteBodyEditor, { type NoteBodyEditorHandle } from "../../../src/notes/note-body-editor";
+import { FormatToolbar } from "../../../src/notes/format-toolbar";
+import {
+  EMPTY_TOOLBAR_STATE,
+  markdownToPlainText,
+  type EditorCommand,
+  type EditorToolbarState,
+} from "@inkmark/editor";
 
 type SaveState = "saved" | "saving" | "error";
 
@@ -183,9 +192,15 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
   const [actionsOpen, setActionsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [bodyY, setBodyY] = useState(0);
-  const [measureHeight, setMeasureHeight] = useState(0);
+  const [toolbarState, setToolbarState] = useState<EditorToolbarState>(EMPTY_TOOLBAR_STATE);
+  const [bodyFocused, setBodyFocused] = useState(false);
+  const [matchCount, setMatchCount] = useState(0);
+  const [activeTop, setActiveTop] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const scrollY = useRef(0);
+  const viewportHeight = useRef(0);
 
-  const bodyInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const bodyRef = useRef<NoteBodyEditorHandle>(null);
   const titleInputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
@@ -196,28 +211,33 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
   const setArchived = useMutation(api.notes.setArchived);
   const unshare = useMutation(api.notes.unshare);
 
-  const matches = useMemo(() => {
-    if (!find) return [];
-    const escaped = find.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const expression = new RegExp(escaped, "gi");
-    const found: { start: number; end: number }[] = [];
-    let match: RegExpExecArray | null;
-    while ((match = expression.exec(body)) !== null) {
-      found.push({ start: match.index, end: match.index + match[0].length });
-    }
-    return found;
-  }, [body, find]);
+  const currentActiveIndex = Math.min(activeIndex, Math.max(0, matchCount - 1));
+  const findQuery = findOpen ? find : "";
 
-  const currentActiveIndex = Math.min(activeIndex, Math.max(0, matches.length - 1));
+  // Bring the current match into view.
+  useEffect(() => {
+    if (findQuery && matchCount > 0) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, bodyY + activeTop - 160), animated: true });
+    }
+  }, [activeTop, bodyY, findQuery, matchCount]);
 
   useEffect(() => {
-    if (findOpen && find && matches.length > 0 && currentActiveIndex >= 0 && measureHeight > 0) {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, bodyY + measureHeight - 160),
-        animated: true,
-      });
-    }
-  }, [bodyY, currentActiveIndex, find, findOpen, matches.length, measureHeight]);
+    const show = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKeyboardVisible(true),
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardVisible(false),
+    );
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  // The floating tab bar covers the bottom of the screen. On Android it also rides above the
+  // keyboard; on iOS the keyboard covers it. Keep the format toolbar just above whichever is on top.
+  const toolbarOffset = Platform.OS === "android" || !keyboardVisible ? tabBarInset : 0;
 
   // Sync external changes when server copy updates, unless local edits are in flight
   /* oxlint-disable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps, react/set-state-in-effect */
@@ -239,10 +259,37 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
     save.queue({ title: val });
   };
 
-  const handleBodyChange = (val: string) => {
-    setBody(val);
-    save.queue({ body: val });
-  };
+  const queueSave = save.queue;
+  const handleBodyChange = useCallback(
+    (markdown: string) => {
+      setBody(markdown);
+      queueSave({ body: markdown });
+    },
+    [queueSave],
+  );
+
+  const handleFind = useCallback((count: number, top: number) => {
+    setMatchCount(count);
+    setActiveTop(top);
+  }, []);
+
+  // The body is a WebView sized to its content, so keep the caret above the keyboard by hand.
+  const handleCaret = useCallback(
+    (bottom: number) => {
+      const caret = bodyY + bottom;
+      const visibleBottom = scrollY.current + viewportHeight.current - 24;
+      if (caret > visibleBottom) {
+        scrollRef.current?.scrollTo({ y: caret - viewportHeight.current + 48, animated: true });
+      } else if (caret - 48 < scrollY.current) {
+        scrollRef.current?.scrollTo({ y: Math.max(0, caret - 96), animated: true });
+      }
+    },
+    [bodyY],
+  );
+
+  const runCommand = useCallback((command: EditorCommand) => {
+    bodyRef.current?.run(command);
+  }, []);
 
   const handleTagsChange = (next: string[]) => {
     setTags(next);
@@ -295,44 +342,28 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
   };
 
   const stepMatch = (direction: -1 | 1) => {
-    if (matches.length === 0) return;
+    if (matchCount === 0) return;
     setActiveIndex(
-      (current) =>
-        (Math.min(current, matches.length - 1) + direction + matches.length) % matches.length,
+      (current) => (Math.min(current, matchCount - 1) + direction + matchCount) % matchCount,
     );
     haptics.select();
   };
 
-  const activeStart = matches[currentActiveIndex]?.start ?? 0;
-  const highlightedBody = useMemo(() => {
-    if (!find || matches.length === 0) return body;
-    const segments: React.ReactNode[] = [];
-    let cursor = 0;
-    matches.forEach((match, index) => {
-      if (match.start > cursor) segments.push(body.slice(cursor, match.start));
-      segments.push(
-        <Text
-          key={`match-${match.start}`}
-          style={{
-            backgroundColor: index === currentActiveIndex ? colors.markerActive : colors.marker,
-          }}
-        >
-          {body.slice(match.start, match.end)}
-        </Text>,
-      );
-      cursor = match.end;
-    });
-    if (cursor < body.length) segments.push(body.slice(cursor));
-    return segments;
-  }, [body, colors.marker, colors.markerActive, currentActiveIndex, find, matches]);
-
-  const bodyTextStyle = [styles.bodyInput, typography.body, { color: colors.ink }];
-  const openBodyEditor = () => {
-    setFindOpen(false);
-    requestAnimationFrame(() => bodyInputRef.current?.focus());
-  };
-
-  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+  // Props of the body WebView are re-sent whenever they change, so keep the objects stable.
+  const bodyColors = useMemo(
+    () => ({
+      ink: colors.ink,
+      muted: colors.muted,
+      hanko: colors.hanko,
+      border: colors.border,
+      card: colors.card,
+      marker: colors.marker,
+      markerActive: colors.markerActive,
+    }),
+    [colors],
+  );
+  const plainBody = useMemo(() => markdownToPlainText(body), [body]);
+  const words = plainBody ? plainBody.split(/\s+/).length : 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper }]}>
@@ -449,34 +480,37 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
             style={[styles.findInput, { color: colors.ink }]}
           />
           <Text style={[styles.findCounter, { color: colors.muted }]}>
-            {find && matches.length === 0
+            {find && matchCount === 0
               ? "No matches"
-              : matches.length
-                ? `${currentActiveIndex + 1}/${matches.length}`
+              : matchCount
+                ? `${currentActiveIndex + 1}/${matchCount}`
                 : ""}
           </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Previous match"
-            disabled={!matches.length}
+            disabled={!matchCount}
             onPress={() => stepMatch(-1)}
-            style={{ opacity: matches.length ? 1 : 0.35 }}
+            style={{ opacity: matchCount ? 1 : 0.35 }}
           >
             <Feather name="chevron-up" size={18} color={colors.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Next match"
-            disabled={!matches.length}
+            disabled={!matchCount}
             onPress={() => stepMatch(1)}
-            style={{ opacity: matches.length ? 1 : 0.35 }}
+            style={{ opacity: matchCount ? 1 : 0.35 }}
           >
             <Feather name="chevron-down" size={18} color={colors.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close find"
-            onPress={() => setFindOpen(false)}
+            onPress={() => {
+              setFindOpen(false);
+              if (matchCount > 0 && !readOnly) bodyRef.current?.selectActiveMatch();
+            }}
           >
             <Feather name="x" size={18} color={colors.muted} />
           </Pressable>
@@ -490,6 +524,13 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
         <ScrollView
           ref={scrollRef}
           style={styles.flex}
+          onLayout={(event) => {
+            viewportHeight.current = event.nativeEvent.layout.height;
+          }}
+          onScroll={(event) => {
+            scrollY.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={32}
           contentContainerStyle={[
             styles.scrollContent,
             {
@@ -533,7 +574,7 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
             placeholderTextColor={colors.muted}
             accessibilityLabel="Title"
             returnKeyType="next"
-            onSubmitEditing={() => bodyInputRef.current?.focus()}
+            onSubmitEditing={() => bodyRef.current?.focus()}
             editable={!readOnly}
             style={[
               styles.titleInput,
@@ -555,35 +596,21 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
 
           {/* Body */}
           <View style={styles.bodyWrap} onLayout={(event) => setBodyY(event.nativeEvent.layout.y)}>
-            {findOpen && find ? (
-              <Pressable onPress={openBodyEditor}>
-                <Text style={bodyTextStyle}>{highlightedBody}</Text>
-              </Pressable>
-            ) : (
-              <TextInput
-                ref={bodyInputRef}
-                value={body}
-                onChangeText={handleBodyChange}
-                placeholder="Start writing…"
-                placeholderTextColor={colors.muted}
-                accessibilityLabel="Note body"
-                multiline
-                scrollEnabled={false}
-                textAlignVertical="top"
-                editable={!readOnly}
-                style={bodyTextStyle}
-              />
-            )}
-            {findOpen && find && matches.length > 0 && (
-              <Text
-                pointerEvents="none"
-                onLayout={(event) => setMeasureHeight(event.nativeEvent.layout.height)}
-                style={[bodyTextStyle, styles.measureText]}
-              >
-                {body.slice(0, activeStart)}
-                {"\u200B"}
-              </Text>
-            )}
+            <NoteBodyEditor
+              ref={bodyRef}
+              value={body}
+              editable={!readOnly}
+              placeholder="Start writing…"
+              find={findQuery}
+              activeIndex={currentActiveIndex}
+              colors={bodyColors}
+              onChange={handleBodyChange}
+              onToolbarState={setToolbarState}
+              onFind={handleFind}
+              onCaret={handleCaret}
+              onFocusChange={setBodyFocused}
+              dom={bodyDom}
+            />
           </View>
 
           {/* Footer Metadata */}
@@ -591,6 +618,11 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
             {words} {words === 1 ? "word" : "words"} · Edited {relativeTime(note.updatedAt)}
           </Text>
         </ScrollView>
+        {bodyFocused && !readOnly && (
+          <View style={{ marginBottom: toolbarOffset }}>
+            <FormatToolbar state={toolbarState} onCommand={runCommand} />
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       <Modal
@@ -829,15 +861,6 @@ const styles = StyleSheet.create({
   archivedText: { flex: 1, fontSize: 14 },
   unarchiveText: { fontSize: 14, fontWeight: "600" },
   bodyWrap: { position: "relative" },
-  measureText: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    opacity: 0,
-    minHeight: 0,
-    paddingVertical: 12,
-  },
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: {
     position: "absolute",
@@ -896,3 +919,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+const bodyDom = {
+  matchContents: true,
+  scrollEnabled: false,
+  style: { backgroundColor: "transparent" },
+  // matchContents sizes width to the content too; keep the full column width.
+  containerStyle: { backgroundColor: "transparent", width: "100%" },
+} as const;

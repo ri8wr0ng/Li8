@@ -31,6 +31,7 @@ import { cn } from "#/lib/utils";
 import { Highlight, snippet } from "#/lib/highlight";
 import { acronym, formatChapter, parseChapterCommand } from "#/lib/series";
 import { api } from "@inkmark/backend/convex/_generated/api";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
 type PaletteContext = { openPalette: () => void };
@@ -450,7 +451,10 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
                     </span>
                     {hit.doc.body && (
                       <span className="block truncate text-xs text-muted-foreground">
-                        <Highlight text={snippet(hit.doc.body, hit.terms, 40)} terms={hit.terms} />
+                        <Highlight
+                          text={snippet(markdownToPlainText(hit.doc.body), hit.terms, 40)}
+                          terms={hit.terms}
+                        />
                       </span>
                     )}
                   </span>
@@ -515,7 +519,7 @@ function Palette({ close, variant = "dialog" }: { close: () => void; variant?: V
                     </span>
                     {item.doc.body && (
                       <span className="block truncate text-xs text-muted-foreground">
-                        {snippet(item.doc.body, [], 40)}
+                        {snippet(markdownToPlainText(item.doc.body), [], 40)}
                       </span>
                     )}
                   </span>

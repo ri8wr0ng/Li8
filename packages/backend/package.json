@@ -16,6 +16,7 @@
     "@convex-dev/agent": "^0.7.9",
     "@convex-dev/auth": "^2.0.0",
     "@convex-dev/rate-limiter": "^0.4.3",
+    "@inkmark/editor": "workspace:*",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "ai": "^7.0.172",
     "convex": "catalog:",
