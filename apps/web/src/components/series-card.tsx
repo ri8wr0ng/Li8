@@ -1,8 +1,25 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "convex/react";
-import { ChevronRight, ExternalLink, Minus, Plus } from "lucide-react";
+import { CheckCheck, ChevronRight, ExternalLink, Minus, Plus, Trash2 } from "lucide-react";
 import { useState, type PointerEvent } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#/components/ui/alert-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "#/components/ui/context-menu";
 import {
   Card,
   CardAction,
@@ -29,6 +46,10 @@ import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 
 export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; terms?: string[] }) {
+  const navigate = useNavigate();
+  const remove = useMutation(api.series.remove);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [contextDisabled, setContextDisabled] = useState(false);
   const bump = useMutation(api.series.bump).withOptimisticUpdate((store, { id, delta }) => {
     // Every loaded page of every filter: the Library always passes filter args.
     for (const { args, value } of store.getAllQueries(api.library.listPage)) {
@@ -93,179 +114,257 @@ export function SeriesCard({ series, terms = [] }: { series: Doc<"series">; term
     : `${isWatchKind(series.kind) ? "Ep." : "Ch."} ${formatChapter(next)}`;
 
   return (
-    // min-w-0: as a grid item the card would otherwise grow to fit the
-    // un-truncated alt-names line and push the page wider than the screen.
-    <div className="relative min-w-0">
-      {/* Revealed behind the card as you swipe right. */}
-      {!isMovie && (
-        <div
-          ref={attachReveal}
-          aria-hidden
-          style={{ opacity: 0 }}
-          className="group/reveal absolute inset-0 flex items-center gap-2 rounded-2xl bg-hanko pl-5 text-hanko-foreground"
+    <>
+      {/* min-w-0 lets the card shrink around long alt names instead of widening the page. */}
+      <ContextMenu>
+        <ContextMenuTrigger
+          asChild
+          disabled={contextDisabled}
+          onPointerDownCapture={(e) => {
+            if (e.button !== 2) {
+              setContextDisabled(false);
+              return;
+            }
+            const target = e.target;
+            const editing =
+              target instanceof Element &&
+              Boolean(target.closest('input, textarea, [contenteditable="true"]'));
+            setContextDisabled(editing || Boolean(window.getSelection()?.toString()));
+          }}
         >
-          <span className="grid size-10 place-items-center rounded-full bg-white/15 transition-transform duration-150 group-data-[armed=true]/reveal:scale-110">
-            <Plus className="size-5" />
-          </span>
-          <span className="font-mono text-sm font-semibold tabular-nums">{revealText}</span>
-        </div>
-      )}
-      <Card
-        ref={attachSurface}
-        {...swipeHandlers}
-        className="group relative h-full min-w-0 touch-pan-y gap-0 rounded-2xl py-4 shadow-none select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:py-5"
-      >
-        {/* minmax(0,1fr): the header is a grid too, so its column must be allowed to shrink for truncate to work. */}
-        <CardHeader className="grid-cols-[minmax(0,1fr)] gap-1 px-4 has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
-          <CardDescription className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider uppercase">
-            {KIND_LABEL[series.kind]}
-            <span className="size-1 rounded-full bg-border" />
-            {statusLabel(series.status, series.kind)}
-          </CardDescription>
-          <CardTitle className="font-display text-lg leading-snug tracking-tight [overflow-wrap:anywhere]">
-            <Highlight text={series.title} terms={terms} />
-          </CardTitle>
-          <CardAction>
-            <Link
-              to="/library/$seriesId"
-              params={{ seriesId: series._id }}
-              aria-label={`Open ${series.title}`}
-              className="-mt-1 mr-1.5 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
-            >
-              <ChevronRight className="size-5" />
-            </Link>
-          </CardAction>
-          {series.altNames.length > 0 && (
-            <CardDescription className="col-start-1 truncate">
-              <Highlight text={series.altNames.join(" · ")} terms={terms} />
-            </CardDescription>
-          )}
-          {series.labelIds && series.labelIds.length > 0 && allLabels && (
-            <div className="col-start-1 flex flex-wrap gap-1 pt-1">
-              {series.labelIds.map((lid) => {
-                const label = allLabels.find((l) => l._id === lid);
-                if (!label) return null;
-                return (
-                  <span
-                    key={lid}
-                    className="rounded-md border bg-secondary/60 px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground"
-                  >
-                    {label.name}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        </CardHeader>
-
-        {isMovie ? (
-          <CardContent className="mt-auto flex items-center justify-between gap-3 px-4 pt-5 sm:px-5">
-            <div className="text-xs text-muted-foreground">{relativeTime(series.lastReadAt)}</div>
-            {series.status !== "completed" ? (
-              <button
-                type="button"
-                disabled={readOnly}
-                onClick={() => void update({ id: series._id, status: "completed" })}
-                className="flex h-9 items-center justify-center rounded-xl bg-hanko px-3.5 text-xs font-medium text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-95 disabled:opacity-40"
+          <div className="relative min-w-0">
+            {/* Revealed behind the card as you swipe right. */}
+            {!isMovie && (
+              <div
+                ref={attachReveal}
+                aria-hidden
+                style={{ opacity: 0 }}
+                className="group/reveal absolute inset-0 flex items-center gap-2 rounded-2xl bg-hanko pl-5 text-hanko-foreground"
               >
-                Mark watched
-              </button>
-            ) : (
-              <span className="text-xs font-medium text-muted-foreground">Watched</span>
-            )}
-          </CardContent>
-        ) : (
-          <CardContent className="mt-auto flex items-end justify-between gap-3 px-4 pt-5 sm:px-5">
-            <div className="min-w-0">
-              <div className="text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
-                {episodic ? "Episode" : "Chapter"}
-              </div>
-              <div className="flex items-baseline gap-1.5">
-                {episodic && (
-                  <span className="font-mono text-sm font-semibold text-muted-foreground tabular-nums">
-                    S{series.season ?? 1}
-                  </span>
-                )}
-                <span className="font-mono text-4xl leading-none font-semibold tabular-nums">
-                  {episodic && <span className="text-2xl text-muted-foreground">E</span>}
-                  <ChapterField
-                    value={series.chapter}
-                    label={`Set ${episodic ? "episode" : "chapter"} for ${series.title}`}
-                    disabled={readOnly}
-                    onCommit={(chapter) => {
-                      const previous = series.chapter;
-                      void setChapter({ id: series._id, chapter }).then(() =>
-                        toast(`${progressLabel(series.kind)} ${formatChapter(chapter)}`, {
-                          action: {
-                            label: "Undo",
-                            onClick: () => void setChapter({ id: series._id, chapter: previous }),
-                          },
-                        }),
-                      );
-                    }}
-                  />
+                <span className="grid size-10 place-items-center rounded-full bg-white/15 transition-transform duration-150 group-data-[armed=true]/reveal:scale-110">
+                  <Plus className="size-5" />
                 </span>
-                {series.totalChapters && (
-                  <span className="font-mono text-sm text-muted-foreground tabular-nums">
-                    / {formatChapter(series.totalChapters)}
-                  </span>
-                )}
+                <span className="font-mono text-sm font-semibold tabular-nums">{revealText}</span>
               </div>
-              <div className="mt-1.5 text-xs text-muted-foreground">
-                {relativeTime(series.lastReadAt)}
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                aria-label={`One back on ${series.title}`}
-                disabled={series.chapter <= 0 || readOnly}
-                onClick={() => void bump({ id: series._id, delta: -1 })}
-                className="grid size-10 place-items-center rounded-full border bg-background text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-40"
-              >
-                <Minus className="size-4" />
-              </button>
-              <button
-                type="button"
-                aria-label={`One forward on ${series.title}`}
-                disabled={readOnly}
-                onClick={() => {
-                  vibrate(8); // same tick as the swipe commit (Android; no-op on iOS)
-                  void bump({ id: series._id, delta: 1 });
-                }}
-                className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90 disabled:opacity-40"
-              >
-                <Plus className="size-5" />
-              </button>
-            </div>
-          </CardContent>
-        )}
-
-        {nextUrl && (
-          <CardFooter className="mt-4 px-4 sm:px-5">
-            <button
-              type="button"
-              onClick={readNext}
-              disabled={readOnly}
-              className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
+            )}
+            <Card
+              ref={attachSurface}
+              {...swipeHandlers}
+              className="group relative h-full min-w-0 touch-pan-y gap-0 rounded-2xl py-4 shadow-none select-none [-webkit-touch-callout:none] hover:shadow-[0_8px_24px_-14px_rgba(28,26,23,0.3)] sm:py-5"
             >
-              {isWatchKind(series.kind) ? "Watch" : "Read"}{" "}
-              {episodic
-                ? `S${series.season ?? 1} · E${formatChapter(next)}`
-                : `${progressLabel(series.kind)} ${formatChapter(next)}`}{" "}
-              <ExternalLink className="size-3.5" />
-            </button>
-          </CardFooter>
-        )}
+              {/* minmax(0,1fr): the header is a grid too, so its column must be allowed to shrink for truncate to work. */}
+              <CardHeader className="grid-cols-[minmax(0,1fr)] gap-1 px-4 has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
+                <CardDescription className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wider uppercase">
+                  {KIND_LABEL[series.kind]}
+                  <span className="size-1 rounded-full bg-border" />
+                  {statusLabel(series.status, series.kind)}
+                </CardDescription>
+                <CardTitle className="font-display text-lg leading-snug tracking-tight [overflow-wrap:anywhere]">
+                  <Highlight text={series.title} terms={terms} />
+                </CardTitle>
+                <CardAction>
+                  <Link
+                    to="/library/$seriesId"
+                    params={{ seriesId: series._id }}
+                    aria-label={`Open ${series.title}`}
+                    className="-mt-1 mr-1.5 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground active:scale-95"
+                  >
+                    <ChevronRight className="size-5" />
+                  </Link>
+                </CardAction>
+                {series.altNames.length > 0 && (
+                  <CardDescription className="col-start-1 truncate">
+                    <Highlight text={series.altNames.join(" · ")} terms={terms} />
+                  </CardDescription>
+                )}
+                {series.labelIds && series.labelIds.length > 0 && allLabels && (
+                  <div className="col-start-1 flex flex-wrap gap-1 pt-1">
+                    {series.labelIds.map((lid) => {
+                      const label = allLabels.find((l) => l._id === lid);
+                      if (!label) return null;
+                      return (
+                        <span
+                          key={lid}
+                          className="rounded-md border bg-secondary/60 px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground"
+                        >
+                          {label.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardHeader>
 
-        {progress !== null && !isMovie && (
-          <div className="absolute inset-x-5 bottom-0 h-0.5 overflow-hidden rounded-full bg-border">
-            <div className="h-full bg-hanko" style={{ width: `${progress * 100}%` }} />
+              {isMovie ? (
+                <CardContent className="mt-auto flex items-center justify-between gap-3 px-4 pt-5 sm:px-5">
+                  <div className="text-xs text-muted-foreground">
+                    {relativeTime(series.lastReadAt)}
+                  </div>
+                  {series.status !== "completed" ? (
+                    <button
+                      type="button"
+                      disabled={readOnly}
+                      onClick={() => void update({ id: series._id, status: "completed" })}
+                      className="flex h-9 items-center justify-center rounded-xl bg-hanko px-3.5 text-xs font-medium text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-95 disabled:opacity-40"
+                    >
+                      Mark watched
+                    </button>
+                  ) : (
+                    <span className="text-xs font-medium text-muted-foreground">Watched</span>
+                  )}
+                </CardContent>
+              ) : (
+                <CardContent className="mt-auto flex items-end justify-between gap-3 px-4 pt-5 sm:px-5">
+                  <div className="min-w-0">
+                    <div className="text-[0.65rem] font-medium tracking-widest text-muted-foreground uppercase">
+                      {episodic ? "Episode" : "Chapter"}
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      {episodic && (
+                        <span className="font-mono text-sm font-semibold text-muted-foreground tabular-nums">
+                          S{series.season ?? 1}
+                        </span>
+                      )}
+                      <span className="font-mono text-4xl leading-none font-semibold tabular-nums">
+                        {episodic && <span className="text-2xl text-muted-foreground">E</span>}
+                        <ChapterField
+                          value={series.chapter}
+                          label={`Set ${episodic ? "episode" : "chapter"} for ${series.title}`}
+                          disabled={readOnly}
+                          onCommit={(chapter) => {
+                            const previous = series.chapter;
+                            void setChapter({ id: series._id, chapter }).then(() =>
+                              toast(`${progressLabel(series.kind)} ${formatChapter(chapter)}`, {
+                                action: {
+                                  label: "Undo",
+                                  onClick: () =>
+                                    void setChapter({ id: series._id, chapter: previous }),
+                                },
+                              }),
+                            );
+                          }}
+                        />
+                      </span>
+                      {series.totalChapters && (
+                        <span className="font-mono text-sm text-muted-foreground tabular-nums">
+                          / {formatChapter(series.totalChapters)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5 text-xs text-muted-foreground">
+                      {relativeTime(series.lastReadAt)}
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      aria-label={`One back on ${series.title}`}
+                      disabled={series.chapter <= 0 || readOnly}
+                      onClick={() => void bump({ id: series._id, delta: -1 })}
+                      className="grid size-10 place-items-center rounded-full border bg-background text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-40"
+                    >
+                      <Minus className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`One forward on ${series.title}`}
+                      disabled={readOnly}
+                      onClick={() => {
+                        vibrate(8); // same tick as the swipe commit (Android; no-op on iOS)
+                        void bump({ id: series._id, delta: 1 });
+                      }}
+                      className="grid size-12 place-items-center rounded-full bg-hanko text-hanko-foreground shadow-sm transition-transform hover:bg-hanko/90 active:scale-90 disabled:opacity-40"
+                    >
+                      <Plus className="size-5" />
+                    </button>
+                  </div>
+                </CardContent>
+              )}
+
+              {nextUrl && (
+                <CardFooter className="mt-4 px-4 sm:px-5">
+                  <button
+                    type="button"
+                    onClick={readNext}
+                    disabled={readOnly}
+                    className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-secondary text-sm font-medium transition-colors hover:bg-accent"
+                  >
+                    {isWatchKind(series.kind) ? "Watch" : "Read"}{" "}
+                    {episodic
+                      ? `S${series.season ?? 1} · E${formatChapter(next)}`
+                      : `${progressLabel(series.kind)} ${formatChapter(next)}`}{" "}
+                    <ExternalLink className="size-3.5" />
+                  </button>
+                </CardFooter>
+              )}
+
+              {progress !== null && !isMovie && (
+                <div className="absolute inset-x-5 bottom-0 h-0.5 overflow-hidden rounded-full bg-border">
+                  <div className="h-full bg-hanko" style={{ width: `${progress * 100}%` }} />
+                </div>
+              )}
+            </Card>
           </div>
-        )}
-      </Card>
-    </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-52">
+          <ContextMenuItem
+            onSelect={() =>
+              void navigate({ to: "/library/$seriesId", params: { seriesId: series._id } })
+            }
+          >
+            <ChevronRight /> Open
+          </ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => window.open(`/library/${series._id}`, "_blank", "noopener")}
+          >
+            <ExternalLink /> Open in new tab
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => void bump({ id: series._id, delta: 1 })}>
+            <Plus /> One forward
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={() => void bump({ id: series._id, delta: -1 })}>
+            <Minus /> One back
+          </ContextMenuItem>
+          {series.status !== "completed" && (
+            <ContextMenuItem onSelect={() => void update({ id: series._id, status: "completed" })}>
+              <CheckCheck /> Mark completed
+            </ContextMenuItem>
+          )}
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
+            <Trash2 /> Delete…
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this series?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will be removed from your Library. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                try {
+                  await remove({ id: series._id });
+                  toast("Series deleted");
+                } catch {
+                  toast.error("Something went wrong");
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

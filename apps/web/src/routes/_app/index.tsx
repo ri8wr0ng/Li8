@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNewNote } from "#/components/app-shell";
 import { EmptyState, PageHeader, SearchField, SectionLabel } from "#/components/page";
 import { PullToRefresh } from "#/components/pull-to-refresh";
+import { NoteRowMenu } from "#/components/note-context-menu";
 import { Button } from "#/components/ui/button";
 import { Skeleton } from "#/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "#/components/ui/tabs";
@@ -266,6 +267,7 @@ function NoteList({
   status?: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
   loadMore?: (numItems: number) => void;
 }) {
+  const me = useQuery(api.users.me, {});
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -283,54 +285,56 @@ function NoteList({
       <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
         {items.map(({ note, terms, subtitle }) => (
           <li key={note._id}>
-            <Link
-              to="/notes/$noteId"
-              params={{ noteId: note._id }}
-              search={query ? { q: query } : {}}
-              className="block px-4 py-3.5 transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none sm:px-5"
-            >
-              <div className="flex items-baseline gap-3">
-                <h3 className="min-w-0 flex-1 truncate font-medium">
-                  {note.pinned && (
-                    <Pin className="mr-1.5 inline size-3.5 -translate-y-px text-hanko" />
-                  )}
-                  {note.title ? (
-                    <Highlight text={note.title} terms={terms} />
-                  ) : (
-                    <span className="text-muted-foreground">Untitled</span>
-                  )}
-                </h3>
-                {note.archived && (
-                  <span className="shrink-0 rounded-md bg-secondary px-1.5 py-0.5 text-[0.7rem] font-medium text-secondary-foreground">
-                    Archived
-                  </span>
-                )}
-                <time className="shrink-0 text-xs text-muted-foreground">
-                  {relativeTime(note.updatedAt)}
-                </time>
-              </div>
-              {markdownToPlainText(note.body) && (
-                <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                  <Highlight
-                    text={snippet(markdownToPlainText(note.body), terms, 90)}
-                    terms={terms}
-                  />
-                </p>
-              )}
-              {note.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {note.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-md bg-secondary px-1.5 py-0.5 text-[0.7rem] font-medium text-secondary-foreground"
-                    >
-                      #<Highlight text={tag} terms={terms} />
+            <NoteRowMenu note={note} query={query} isOwner={me?.id === note.userId} userId={me?.id}>
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: note._id }}
+                search={query ? { q: query } : {}}
+                className="block px-4 py-3.5 transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none sm:px-5"
+              >
+                <div className="flex items-baseline gap-3">
+                  <h3 className="min-w-0 flex-1 truncate font-medium">
+                    {note.pinned && (
+                      <Pin className="mr-1.5 inline size-3.5 -translate-y-px text-hanko" />
+                    )}
+                    {note.title ? (
+                      <Highlight text={note.title} terms={terms} />
+                    ) : (
+                      <span className="text-muted-foreground">Untitled</span>
+                    )}
+                  </h3>
+                  {note.archived && (
+                    <span className="shrink-0 rounded-md bg-secondary px-1.5 py-0.5 text-[0.7rem] font-medium text-secondary-foreground">
+                      Archived
                     </span>
-                  ))}
+                  )}
+                  <time className="shrink-0 text-xs text-muted-foreground">
+                    {relativeTime(note.updatedAt)}
+                  </time>
                 </div>
-              )}
-              {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
-            </Link>
+                {markdownToPlainText(note.body) && (
+                  <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                    <Highlight
+                      text={snippet(markdownToPlainText(note.body), terms, 90)}
+                      terms={terms}
+                    />
+                  </p>
+                )}
+                {note.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {note.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-md bg-secondary px-1.5 py-0.5 text-[0.7rem] font-medium text-secondary-foreground"
+                      >
+                        #<Highlight text={tag} terms={terms} />
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
+              </Link>
+            </NoteRowMenu>
           </li>
         ))}
       </ul>

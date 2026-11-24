@@ -111,6 +111,7 @@ export function NoteToolbar({
     <div
       role="toolbar"
       aria-label="Formatting"
+      data-sticky-chrome
       className={cn(
         "flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,

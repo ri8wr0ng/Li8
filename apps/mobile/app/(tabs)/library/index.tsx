@@ -8,11 +8,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useRouter, useNavigation } from "expo-router";
-import { useTabBarInset } from "../../../src/components/glass";
+import { BottomSearchBar, useBottomSearchInset } from "../../../src/components/bottom-search-bar";
 import { Feather } from "@expo/vector-icons";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -38,7 +37,7 @@ const STATUS_CHIPS: FilterStatus[] = [
 export default function LibraryScreen() {
   const router = useRouter();
   const navigation = useNavigation();
-  const tabBarInset = useTabBarInset();
+  const bottomInset = useBottomSearchInset();
   const { colors, radii, typography } = useTheme();
 
   // Filters state
@@ -138,44 +137,6 @@ export default function LibraryScreen() {
 
   const renderHeader = () => (
     <View style={styles.listHeaderContainer}>
-      {/* Search Bar */}
-      <View
-        style={[
-          styles.searchContainer,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-            borderRadius: radii.controls,
-          },
-        ]}
-      >
-        <Feather name="search" size={18} color={colors.muted} style={styles.searchIcon} />
-        <TextInput
-          selectionColor={colors.hanko}
-          cursorColor={colors.hanko}
-          accessibilityLabel="Search titles and alternative names"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search titles and alternative names…"
-          placeholderTextColor={colors.muted}
-          style={[styles.searchInput, typography.bodySm, { color: colors.ink }]}
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          returnKeyType="search"
-        />
-        {searchQuery.length > 0 && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-            onPress={() => setSearchQuery("")}
-            style={styles.clearSearchBtn}
-          >
-            <Feather name="x" size={16} color={colors.muted} />
-          </Pressable>
-        )}
-      </View>
-
       {/* Filter Row (hidden during active search) */}
       {!isSearchActive && (
         <View style={styles.filterSection}>
@@ -423,12 +384,12 @@ export default function LibraryScreen() {
   const renderFooter = () => {
     if (!isSearchActive && paginationStatus === "LoadingMore") {
       return (
-        <View style={styles.footerLoading}>
+        <View style={[styles.footerLoading, { marginBottom: bottomInset }]}>
           <ActivityIndicator size="small" color={colors.hanko} />
         </View>
       );
     }
-    return <View style={{ height: tabBarInset + 16 }} />;
+    return <View style={{ height: bottomInset }} />;
   };
 
   return (
@@ -471,6 +432,12 @@ export default function LibraryScreen() {
         selectedLabelIds={selectedLabelIds}
         onSelectLabelIds={setSelectedLabelIds}
       />
+
+      <BottomSearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search titles and alternative names…"
+      />
     </View>
   );
 }
@@ -485,23 +452,6 @@ const styles = StyleSheet.create({
   },
   listHeaderContainer: {
     marginBottom: 12,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 44,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: "100%",
-  },
-  clearSearchBtn: {
-    padding: 4,
   },
   filterSection: {
     marginTop: 12,

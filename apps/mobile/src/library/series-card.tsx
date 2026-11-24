@@ -20,6 +20,8 @@ import {
   statusLabel,
 } from "./series";
 import { relativeTime } from "./time";
+import { SwipeRow, type SwipeAction } from "../components/swipe-row";
+import { dialog } from "../components/dialog";
 
 interface SeriesCardProps {
   series: Doc<"series">;
@@ -44,6 +46,7 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     }
   });
   const update = useMutation(api.series.update);
+  const remove = useMutation(api.series.remove);
   // Optimistic too, so a typed chapter shows at once instead of flicking back while it saves.
   const setChapter = useMutation(api.series.setChapter).withOptimisticUpdate(
     (store, { id, chapter }) => {
@@ -94,6 +97,68 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     }
   };
 
+  const swipeActions: SwipeAction[] = [
+    {
+      key: "bump",
+      label: "+1",
+      icon: "plus",
+      color: colors.hanko,
+      onPress: () => {
+        haptics.tap();
+        bump({ id: series._id, delta: 1 }).catch((err: unknown) =>
+          console.error("Bump error:", err),
+        );
+      },
+    },
+  ];
+  const trailingActions: SwipeAction[] = [
+    ...(series.status !== "completed"
+      ? [
+          {
+            key: "done",
+            label: "Done",
+            icon: "check" as const,
+            color: "#5a8f5a",
+            onPress: () => {
+              haptics.success();
+              update({ id: series._id, status: "completed" }).catch((err: unknown) =>
+                console.error("Mark watched error:", err),
+              );
+            },
+          },
+        ]
+      : []),
+    {
+      key: "delete",
+      label: "Delete",
+      icon: "trash-2",
+      color: colors.destructive,
+      destructive: true,
+      onPress: () => {
+        haptics.warning();
+        dialog.alert(
+          "Delete this series?",
+          "It will be removed from your Library. This can't be undone.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: async () => {
+                try {
+                  await remove({ id: series._id });
+                } catch (err) {
+                  haptics.warning();
+                  console.error("Delete series error:", err);
+                }
+              },
+            },
+          ],
+        );
+      },
+    },
+  ];
+
   const handleReadNext = async (e: { stopPropagation?: () => void }) => {
     e.stopPropagation?.();
     if (!nextUrl) return;
@@ -132,244 +197,249 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
       : [];
 
   return (
-    <PressableScale
-      accessibilityRole="button"
+    <SwipeRow
+      leading={swipeActions}
+      trailing={trailingActions}
+      borderRadius={radii.card}
       accessibilityLabel={`Open series ${series.title}`}
-      // The card is one accessibility element, so the chapter field is reached as an action.
       accessibilityActions={isMovie ? undefined : [{ name: "setChapter", label: "Set chapter" }]}
+      onAccessibilityTap={handlePressCard}
       onAccessibilityAction={(e) => {
         if (e.nativeEvent.actionName !== "setChapter") return;
         setDraft(formatChapter(series.chapter));
         setEditing(true);
       }}
-      onPress={handlePressCard}
-      scale={0.98}
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderRadius: radii.card,
-        },
-      ]}
     >
-      {/* Header: Kind, Status, Chevron */}
-      <View style={styles.cardHeader}>
-        <View style={styles.badgeRow}>
-          <Text style={[styles.kindBadge, { color: colors.muted }]}>
-            {KIND_LABEL[series.kind].toUpperCase()}
-          </Text>
-          <View style={[styles.dot, { backgroundColor: colors.border }]} />
-          <Text style={[styles.statusBadge, { color: colors.muted }]}>
-            {statusLabel(series.status, series.kind).toUpperCase()}
-          </Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={colors.muted} />
-      </View>
-
-      {/* Title */}
-      <Text style={[styles.title, typography.display, { color: colors.ink }]} numberOfLines={2}>
-        {series.title}
-      </Text>
-
-      {/* Alternative Names */}
-      {series.altNames && series.altNames.length > 0 ? (
-        <Text
-          style={[styles.altNames, typography.bodySm, { color: colors.muted }]}
-          numberOfLines={1}
-        >
-          {series.altNames.join(" · ")}
-        </Text>
-      ) : null}
-
-      {/* Labels */}
-      {seriesLabels.length > 0 ? (
-        <View style={styles.labelRow}>
-          {seriesLabels.map((name, index) => (
-            <View
-              key={`${name}-${index}`}
-              style={[
-                styles.labelPill,
-                {
-                  backgroundColor: colors.surfaceHighlight,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Text style={[styles.labelText, { color: colors.muted }]}>{name}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {/* Progress & Controls */}
-      {isMovie ? (
-        <View style={styles.footerRow}>
-          <Text style={[styles.updatedText, { color: colors.muted }]}>
-            {relativeTime(series.lastReadAt)}
-          </Text>
-          {series.status !== "completed" ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Mark watched"
-              onPress={handleMarkWatched}
-              style={({ pressed }) => [
-                styles.markWatchedButton,
-                {
-                  backgroundColor: colors.hanko,
-                  borderRadius: radii.controls,
-                  opacity: pressed ? 0.85 : 1,
-                  transform: [{ scale: pressed ? 0.96 : 1 }],
-                },
-              ]}
-            >
-              <Text style={[styles.markWatchedText, { color: colors.card }]}>Mark watched</Text>
-            </Pressable>
-          ) : (
-            <Text style={[styles.watchedText, { color: colors.muted }]}>Watched</Text>
-          )}
-        </View>
-      ) : (
-        <View style={styles.progressRow}>
-          <View style={styles.progressInfo}>
-            <Text style={[styles.progressTypeLabel, { color: colors.muted }]}>
-              {episodic ? "EPISODE" : "CHAPTER"}
+      <PressableScale
+        onPress={handlePressCard}
+        scale={0.98}
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderRadius: radii.card,
+          },
+        ]}
+      >
+        {/* Header: Kind, Status, Chevron */}
+        <View style={styles.cardHeader}>
+          <View style={styles.badgeRow}>
+            <Text style={[styles.kindBadge, { color: colors.muted }]}>
+              {KIND_LABEL[series.kind].toUpperCase()}
             </Text>
-            <View style={styles.chapterNumbers}>
-              {episodic && (
-                <Text style={[styles.seasonText, typography.number, { color: colors.muted }]}>
-                  S{series.season ?? 1} ·{" "}
-                </Text>
-              )}
-              {editing ? (
-                <TextInput
-                  selectionColor={colors.hanko}
-                  cursorColor={colors.hanko}
-                  autoFocus
-                  selectTextOnFocus
-                  keyboardType="decimal-pad"
-                  returnKeyType="done"
-                  value={draft}
-                  onChangeText={setDraft}
-                  onSubmitEditing={commit}
-                  onBlur={commit}
-                  style={[
-                    styles.chapterValue,
-                    styles.chapterInput,
-                    typography.number,
-                    { color: colors.ink, borderColor: colors.hanko },
-                  ]}
-                />
-              ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Set ${episodic ? "episode" : "chapter"} for ${series.title}`}
-                  hitSlop={8}
-                  onPress={(e) => {
-                    e.stopPropagation?.();
-                    haptics.tap();
-                    setDraft(formatChapter(series.chapter));
-                    setEditing(true);
-                  }}
-                >
-                  <Text style={[styles.chapterValue, typography.number, { color: colors.ink }]}>
-                    {formatChapter(series.chapter)}
-                  </Text>
-                </Pressable>
-              )}
-              {series.totalChapters ? (
-                <Text
-                  style={[styles.totalChapterValue, typography.number, { color: colors.muted }]}
-                >
-                  {" "}
-                  / {formatChapter(series.totalChapters)}
-                </Text>
-              ) : null}
-            </View>
+            <View style={[styles.dot, { backgroundColor: colors.border }]} />
+            <Text style={[styles.statusBadge, { color: colors.muted }]}>
+              {statusLabel(series.status, series.kind).toUpperCase()}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.muted} />
+        </View>
+
+        {/* Title */}
+        <Text style={[styles.title, typography.display, { color: colors.ink }]} numberOfLines={2}>
+          {series.title}
+        </Text>
+
+        {/* Alternative Names */}
+        {series.altNames && series.altNames.length > 0 ? (
+          <Text
+            style={[styles.altNames, typography.bodySm, { color: colors.muted }]}
+            numberOfLines={1}
+          >
+            {series.altNames.join(" · ")}
+          </Text>
+        ) : null}
+
+        {/* Labels */}
+        {seriesLabels.length > 0 ? (
+          <View style={styles.labelRow}>
+            {seriesLabels.map((name, index) => (
+              <View
+                key={`${name}-${index}`}
+                style={[
+                  styles.labelPill,
+                  {
+                    backgroundColor: colors.surfaceHighlight,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.labelText, { color: colors.muted }]}>{name}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Progress & Controls */}
+        {isMovie ? (
+          <View style={styles.footerRow}>
             <Text style={[styles.updatedText, { color: colors.muted }]}>
               {relativeTime(series.lastReadAt)}
             </Text>
+            {series.status !== "completed" ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Mark watched"
+                onPress={handleMarkWatched}
+                style={({ pressed }) => [
+                  styles.markWatchedButton,
+                  {
+                    backgroundColor: colors.hanko,
+                    borderRadius: radii.controls,
+                    opacity: pressed ? 0.85 : 1,
+                    transform: [{ scale: pressed ? 0.96 : 1 }],
+                  },
+                ]}
+              >
+                <Text style={[styles.markWatchedText, { color: colors.card }]}>Mark watched</Text>
+              </Pressable>
+            ) : (
+              <Text style={[styles.watchedText, { color: colors.muted }]}>Watched</Text>
+            )}
           </View>
+        ) : (
+          <View style={styles.progressRow}>
+            <View style={styles.progressInfo}>
+              <Text style={[styles.progressTypeLabel, { color: colors.muted }]}>
+                {episodic ? "EPISODE" : "CHAPTER"}
+              </Text>
+              <View style={styles.chapterNumbers}>
+                {episodic && (
+                  <Text style={[styles.seasonText, typography.number, { color: colors.muted }]}>
+                    S{series.season ?? 1} ·{" "}
+                  </Text>
+                )}
+                {editing ? (
+                  <TextInput
+                    selectionColor={colors.hanko}
+                    cursorColor={colors.hanko}
+                    autoFocus
+                    selectTextOnFocus
+                    keyboardType="decimal-pad"
+                    returnKeyType="done"
+                    value={draft}
+                    onChangeText={setDraft}
+                    onSubmitEditing={commit}
+                    onBlur={commit}
+                    style={[
+                      styles.chapterValue,
+                      styles.chapterInput,
+                      typography.number,
+                      { color: colors.ink, borderColor: colors.hanko },
+                    ]}
+                  />
+                ) : (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set ${episodic ? "episode" : "chapter"} for ${series.title}`}
+                    hitSlop={8}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      haptics.tap();
+                      setDraft(formatChapter(series.chapter));
+                      setEditing(true);
+                    }}
+                  >
+                    <Text style={[styles.chapterValue, typography.number, { color: colors.ink }]}>
+                      {formatChapter(series.chapter)}
+                    </Text>
+                  </Pressable>
+                )}
+                {series.totalChapters ? (
+                  <Text
+                    style={[styles.totalChapterValue, typography.number, { color: colors.muted }]}
+                  >
+                    {" "}
+                    / {formatChapter(series.totalChapters)}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={[styles.updatedText, { color: colors.muted }]}>
+                {relativeTime(series.lastReadAt)}
+              </Text>
+            </View>
 
-          {/* Stepper buttons */}
-          <View style={styles.stepperContainer}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`One back on ${series.title}`}
-              accessibilityState={{ disabled: series.chapter <= 0 }}
-              onPress={handleBump(-1)}
-              style={({ pressed }) => [
-                styles.stepMinusButton,
-                {
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
-                  opacity: series.chapter <= 0 ? 0.35 : pressed ? 0.7 : 1,
-                  transform: [{ scale: pressed ? 0.94 : 1 }],
-                },
-              ]}
-            >
-              <Feather name="minus" size={16} color={colors.ink} />
-            </Pressable>
+            {/* Stepper buttons */}
+            <View style={styles.stepperContainer}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`One back on ${series.title}`}
+                accessibilityState={{ disabled: series.chapter <= 0 }}
+                onPress={handleBump(-1)}
+                style={({ pressed }) => [
+                  styles.stepMinusButton,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.card,
+                    opacity: series.chapter <= 0 ? 0.35 : pressed ? 0.7 : 1,
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  },
+                ]}
+              >
+                <Feather name="minus" size={16} color={colors.ink} />
+              </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`One forward on ${series.title}`}
-              onPress={handleBump(1)}
-              style={({ pressed }) => [
-                styles.stepPlusButton,
-                {
-                  backgroundColor: colors.hanko,
-                  opacity: pressed ? 0.85 : 1,
-                  transform: [{ scale: pressed ? 0.92 : 1 }],
-                },
-              ]}
-            >
-              <Feather name="plus" size={20} color="#FFFFFF" />
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`One forward on ${series.title}`}
+                onPress={handleBump(1)}
+                style={({ pressed }) => [
+                  styles.stepPlusButton,
+                  {
+                    backgroundColor: colors.hanko,
+                    opacity: pressed ? 0.85 : 1,
+                    transform: [{ scale: pressed ? 0.92 : 1 }],
+                  },
+                ]}
+              >
+                <Feather name="plus" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Read Next Link Button */}
-      {nextUrl ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${isWatchKind(series.kind) ? "Watch" : "Read"} next`}
-          onPress={handleReadNext}
-          style={({ pressed }) => [
-            styles.readNextButton,
-            {
-              backgroundColor: colors.surfaceHighlight,
-              borderRadius: radii.controls,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Text style={[styles.readNextText, { color: colors.ink }]}>
-            {isWatchKind(series.kind) ? "Watch" : "Read"}{" "}
-            {episodic
-              ? `S${series.season ?? 1} · E${formatChapter(next)}`
-              : `${progressLabel(series.kind)} ${formatChapter(next)}`}
-          </Text>
-          <Feather name="external-link" size={14} color={colors.muted} />
-        </Pressable>
-      ) : null}
-
-      {/* Progress Bar */}
-      {progress !== null && !isMovie ? (
-        <View style={[styles.progressBarTrack, { backgroundColor: colors.border }]}>
-          <View
-            style={[
-              styles.progressBarFill,
+        {/* Read Next Link Button */}
+        {nextUrl ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${isWatchKind(series.kind) ? "Watch" : "Read"} next`}
+            onPress={handleReadNext}
+            style={({ pressed }) => [
+              styles.readNextButton,
               {
-                width: `${Math.round(progress * 100)}%`,
-                backgroundColor: colors.hanko,
+                backgroundColor: colors.surfaceHighlight,
+                borderRadius: radii.controls,
+                opacity: pressed ? 0.8 : 1,
               },
             ]}
-          />
-        </View>
-      ) : null}
-    </PressableScale>
+          >
+            <Text style={[styles.readNextText, { color: colors.ink }]}>
+              {isWatchKind(series.kind) ? "Watch" : "Read"}{" "}
+              {episodic
+                ? `S${series.season ?? 1} · E${formatChapter(next)}`
+                : `${progressLabel(series.kind)} ${formatChapter(next)}`}
+            </Text>
+            <Feather name="external-link" size={14} color={colors.muted} />
+          </Pressable>
+        ) : null}
+
+        {/* Progress Bar */}
+        {progress !== null && !isMovie ? (
+          <View style={[styles.progressBarTrack, { backgroundColor: colors.border }]}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${Math.round(progress * 100)}%`,
+                  backgroundColor: colors.hanko,
+                },
+              ]}
+            />
+          </View>
+        ) : null}
+      </PressableScale>
+    </SwipeRow>
   );
 }
 
