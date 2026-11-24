@@ -3,8 +3,23 @@
 @import "@fontsource-variable/roboto";
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./typeset.css";
 
 @plugin "@tailwindcss/typography";
+
+:root {
+  --font-geist: "Geist Variable", sans-serif;
+  --font-geist-mono: "Geist Mono Variable", monospace;
+}
+
+.typeset-docs {
+  --typeset-font-body: var(--font-geist);
+  --typeset-font-heading: var(--font-geist);
+  --typeset-font-mono: var(--font-geist-mono);
+  --typeset-size: 15px;
+  --typeset-leading: 1.75;
+  --typeset-flow: 1em;
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -209,12 +224,10 @@
     color: #1c1a17;
   }
 
-  /* The note body editor (Tiptap). Sits inside `prose`; these fill in what prose doesn't know. */
+  /* The note body editor (Tiptap). Sits inside `typeset`; these fill in what typeset doesn't know. */
   .note-editor {
     min-height: 16rem;
     outline: none;
-    font-size: 1.0625rem;
-    line-height: 1.75;
     overflow-wrap: anywhere;
   }
   .note-editor > :first-child {

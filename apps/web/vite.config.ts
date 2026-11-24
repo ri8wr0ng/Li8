@@ -1,5 +1,7 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -11,6 +13,15 @@ const config = defineConfig({
   // `convex dev` (run in packages/backend) writes VITE_CONVEX_URL to its .env.local.
   envDir: fileURLToPath(new URL("../../packages/backend", import.meta.url)),
   resolve: { tsconfigPaths: true },
+  server: {
+    fs: {
+      // Bun links packages from its global cache, outside the repo, so Vite would 403 font files.
+      allow: [
+        searchForWorkspaceRoot(process.cwd()),
+        process.env.BUN_INSTALL_CACHE_DIR ?? join(homedir(), ".bun", "install", "cache"),
+      ],
+    },
+  },
   plugins: [
     tailwindcss(),
     tanstackStart({

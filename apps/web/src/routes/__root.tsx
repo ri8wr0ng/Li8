@@ -14,7 +14,7 @@ import { PUBLIC_PATHS } from "#/lib/public-paths";
 import { DESCRIPTION, HOME_TITLE, SITE_NAME, SITE_URL, TAGLINE, absoluteUrl } from "#/lib/seo";
 import { THEME_INIT_SCRIPT } from "#/lib/theme";
 
-import appCss from "../styles.css?url";
+import appCss from "../styles/index.css?url";
 
 export const Route = createRootRoute({
   head: () => ({
