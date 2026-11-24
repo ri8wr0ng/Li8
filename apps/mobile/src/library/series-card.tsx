@@ -100,7 +100,10 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     try {
       const canOpen = await Linking.canOpenURL(nextUrl);
       if (canOpen) {
-        await WebBrowser.openBrowserAsync(nextUrl).catch(() => Linking.openURL(nextUrl));
+        await WebBrowser.openBrowserAsync(nextUrl, {
+          toolbarColor: colors.paper,
+          controlsColor: colors.hanko,
+        }).catch(() => Linking.openURL(nextUrl));
       }
     } catch {
       // Fallback open
@@ -240,6 +243,8 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
               )}
               {editing ? (
                 <TextInput
+                  selectionColor={colors.hanko}
+                  cursorColor={colors.hanko}
                   autoFocus
                   selectTextOnFocus
                   keyboardType="decimal-pad"

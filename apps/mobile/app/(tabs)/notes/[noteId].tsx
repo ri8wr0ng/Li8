@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { dialog } from "../../../src/components/dialog";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -307,7 +307,7 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
 
   const handleDelete = () => {
     haptics.warning();
-    Alert.alert(
+    dialog.alert(
       "Delete this note?",
       `“${title.trim() || "Untitled"}” will be removed from all your devices. This can't be undone.`,
       [
@@ -320,7 +320,7 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
               await removeNote({ id: note._id });
               router.back();
             } catch (err) {
-              Alert.alert(
+              dialog.alert(
                 "Couldn't do that",
                 err instanceof ConvexError ? String(err.data) : "Please try again.",
               );
@@ -334,7 +334,7 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
   const runMenuAction = (action: () => Promise<void>) => {
     setActionsOpen(false);
     void action().catch((err: unknown) => {
-      Alert.alert(
+      dialog.alert(
         "Couldn't do that",
         err instanceof ConvexError ? String(err.data) : "Please try again.",
       );
@@ -464,6 +464,8 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
         >
           <Feather name="search" size={16} color={colors.muted} />
           <TextInput
+            selectionColor={colors.hanko}
+            cursorColor={colors.hanko}
             value={find}
             onChangeText={(value) => {
               setFind(value);
@@ -567,6 +569,8 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
           )}
           {/* Title */}
           <TextInput
+            selectionColor={colors.hanko}
+            cursorColor={colors.hanko}
             ref={titleInputRef}
             value={title}
             onChangeText={handleTitleChange}

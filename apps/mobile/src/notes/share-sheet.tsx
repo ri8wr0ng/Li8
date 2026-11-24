@@ -157,6 +157,9 @@ export function ShareSheet({
               <Text style={[styles.sectionLabel, { color: colors.muted }]}>People</Text>
 
               <TextInput
+                selectionColor={colors.hanko}
+                cursorColor={colors.hanko}
+
                 value={email}
                 onChangeText={(v) => {
                   setEmail(v);

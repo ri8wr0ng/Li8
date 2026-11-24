@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { dialog } from "../../../src/components/dialog";
 import { useRouter, Stack } from "expo-router";
 import { useTabBarInset } from "../../../src/components/glass";
 import { Feather } from "@expo/vector-icons";
@@ -69,7 +69,7 @@ export default function NewSeriesScreen() {
     try {
       full = await resolveMatch(media);
     } catch (err) {
-      Alert.alert(catalogName(media.source), errorMessage(err, media.source));
+      dialog.alert(catalogName(media.source), errorMessage(err, media.source));
       return;
     }
 
@@ -110,7 +110,7 @@ export default function NewSeriesScreen() {
 
     const chapNum = Number(chapter.trim());
     if (!Number.isFinite(chapNum) || chapNum < 0) {
-      Alert.alert("Invalid number", "Chapter must be 0 or more");
+      dialog.alert("Invalid number", "Chapter must be 0 or more");
       return;
     }
 
@@ -159,7 +159,7 @@ export default function NewSeriesScreen() {
       }
     } catch (err) {
       console.error("Create series error:", err);
-      Alert.alert("Error", "Could not create series. Please try again.");
+      dialog.alert("Error", "Could not create series. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -186,6 +186,8 @@ export default function NewSeriesScreen() {
           <View style={styles.formGroup}>
             <Text style={[styles.fieldLabel, { color: colors.ink }]}>Title *</Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={title}
               onChangeText={(text) => {
                 setTitle(text);
@@ -349,6 +351,8 @@ export default function NewSeriesScreen() {
                 <View style={[styles.formGroup, { flex: 1 }]}>
                   <Text style={[styles.fieldLabel, { color: colors.ink }]}>Season</Text>
                   <TextInput
+                    selectionColor={colors.hanko}
+                    cursorColor={colors.hanko}
                     value={season}
                     onChangeText={setSeason}
                     keyboardType="numeric"
@@ -373,6 +377,8 @@ export default function NewSeriesScreen() {
                   {episodic ? "Episode" : "Current Chapter"}
                 </Text>
                 <TextInput
+                  selectionColor={colors.hanko}
+                  cursorColor={colors.hanko}
                   value={chapter}
                   onChangeText={setChapter}
                   keyboardType="decimal-pad"
@@ -394,6 +400,8 @@ export default function NewSeriesScreen() {
               <View style={[styles.formGroup, { flex: 1.5 }]}>
                 <Text style={[styles.fieldLabel, { color: colors.ink }]}>Total Count</Text>
                 <TextInput
+                  selectionColor={colors.hanko}
+                  cursorColor={colors.hanko}
                   value={totalChapters}
                   onChangeText={setTotalChapters}
                   keyboardType="decimal-pad"
@@ -420,6 +428,8 @@ export default function NewSeriesScreen() {
               Alternative Names (comma-separated)
             </Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={altNames}
               onChangeText={setAltNames}
               placeholder="e.g. SL, Na Honjaman Lebel-eob"
@@ -440,6 +450,8 @@ export default function NewSeriesScreen() {
           <View style={styles.formGroup}>
             <Text style={[styles.fieldLabel, { color: colors.ink }]}>Genres (comma-separated)</Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={genres}
               onChangeText={setGenres}
               placeholder="Action, Fantasy, Adventure…"
@@ -460,6 +472,8 @@ export default function NewSeriesScreen() {
           <View style={styles.formGroup}>
             <Text style={[styles.fieldLabel, { color: colors.ink }]}>Description</Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={description}
               onChangeText={setDescription}
               multiline

@@ -344,6 +344,8 @@ export default function NotesScreen() {
         >
           <Feather name="search" size={18} color={colors.muted} style={styles.searchIcon} />
           <TextInput
+            selectionColor={colors.hanko}
+            cursorColor={colors.hanko}
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search notes…"

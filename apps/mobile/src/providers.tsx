@@ -4,6 +4,7 @@ import { ConvexReactClient } from "convex/react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { loadThemePreference } from "./theme-preference";
+import { DialogHost } from "./components/dialog";
 import { UpdaterProvider } from "./updates/updater";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "./storage";
 
@@ -57,6 +58,7 @@ export function Providers({ children }: { children: ReactNode }) {
       >
         <UpdaterProvider>{children}</UpdaterProvider>
       </ConvexAuthProvider>
+      <DialogHost />
     </SafeAreaProvider>
   );
 }

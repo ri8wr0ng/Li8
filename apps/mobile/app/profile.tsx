@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { dialog } from "../src/components/dialog";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery } from "convex/react";
@@ -120,7 +120,7 @@ function Identity({ user }: { user: User }) {
       haptics.success();
       setEditing(false);
     } catch {
-      Alert.alert("Couldn't save your name", "Try again.");
+      dialog.alert("Couldn't save your name", "Try again.");
     } finally {
       setSaving(false);
     }
@@ -139,6 +139,8 @@ function Identity({ user }: { user: User }) {
         <View style={styles.flex}>
           {editing ? (
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               value={name}
               onChangeText={setName}
               onSubmitEditing={() => void save()}
@@ -199,7 +201,7 @@ function AvatarPicker({ user }: { user: User }) {
   const save = (patch: { avatarStyle?: string; avatarSeed?: string }) =>
     update(patch).catch((error: unknown) => {
       console.error(error);
-      Alert.alert("Couldn't save your avatar", "Try again.");
+      dialog.alert("Couldn't save your avatar", "Try again.");
     });
 
   return (

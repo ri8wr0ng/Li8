@@ -8,7 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Alert, AppState, Platform } from "react-native";
+import { AppState, Platform } from "react-native";
+import { dialog } from "../components/dialog";
 import * as Application from "expo-application";
 import { getItemAsync, setItemAsync } from "../storage";
 import {
@@ -187,7 +188,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
       const prompted = await getItemAsync(PROMPTED_KEY).catch(() => null);
       if (prompted === build.tag) return;
       await setItemAsync(PROMPTED_KEY, build.tag).catch(() => {});
-      Alert.alert(
+      dialog.alert(
         "Update available",
         `li8 ${build.version} is ready (${formatBytes(build.apkSize)}).`,
         [

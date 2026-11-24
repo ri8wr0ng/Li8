@@ -208,6 +208,8 @@ export function FormatToolbar({
               {state.link ? "Edit link" : "Add link"}
             </Text>
             <TextInput
+              selectionColor={colors.hanko}
+              cursorColor={colors.hanko}
               autoFocus
               value={href}
               onChangeText={setHref}
