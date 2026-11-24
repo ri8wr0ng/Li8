@@ -187,7 +187,18 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon
+        # Maven Central sometimes answers 429 Too Many Requests while Gradle downloads
+        # dependencies that aren't cached yet. Gradle keeps what it already downloaded,
+        # so after a pause another attempt only fetches what is still missing.
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew assembleRelease --no-daemon && exit 0
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::Gradle build failed (attempt $attempt of 3), retrying in 60s"
+              sleep 60
+            fi
+          done
+          exit 1
 
       - name: Collect APK
         run: |
