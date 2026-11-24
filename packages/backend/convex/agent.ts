@@ -1,4 +1,5 @@
 import { Agent, createTool, stepCountIs, type ToolCtx } from "@convex-dev/agent";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 import { z } from "zod";
 import { components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -37,7 +38,7 @@ const search = createTool({
               id: h.note._id,
               title: h.note.title || "Untitled",
               tags: h.note.tags,
-              excerpt: h.note.body.slice(0, 600),
+              excerpt: markdownToPlainText(h.note.body).slice(0, 600),
               score: Number(h.score.toFixed(3)),
             }
           : {

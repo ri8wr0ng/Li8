@@ -22,7 +22,13 @@ import { toast } from "sonner";
 import { ConvexError } from "convex/values";
 import { ChipInput } from "#/components/chip-input";
 import { ShareDialog } from "#/components/share-dialog";
-import { HighlightTextarea, type HighlightTextareaHandle } from "#/components/highlight-textarea";
+import { NoteEditorContent, NoteToolbar } from "#/components/note-editor";
+import {
+  getFindMatch,
+  markdownToPlainText,
+  revealActiveMatch,
+  useNoteEditor,
+} from "@inkmark/editor";
 import { EmptyState } from "#/components/page";
 import {
   AlertDialog,
@@ -225,7 +231,6 @@ function Editor({ note }: { note: Doc<"notes"> }) {
 
   // Take edits made on another device, unless you're typing here.
   const titleRef = useRef<HTMLInputElement>(null);
-  const bodyRef = useRef<HighlightTextareaHandle>(null);
   // Only re-sync when the server copy changes, not on every local edit.
   /* oxlint-disable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps */
   useEffect(() => {
@@ -234,6 +239,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
     const active = document.activeElement;
     const editing =
       active === titleRef.current ||
+      Boolean(active?.closest(".note-editor")) ||
       (active?.tagName === "TEXTAREA" && !active.closest("[data-ai-panel]"));
     if (editing) return;
     setTitle(note.title);
@@ -244,12 +250,33 @@ function Editor({ note }: { note: Doc<"notes"> }) {
 
   // Find in note
   const [findOpen, setFindOpen] = useState(Boolean(q));
-  const [find, setFind] = useState(() => initialFind(note.body, q));
+  const [find, setFind] = useState(() => initialFind(markdownToPlainText(note.body), q));
   const [active, setActive] = useState(0);
   const [scrollKey, setScrollKey] = useState(q ? 1 : 0);
   const findInput = useRef<HTMLInputElement>(null);
-  const matches = useMemo(() => (findOpen ? findAll(body, find) : []), [findOpen, body, find]);
-  const activeIndex = matches.length ? Math.min(active, matches.length - 1) : -1;
+
+  const editor = useNoteEditor({
+    value: body,
+    onChange: (markdown) => {
+      setBody(markdown);
+      save.queue({ body: markdown });
+    },
+    editable: !readOnly,
+    placeholder: "Start writing…",
+    find: findOpen ? find : "",
+    activeIndex: active,
+  });
+  const matchCount = findOpen ? editor.matchCount : 0;
+  const activeIndex = matchCount ? Math.min(active, matchCount - 1) : -1;
+
+  // Scroll the current match into view each time find moves (`scrollKey`), once it exists.
+  const revealedKey = useRef(-1);
+  const hasMatches = matchCount > 0;
+  useEffect(() => {
+    if (!findOpen || !editor.editor || !hasMatches || revealedKey.current === scrollKey) return;
+    revealedKey.current = scrollKey;
+    revealActiveMatch(editor.editor);
+  }, [findOpen, editor.editor, hasMatches, scrollKey]);
 
   const openFind = useCallback(() => {
     setFindOpen(true);
@@ -260,17 +287,15 @@ function Editor({ note }: { note: Doc<"notes"> }) {
   }, []);
 
   function step(delta: number) {
-    if (!matches.length) return;
-    setActive((a) => (Math.min(a, matches.length - 1) + delta + matches.length) % matches.length);
+    if (!matchCount) return;
+    setActive((a) => (Math.min(a, matchCount - 1) + delta + matchCount) % matchCount);
     setScrollKey((k) => k + 1);
   }
 
   function closeFind() {
     setFindOpen(false);
-    if (activeIndex >= 0) {
-      const start = matches[activeIndex];
-      bodyRef.current?.selectRange(start, start + find.length);
-    }
+    const match = editor.editor ? getFindMatch(editor.editor, activeIndex) : null;
+    if (match) editor.editor?.chain().focus().setTextSelection(match).scrollIntoView().run();
   }
 
   useEffect(() => {
@@ -284,7 +309,8 @@ function Editor({ note }: { note: Doc<"notes"> }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [openFind]);
 
-  const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+  const plainBody = useMemo(() => markdownToPlainText(body), [body]);
+  const words = plainBody ? plainBody.split(/\s+/).length : 0;
 
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24 sm:px-8">
@@ -431,13 +457,13 @@ function Editor({ note }: { note: Doc<"notes"> }) {
               className="shrink-0 px-1 font-mono text-xs text-muted-foreground tabular-nums"
               aria-live="polite"
             >
-              {find ? (matches.length ? `${activeIndex + 1}/${matches.length}` : "No matches") : ""}
+              {find ? (matchCount ? `${activeIndex + 1}/${matchCount}` : "No matches") : ""}
             </span>
             <Button
               variant="ghost"
               size="icon-sm"
               aria-label="Previous match"
-              disabled={!matches.length}
+              disabled={!matchCount}
               onClick={() => step(-1)}
             >
               <ChevronUp />
@@ -446,7 +472,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
               variant="ghost"
               size="icon-sm"
               aria-label="Next match"
-              disabled={!matches.length}
+              disabled={!matchCount}
               onClick={() => step(1)}
             >
               <ChevronDown />
@@ -484,7 +510,7 @@ function Editor({ note }: { note: Doc<"notes"> }) {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              bodyRef.current?.focus();
+              editor.editor?.commands.focus("start");
             }
           }}
           autoFocus={!note.title && !note.body}
@@ -504,20 +530,13 @@ function Editor({ note }: { note: Doc<"notes"> }) {
           placeholder={tags.length ? "Add tag" : "Add tags…"}
         />
 
-        <HighlightTextarea
-          ref={bodyRef}
-          className="mt-6"
-          value={body}
-          onChange={(value) => {
-            setBody(value);
-            save.queue({ body: value });
-          }}
-          placeholder="Start writing…"
-          matches={matches}
-          matchLength={find.length}
-          activeIndex={activeIndex}
-          scrollKey={scrollKey}
-        />
+        {!readOnly && (
+          <NoteToolbar
+            controller={editor}
+            className="sticky top-[calc(7rem+env(safe-area-inset-top))] z-10 -mx-4 mt-4 h-11 border-b bg-background/85 px-3 backdrop-blur-md sm:-mx-8 sm:px-7 lg:top-14"
+          />
+        )}
+        <NoteEditorContent controller={editor} className="mt-5" />
       </fieldset>
 
       <p className="mt-10 text-xs text-muted-foreground">

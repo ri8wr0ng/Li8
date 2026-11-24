@@ -3,6 +3,7 @@ import { PressableScale } from "../components/pressable-scale";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 import { useTheme } from "../theme";
 import { HighlightedText } from "./highlight";
 import { snippet } from "./snippet";
@@ -32,7 +33,8 @@ export function NoteCard({
     });
   };
 
-  const bodySnippet = note.body.trim() ? snippet(note.body, terms, 90) : "";
+  const plainBody = markdownToPlainText(note.body);
+  const bodySnippet = plainBody ? snippet(plainBody, terms, 90) : "";
 
   return (
     <PressableScale

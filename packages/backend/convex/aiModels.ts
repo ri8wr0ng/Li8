@@ -1,4 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 import { ConvexError } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { env, type QueryCtx } from "./_generated/server";
@@ -57,7 +58,7 @@ const MAX_EMBED_CHARS = 8000;
 
 export function noteText(note: Pick<Doc<"notes">, "title" | "body" | "tags">) {
   const tags = note.tags.map((t) => `#${t}`).join(" ");
-  return [note.title.trim(), tags, note.body.trim()]
+  return [note.title.trim(), tags, markdownToPlainText(note.body)]
     .filter(Boolean)
     .join("\n\n")
     .slice(0, MAX_EMBED_CHARS);

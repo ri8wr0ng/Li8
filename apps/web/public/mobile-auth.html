@@ -13,7 +13,29 @@
       // Convex Auth only redirects to http(s) origins, so Google sign-in in the
       // mobile app lands here first. Hand the query (?convexAuthCode=… or ?convexAuthError=…) to the
       // app's deep link, which the in-app auth browser session is waiting for.
-      var target = "inkmark://auth" + window.location.search;
+      //
+      // The app says where that is in ?return=: "inkmark://auth" in the installed app, or
+      // "exp://<metro>/--/auth" in Expo Go during development. Only those are accepted, and exp://
+      // only on a local or private address, so the sign-in code can't be sent anywhere else.
+      function allowedReturn(value) {
+        if (!value) return null;
+        if (value === "inkmark://auth") return value;
+        var match = /^exp:\/\/([^/:?#]+)(:\d+)?\/--\/auth$/.exec(value);
+        if (!match) return null;
+        var host = match[1];
+        var local =
+          host === "localhost" ||
+          host === "127.0.0.1" ||
+          /^10\./.test(host) ||
+          /^192\.168\./.test(host) ||
+          /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+        return local ? value : null;
+      }
+      var params = new URLSearchParams(window.location.search);
+      var base = allowedReturn(params.get("return")) || "inkmark://auth";
+      params.delete("return");
+      var query = params.toString();
+      var target = base + (query ? "?" + query : "");
       document.getElementById("open").href = target;
       window.location.replace(target);
     </script>

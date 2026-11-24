@@ -1,6 +1,7 @@
 import MiniSearch from "minisearch";
 import { useMemo } from "react";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 import { acronym } from "./series";
 
 type IndexedDoc = {
@@ -40,7 +41,7 @@ export function useSearch(notes: Doc<"notes">[] | undefined, series: Doc<"series
         type: "note",
         title: note.title,
         names: "",
-        body: note.body,
+        body: markdownToPlainText(note.body),
         tags: note.tags.join(" "),
       });
     }

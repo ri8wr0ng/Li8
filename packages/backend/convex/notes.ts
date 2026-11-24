@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
+import { markdownToPlainText } from "@inkmark/editor/plain-text";
 import { internal } from "./_generated/api";
 import {
   internalMutation,
@@ -19,7 +20,7 @@ import { vShareRole, type ShareRole } from "./validators";
 const MAX_NOTES = 2000;
 
 export function makeSearchText(title: string, body: string, tags: string[]) {
-  return [title, body, tags.join(" ")].join(" ");
+  return [title, markdownToPlainText(body), tags.join(" ")].join(" ");
 }
 
 export const list = query({

@@ -208,6 +208,88 @@
     background: var(--marker-active);
     color: #1c1a17;
   }
+
+  /* The note body editor (Tiptap). Sits inside `prose`; these fill in what prose doesn't know. */
+  .note-editor {
+    min-height: 16rem;
+    outline: none;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+  .note-editor > :first-child {
+    margin-top: 0;
+  }
+  .note-editor p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: color-mix(in oklch, var(--muted-foreground) 60%, transparent);
+  }
+  .note-editor [align="center"] {
+    text-align: center;
+  }
+  .note-editor [align="right"] {
+    text-align: right;
+  }
+  .note-editor [align="justify"] {
+    text-align: justify;
+  }
+  .note-editor a {
+    color: var(--hanko, currentColor);
+    text-underline-offset: 0.2em;
+  }
+  .note-editor[contenteditable="true"] a {
+    cursor: text;
+  }
+  .note-editor pre {
+    white-space: pre-wrap;
+  }
+  .note-editor ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0.25em;
+  }
+  .note-editor ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6em;
+    padding-left: 0;
+  }
+  .note-editor ul[data-type="taskList"] li::marker {
+    content: none;
+  }
+  .note-editor ul[data-type="taskList"] li > label {
+    flex: none;
+    margin-top: 0.3em;
+    user-select: none;
+  }
+  .note-editor ul[data-type="taskList"] li > label input {
+    width: 1.05em;
+    height: 1.05em;
+    accent-color: var(--hanko, currentColor);
+    cursor: pointer;
+  }
+  .note-editor ul[data-type="taskList"] li > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .note-editor ul[data-type="taskList"] li > div > p {
+    margin: 0;
+  }
+  .note-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+    color: var(--muted-foreground);
+    text-decoration: line-through;
+  }
+  .note-find-match {
+    background: var(--marker);
+    color: var(--marker-foreground);
+    border-radius: 0.2em;
+  }
+  .note-find-active {
+    background: var(--marker-active);
+    color: #1c1a17;
+  }
 }
 
 @utility pb-safe {

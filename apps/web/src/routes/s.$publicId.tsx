@@ -2,6 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { FileQuestion } from "lucide-react";
 import { Wordmark } from "#/components/brand";
+import { NoteViewer } from "#/components/note-editor";
 import { EmptyState } from "#/components/page";
 import { Skeleton } from "#/components/ui/skeleton";
 import { pageTitle, useDocumentTitle } from "#/lib/seo";
@@ -58,9 +59,7 @@ function SharedNotePage() {
                 ))}
               </div>
             )}
-            <div className="mt-8 font-sans text-[1.0625rem] leading-[1.75] whitespace-pre-wrap [overflow-wrap:anywhere]">
-              {note.body}
-            </div>
+            <NoteViewer markdown={note.body} className="mt-8" />
           </>
         )}
       </main>
