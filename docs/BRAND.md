@@ -51,6 +51,11 @@ All fonts are self-hosted through `@fontsource-variable`, so they work offline a
 - Press feedback is a scale-down (`active:scale-90`/`95`), with no bounce.
 - Library cards: text sits 20px in (16px on phones). The chevron and the + button share one trailing centre line, 24px in from the right edge. Cards in a row are the same height, so their chapter rows line up. (Set 2026-11-23.)
 - Shadows are soft and warm (`rgba(28,26,23,…)`) and used sparingly. Cards gain a shadow on hover.
+- Mobile app edge lines (set 2026-11-26, gridlines pass):
+  - Page line: 16dp from each screen edge. Headings, cards, chips, the AI composer and the header's trailing avatar all start or end on it.
+  - Library and series cards put their text 17dp inside the card (16dp padding plus the border); note cards use 15dp. Every card on the series screen uses the same 16dp padding.
+  - A horizontally scrolling chip row inside a card scrolls out to the card's border, and its first chip starts on the card's text line.
+  - Bottom docks sit 12dp above the tab bar, or just above the keyboard while it's open.
 
 ## Voice
 

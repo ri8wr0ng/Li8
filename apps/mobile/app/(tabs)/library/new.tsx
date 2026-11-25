@@ -1,15 +1,6 @@
 import { useState } from "react";
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoider } from "../../../src/components/keyboard-avoider";
 import { dialog } from "../../../src/components/dialog";
 import { useRouter, Stack } from "expo-router";
 import { useTabBarInset } from "../../../src/components/glass";
@@ -174,10 +165,7 @@ export default function NewSeriesScreen() {
         }}
       />
 
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.paper }]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoider style={[styles.container, { backgroundColor: colors.paper }]}>
         <ScrollView
           contentContainerStyle={[styles.content, { paddingBottom: tabBarInset + 40 }]}
           keyboardShouldPersistTaps="handled"
@@ -513,7 +501,7 @@ export default function NewSeriesScreen() {
             </Text>
           </Pressable>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </>
   );
 }

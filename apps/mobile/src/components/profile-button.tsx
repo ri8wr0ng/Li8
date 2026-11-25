@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { useQuery } from "convex/react";
+import { useCachedQuery } from "../offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "../theme";
 import { PressableScale } from "./pressable-scale";
@@ -51,7 +51,7 @@ export function HeaderIconButton({
 export function HeaderActions({ children }: { children?: ReactNode }) {
   const router = useRouter();
   const { colors } = useTheme();
-  const me = useQuery(api.users.me);
+  const me = useCachedQuery(api.users.me, {});
 
   return (
     <View style={styles.row}>
@@ -89,7 +89,13 @@ export const tabRootHeader = {
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 8, marginRight: 4 },
+  // Android's header already insets its right edge to the page's 16dp line.
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginRight: Platform.OS === "android" ? 0 : 4,
+  },
   round: {
     width: SIZE,
     height: SIZE,

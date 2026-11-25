@@ -17,6 +17,7 @@ import {
   RotateCw,
   Search,
   Settings,
+  Smartphone,
   Sparkles,
   Tag,
   UserRound,
@@ -71,6 +72,7 @@ import {
 } from "#/components/ui/sidebar";
 import { useInstall } from "#/lib/install";
 import { clearCache, useCachedQuery, useOnline, useReadOnly } from "#/lib/offline";
+import { usePlatform } from "#/lib/platform";
 import { useTheme } from "#/lib/theme";
 import { api } from "@inkmark/backend/convex/_generated/api";
 
@@ -439,6 +441,7 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
   const me = useCachedQuery(api.users.me, "me");
   const { signOut } = useAuthActions();
   const install = useInstall();
+  const platform = usePlatform();
   const { isMobile, setOpenMobile } = useSidebar();
   const [iosHelp, setIosHelp] = useState(false);
   const close = () => isMobile && setOpenMobile(false);
@@ -492,13 +495,18 @@ function UserMenu({ align, compact }: { align: "start" | "end"; compact?: boolea
             <Settings /> Settings
           </Link>
         </DropdownMenuItem>
-        {install.kind !== "none" && (
+        {install.kind !== "none" && platform !== "android" && (
           <DropdownMenuItem
             onSelect={() => (install.kind === "ios" ? setIosHelp(true) : void install.install())}
           >
             <Download /> Install app
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem asChild>
+          <Link to="/download" onClick={close}>
+            <Smartphone /> Get the app
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void signOut().then(clearCache)}>
           <LogOut /> Sign out

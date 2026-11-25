@@ -1,8 +1,9 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { Download, LogOut, Monitor, Moon, Sun } from "lucide-react";
+import { Download, LogOut, Monitor, Moon, Smartphone, Sun } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { AndroidLogo, useLatestApk } from "#/components/download-app";
 import { ShortcutList } from "#/components/help-dialog";
 import { IosInstallHelp } from "#/components/install-prompt";
 import { PageHeader } from "#/components/page";
@@ -10,6 +11,7 @@ import { Button } from "#/components/ui/button";
 import { UserAvatar } from "#/components/user-avatar";
 import { useInstall } from "#/lib/install";
 import { clearCache, useCachedQuery, useOnline } from "#/lib/offline";
+import { usePlatform } from "#/lib/platform";
 import { type Theme, useTheme } from "#/lib/theme";
 import { cn } from "#/lib/utils";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -27,6 +29,8 @@ function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { signOut } = useAuthActions();
   const install = useInstall();
+  const platform = usePlatform();
+  const apk = useLatestApk();
   const online = useOnline();
   const [iosHelp, setIosHelp] = useState(false);
 
@@ -73,20 +77,53 @@ function SettingsPage() {
 
       <Section title="This device">
         <div className="divide-y rounded-xl border bg-card">
-          {install.kind !== "none" && (
+          {platform === "android" ? (
             <Row
-              title="Install li8"
-              description="Open it from your home screen or dock, and use it offline."
+              title="Android app"
+              description="Download the app. It works offline and updates itself."
             >
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg"
-                onClick={() => (install.kind === "ios" ? setIosHelp(true) : void install.install())}
-              >
-                <Download /> Install
+              <Button variant="outline" size="sm" className="rounded-lg" asChild>
+                {apk ? (
+                  <a href={apk.apkUrl} download>
+                    <AndroidLogo /> Download
+                  </a>
+                ) : (
+                  <Link to="/download" search={{ platform: "android" }}>
+                    <AndroidLogo /> Download
+                  </Link>
+                )}
               </Button>
             </Row>
+          ) : (
+            <>
+              {install.kind !== "none" && (
+                <Row
+                  title="Install li8"
+                  description="Open it from your home screen or dock, and use it offline."
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={() =>
+                      install.kind === "ios" ? setIosHelp(true) : void install.install()
+                    }
+                  >
+                    <Download /> Install
+                  </Button>
+                </Row>
+              )}
+              <Row
+                title="Mobile apps"
+                description="Get li8 for Android, or add it to your iPhone's Home Screen."
+              >
+                <Button variant="outline" size="sm" className="rounded-lg" asChild>
+                  <Link to="/download">
+                    <Smartphone /> See downloads
+                  </Link>
+                </Button>
+              </Row>
+            </>
           )}
           <Row
             title="Saved copy"

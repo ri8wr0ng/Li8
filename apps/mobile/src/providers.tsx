@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { loadThemePreference } from "./theme-preference";
 import { DialogHost } from "./components/dialog";
+import { ActionMenuHost } from "./components/action-menu";
 import { UpdaterProvider } from "./updates/updater";
 import { deleteItemAsync, getItemAsync, setItemAsync } from "./storage";
 
@@ -60,6 +61,7 @@ export function Providers({ children }: { children: ReactNode }) {
         >
           <UpdaterProvider>{children}</UpdaterProvider>
         </ConvexAuthProvider>
+        <ActionMenuHost />
         <DialogHost />
       </SafeAreaProvider>
     </GestureHandlerRootView>

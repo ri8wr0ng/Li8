@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { useNavigation, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { useCachedPaginatedQuery, useCachedQuery } from "../../../src/offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc } from "@inkmark/backend/convex/_generated/dataModel";
 import { useTheme } from "../../../src/theme";
@@ -100,18 +101,18 @@ export default function NotesScreen() {
   );
 
   // Paginated lists
-  const pinnedQuery = usePaginatedQuery(
+  const pinnedQuery = useCachedPaginatedQuery(
     api.notes.listPage,
     { pinned: true },
     { initialNumItems: 50 },
   );
-  const restQuery = usePaginatedQuery(
+  const restQuery = useCachedPaginatedQuery(
     api.notes.listPage,
     { pinned: false },
     { initialNumItems: 50 },
   );
 
-  const shared = useQuery(api.notes.sharedWithMe, view === "shared" ? {} : "skip");
+  const shared = useCachedQuery(api.notes.sharedWithMe, view === "shared" ? {} : "skip");
 
   // Search stays inside the chosen tab: Notes skips archived ones, Archived keeps only those,
   // and Shared (not in the search index) matches every typed word against title and body.
@@ -128,7 +129,7 @@ export default function NotesScreen() {
       ?.filter((note) => (view === "archived") === (note.archived === true))
       .map((note) => ({ note, subtitle: undefined }));
   }, [view, shared, searchResults, debouncedQuery]);
-  const archivedQuery = usePaginatedQuery(
+  const archivedQuery = useCachedPaginatedQuery(
     api.notes.listPage,
     view === "archived" ? { archived: true } : "skip",
     { initialNumItems: 50 },

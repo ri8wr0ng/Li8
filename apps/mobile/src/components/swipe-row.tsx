@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type ComponentProps, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, type PointerEvent } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import ReanimatedSwipeable, {
   type SwipeableMethods,
@@ -32,6 +32,8 @@ type SwipeRowProps = {
   accessibilityActions?: ComponentProps<typeof View>["accessibilityActions"];
   onAccessibilityAction?: ComponentProps<typeof View>["onAccessibilityAction"];
   onAccessibilityTap?: () => void;
+  /** Opens the card's options; wired to right-click here and to long-press by the card. */
+  onMenu?: () => void;
 };
 
 let openSwipeable: SwipeableMethods | null = null;
@@ -46,6 +48,7 @@ export function SwipeRow({
   accessibilityActions: childAccessibilityActions = [],
   onAccessibilityAction: onChildAccessibilityAction,
   onAccessibilityTap,
+  onMenu,
 }: SwipeRowProps) {
   const swipeableRef = useRef<SwipeableMethods>(null);
   const actions = [...leading, ...trailing];
@@ -64,26 +67,24 @@ export function SwipeRow({
   }, []);
   const accessibilityActions = [
     ...childAccessibilityActions,
+    ...(onMenu ? [{ name: "menu", label: "More options" }] : []),
     ...actions.map((action) => ({ name: `swipe-${action.key}`, label: action.label })),
   ];
 
+  // The actions stack top to bottom in one column beside the card, and reach in under its
+  // rounded corners so the two read as one piece instead of a block floating next to it.
   const renderActions = (
     items: SwipeAction[],
     side: "leading" | "trailing",
     translation: SharedValue<number>,
-  ) => (
-    <ActionGroup
-      translation={translation}
-      style={[
-        styles.actionGroup,
-        side === "leading"
-          ? { borderTopLeftRadius: borderRadius, borderBottomLeftRadius: borderRadius }
-          : { borderTopRightRadius: borderRadius, borderBottomRightRadius: borderRadius },
-      ]}
-    >
-      {items.map((action, index) => {
-        const outerCorner = side === "leading" ? index === 0 : index === items.length - 1;
-        return (
+  ) => {
+    const outer =
+      side === "leading"
+        ? { top: "borderTopLeftRadius", bottom: "borderBottomLeftRadius" }
+        : { top: "borderTopRightRadius", bottom: "borderBottomRightRadius" };
+    return (
+      <ActionGroup translation={translation} style={styles.actionGroup}>
+        {items.map((action, index) => (
           <Pressable
             key={action.key}
             accessibilityRole="button"
@@ -91,26 +92,44 @@ export function SwipeRow({
             onPress={() => runAction(action)}
             style={[
               styles.action,
+              items.length > 1 && styles.actionCompact,
               { backgroundColor: action.color },
-              outerCorner && side === "leading"
-                ? { borderTopLeftRadius: borderRadius, borderBottomLeftRadius: borderRadius }
-                : null,
-              outerCorner && side === "trailing"
-                ? { borderTopRightRadius: borderRadius, borderBottomRightRadius: borderRadius }
-                : null,
+              index === 0 ? { [outer.top]: borderRadius } : null,
+              index === items.length - 1 ? { [outer.bottom]: borderRadius } : null,
             ]}
           >
-            <Feather name={action.icon} size={20} color="#FFFFFF" />
+            <View
+              pointerEvents="none"
+              style={[
+                styles.bridge,
+                { backgroundColor: action.color, width: borderRadius },
+                side === "leading" ? { right: -borderRadius } : { left: -borderRadius },
+              ]}
+            />
+            <Feather name={action.icon} size={items.length > 1 ? 18 : 20} color="#FFFFFF" />
             <Text style={styles.actionLabel} numberOfLines={1}>
               {action.label}
             </Text>
           </Pressable>
-        );
-      })}
-    </ActionGroup>
-  );
+        ))}
+      </ActionGroup>
+    );
+  };
 
-  if (actions.length === 0) return <View style={{ marginBottom: spacing }}>{children}</View>;
+  // A mouse's right button opens the options, like a long-press.
+  const onPointerDown = onMenu
+    ? (event: PointerEvent) => {
+        if (event.nativeEvent.button === 2) onMenu();
+      }
+    : undefined;
+
+  if (actions.length === 0) {
+    return (
+      <View style={{ marginBottom: spacing }} onPointerDown={onPointerDown}>
+        {children}
+      </View>
+    );
+  }
 
   return (
     <ReanimatedSwipeable
@@ -149,12 +168,14 @@ export function SwipeRow({
         accessibilityActions={accessibilityActions}
         onAccessibilityTap={onAccessibilityTap}
         onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === "menu") return onMenu?.();
           onChildAccessibilityAction?.(event);
           const action = actions.find(
             (item) => `swipe-${item.key}` === event.nativeEvent.actionName,
           );
           if (action) runAction(action);
         }}
+        onPointerDown={onPointerDown}
         style={{ borderRadius, overflow: "hidden" }}
       >
         {children}
@@ -182,14 +203,22 @@ function ActionGroup({
 
 const styles = StyleSheet.create({
   actionGroup: {
-    flexDirection: "row",
-    overflow: "hidden",
+    flexDirection: "column",
+    width: 84,
   },
   action: {
-    width: 76,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
+  },
+  actionCompact: {
+    gap: 2,
+  },
+  bridge: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
   },
   actionLabel: {
     color: "#FFFFFF",

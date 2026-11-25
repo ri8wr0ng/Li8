@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { useConvexAuth, useQuery } from "convex/react";
+import { clearCache, useCachedQuery, useSessionGate } from "../src/offline";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,10 +22,10 @@ const THEMES: { value: ThemePreference; label: string; icon: "sun" | "moon" | "s
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { isLoading, isAuthenticated } = useConvexAuth();
+  const gate = useSessionGate();
 
   // Sign out happens here; the tabs' own redirect only runs once they're focused again.
-  if (!isLoading && !isAuthenticated) return <Redirect href="/sign-in" />;
+  if (gate === "signed-out") return <Redirect href="/sign-in" />;
 
   return (
     <ScrollView
@@ -47,7 +47,7 @@ export default function SettingsScreen() {
 function AccountRow() {
   const router = useRouter();
   const { colors, radii, typography } = useTheme();
-  const me = useQuery(api.users.me);
+  const me = useCachedQuery(api.users.me, {});
 
   return (
     <PressableScale
@@ -122,6 +122,8 @@ function SignOut() {
     setBusy(true);
     try {
       await signOut();
+      // So the next account never sees this one's notes.
+      await clearCache();
     } catch (error) {
       console.error("Sign out error:", error);
       setBusy(false);

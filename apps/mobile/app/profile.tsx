@@ -11,7 +11,8 @@ import {
 import { dialog } from "../src/components/dialog";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, type useQuery } from "convex/react";
+import { useCachedQuery } from "../src/offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "../src/theme";
 import { haptics } from "../src/haptics";
@@ -38,9 +39,9 @@ import {
 const number = (n: number) => new Intl.NumberFormat().format(n);
 
 export default function ProfileScreen() {
-  const user = useQuery(api.users.me);
+  const user = useCachedQuery(api.users.me, {});
   const [tzOffsetMinutes] = useState(() => new Date().getTimezoneOffset());
-  const stats = useQuery(api.users.stats, { tzOffsetMinutes });
+  const stats = useCachedQuery(api.users.stats, { tzOffsetMinutes });
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 

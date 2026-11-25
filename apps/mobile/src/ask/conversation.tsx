@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -12,11 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoider } from "../components/keyboard-avoider";
 import { dialog } from "../components/dialog";
 import { useNavigation } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useCachedQuery } from "../offline";
 import { ConvexError } from "convex/values";
 import { useSmoothText, useUIMessages, type UIMessage } from "@convex-dev/agent/react";
 import { api } from "@inkmark/backend/convex/_generated/api";
@@ -91,8 +92,8 @@ export function AskScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const headerHeight = useHeaderHeight();
-  const status = useQuery(api.chat.status, {});
-  const threads = useQuery(api.chat.threads, {});
+  const status = useCachedQuery(api.chat.status, {});
+  const threads = useCachedQuery(api.chat.threads, {});
   const remove = useMutation(api.chat.remove);
   const [threadId, setThreadId] = useState<string | undefined>();
 
@@ -139,10 +140,9 @@ export function AskScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAvoider
       style={[styles.flex, { backgroundColor: colors.paper }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
+      iosOffset={headerHeight}
     >
       {threads && threads.length > 0 && (
         <View>
@@ -194,7 +194,7 @@ export function AskScreen() {
         </View>
       )}
       <Conversation key={threadId ?? "new"} threadId={threadId} onThread={setThreadId} />
-    </KeyboardAvoidingView>
+    </KeyboardAvoider>
   );
 }
 
@@ -262,7 +262,7 @@ export function Conversation({
             <Feather name="zap" size={20} color={colors.muted} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>What would you like to do?</Text>
-          <Text style={[styles.emptyBody, { color: colors.muted }]}>
+          <Text textBreakStrategy="balanced" style={[styles.emptyBody, { color: colors.muted }]}>
             Ask about your notes, update a chapter, or look something up.
           </Text>
           <View style={styles.prompts}>
@@ -299,6 +299,13 @@ export function Conversation({
         />
       )}
 
+      {/* Only while the assistant works, so an idle composer sits close to the tab bar. */}
+      {working ? (
+        <View style={styles.statusLine} accessibilityLiveRegion="polite">
+          <Feather name="zap" size={12} color={colors.muted} />
+          <Text style={[styles.statusText, { color: colors.muted }]}>{working}…</Text>
+        </View>
+      ) : null}
       <View
         style={[
           styles.composerWrap,
@@ -348,14 +355,6 @@ export function Conversation({
               <Feather name="arrow-up" size={18} color="#fff" />
             )}
           </PressableScale>
-        </View>
-        <View style={styles.statusLine} accessibilityLiveRegion="polite">
-          {working && (
-            <>
-              <Feather name="zap" size={12} color={colors.muted} />
-              <Text style={[styles.statusText, { color: colors.muted }]}>{working}…</Text>
-            </>
-          )}
         </View>
       </View>
     </View>
@@ -445,7 +444,7 @@ function SmoothPart({ text, streaming }: { text: string; streaming: boolean }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
-  threads: { gap: 6, paddingHorizontal: 12, paddingVertical: 10 },
+  threads: { gap: 6, paddingHorizontal: 16, paddingVertical: 10 },
   thread: {
     flexDirection: "row",
     alignItems: "center",
@@ -487,7 +486,7 @@ const styles = StyleSheet.create({
   tool: { flexDirection: "row", alignItems: "center", gap: 8 },
   toolSpinner: { transform: [{ scale: 0.7 }], width: 13, height: 13 },
   toolText: { fontSize: 13, flexShrink: 1 },
-  composerWrap: { paddingHorizontal: 12, paddingTop: 6 },
+  composerWrap: { paddingHorizontal: 16, paddingTop: 6 },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -504,7 +503,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     height: 26,
-    paddingHorizontal: 4,
+    paddingHorizontal: 20,
   },
   statusText: { fontSize: 12, fontWeight: "500" },
 });
