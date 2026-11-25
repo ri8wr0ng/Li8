@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useCachedQuery } from "../offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Id } from "@inkmark/backend/convex/_generated/dataModel";
 import type { SeriesKind } from "@inkmark/backend/convex/validators";
@@ -191,7 +192,7 @@ export function LabelFilterModal({
   onSelectLabelIds,
 }: LabelFilterModalProps) {
   const { colors, radii, typography } = useTheme();
-  const labels = useQuery(api.labels.list) ?? [];
+  const labels = useCachedQuery(api.labels.list, {}) ?? [];
   const createLabel = useMutation(api.labels.create);
 
   const [newLabelName, setNewLabelName] = useState("");

@@ -14,7 +14,8 @@ import { useRouter, useNavigation } from "expo-router";
 import { BottomSearchBar, useBottomSearchInset } from "../../../src/components/bottom-search-bar";
 import { useScreenSearch } from "../../../src/components/screen-search";
 import { Feather } from "@expo/vector-icons";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
+import { useCachedPaginatedQuery, useCachedQuery } from "../../../src/offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc, Id } from "@inkmark/backend/convex/_generated/dataModel";
 import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
@@ -58,7 +59,7 @@ export default function LibraryScreen() {
   const bottomInset = useBottomSearchInset(0, searchVisible);
 
   // Labels map
-  const allLabels = useQuery(api.labels.list);
+  const allLabels = useCachedQuery(api.labels.list, {});
   const labelsMap = useMemo(() => {
     const map = new Map<string, string>();
     if (!allLabels) return map;
@@ -117,7 +118,7 @@ export default function LibraryScreen() {
     status: paginationStatus,
     loadMore,
     isLoading: isListLoading,
-  } = usePaginatedQuery(api.library.listPage, listQueryArgs, { initialNumItems: 50 });
+  } = useCachedPaginatedQuery(api.library.listPage, listQueryArgs, { initialNumItems: 50 });
 
   const handleEndReached = useCallback(() => {
     if (!isSearchActive && paginationStatus === "CanLoadMore") {

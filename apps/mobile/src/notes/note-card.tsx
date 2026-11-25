@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useCachedQuery } from "../offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { PressableScale } from "../components/pressable-scale";
 import { Feather } from "@expo/vector-icons";
@@ -11,6 +12,7 @@ import { HighlightedText } from "./highlight";
 import { snippet } from "./snippet";
 import { relativeTime } from "./time";
 import { SwipeRow, type SwipeAction } from "../components/swipe-row";
+import { actionMenu, type MenuItem } from "../components/action-menu";
 import { haptics } from "../haptics";
 import { dialog } from "../components/dialog";
 
@@ -38,11 +40,12 @@ export function NoteCard({
 }) {
   const router = useRouter();
   const { colors, radii, typography } = useTheme();
-  const me = useQuery(api.users.me, {});
+  const me = useCachedQuery(api.users.me, {});
   const updateNote = useMutation(api.notes.update);
   const removeNote = useMutation(api.notes.remove);
   const setArchived = useMutation(api.notes.setArchived);
   const unshare = useMutation(api.notes.unshare);
+  const duplicate = useMutation(api.notes.duplicate);
   const isOwner = me?.id === note.userId;
 
   const handlePress = () => {
@@ -125,8 +128,26 @@ export function NoteCard({
         },
       ];
 
+  const title = note.title.trim() || "Untitled";
+  // Long-press or right-click: the swipe actions, plus duplicating (owner only).
+  const openMenu = () => {
+    const extra: MenuItem[] = isOwner
+      ? [
+          {
+            key: "duplicate",
+            label: "Duplicate",
+            icon: "copy",
+            onPress: () =>
+              void runMutation("Failed to duplicate note", () => duplicate({ id: note._id })),
+          },
+        ]
+      : [];
+    actionMenu.show(title, [...leading, ...extra, ...trailing]);
+  };
+
   return (
     <SwipeRow
+      onMenu={openMenu}
       leading={swipeable ? leading : []}
       trailing={swipeable ? trailing : []}
       borderRadius={radii.card}
@@ -138,6 +159,8 @@ export function NoteCard({
         accessibilityRole="button"
         accessibilityLabel={note.title.trim() || "Untitled note"}
         onPress={handlePress}
+        onLongPress={openMenu}
+        delayLongPress={350}
         scale={0.98}
         style={[
           styles.card,

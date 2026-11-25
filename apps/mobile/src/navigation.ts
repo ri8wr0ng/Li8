@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useCachedQuery, useSessionGate } from "./offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import { useTheme } from "./theme";
 import { getItem, setItemAsync } from "./storage";
@@ -38,8 +38,8 @@ export function useStackScreenOptions() {
  * user to sign in, and whether to show Ask (only when AI is on for them, like the web).
  */
 export function useTabsGate() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
-  const ai = useQuery(api.chat.status, isAuthenticated ? {} : "skip");
+  const gate = useSessionGate();
+  const ai = useCachedQuery(api.chat.status, {});
   const live = ai?.enabled;
 
   useEffect(() => {
@@ -49,7 +49,8 @@ export function useTabsGate() {
   }, [live]);
 
   return {
-    signedOut: !isLoading && !isAuthenticated,
+    // Opened offline with a saved copy counts as signed in (read-only until Convex confirms).
+    signedOut: gate === "signed-out",
     // Until the live answer arrives, keep the last one so the bar doesn't resize.
     showAsk: live ?? lastAiEnabled,
   };

@@ -3,11 +3,19 @@ import { ArrowRight, Smartphone } from "lucide-react";
 import type { SVGProps } from "react";
 import { useReleases } from "#/hooks/use-releases";
 import { usePlatform } from "#/lib/platform";
-import { latestBuild } from "#/lib/releases";
+import { latestBuild, type Build } from "#/lib/releases";
 import { cn } from "#/lib/utils";
 
 const BUTTON =
   "inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-primary px-6 text-[0.95rem] font-medium text-primary-foreground shadow-[0_1px_0_rgb(28_26_23/0.04),0_10px_24px_-14px_rgb(28_26_23/0.6)] transition-[background-color,scale] duration-150 hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none active:scale-[0.97] sm:w-auto";
+
+/** Latest published Android build (stable preferred, falling back to nightly), or null while loading. */
+export function useLatestApk(): Build | null {
+  const releases = useReleases();
+  return releases.status === "ready"
+    ? (latestBuild(releases.builds, "stable") ?? latestBuild(releases.builds, "nightly"))
+    : null;
+}
 
 /**
  * The landing page's download button. Android and computers get the latest APK directly (the
@@ -15,7 +23,7 @@ const BUTTON =
  */
 export function DownloadAppButton({ className }: { className?: string }) {
   const platform = usePlatform();
-  const releases = useReleases();
+  const build = useLatestApk();
 
   if (platform === "iphone") {
     return (
@@ -25,11 +33,6 @@ export function DownloadAppButton({ className }: { className?: string }) {
       </Link>
     );
   }
-
-  const build =
-    releases.status === "ready"
-      ? (latestBuild(releases.builds, "stable") ?? latestBuild(releases.builds, "nightly"))
-      : null;
 
   // Until the release list loads (or if it fails), the button opens the download page.
   if (build === null) {

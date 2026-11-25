@@ -15,7 +15,8 @@ import { useTabBarInset } from "../../../src/components/glass";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useCachedQuery, useSavedListItem } from "../../../src/offline";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Id } from "@inkmark/backend/convex/_generated/dataModel";
 import type { SeriesKind, SeriesStatus } from "@inkmark/backend/convex/validators";
@@ -47,10 +48,13 @@ export default function SeriesDetailScreen() {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion
   const id = seriesId ? (seriesId as Id<"series">) : undefined;
 
-  const series = useQuery(api.series.get, id ? { id } : "skip");
-  const history = useQuery(api.series.history, id ? { seriesId: id } : "skip");
-  const pastSeasons = useQuery(api.series.seasons, id ? { seriesId: id } : "skip");
-  const allLabels = useQuery(api.labels.list) ?? [];
+  const opened = useCachedQuery(api.series.get, id ? { id } : "skip");
+  // Offline, a series that was listed but never opened still opens from the saved list.
+  const listed = useSavedListItem(api.library.listPage, id);
+  const series = opened === undefined ? listed : opened;
+  const history = useCachedQuery(api.series.history, id ? { seriesId: id } : "skip");
+  const pastSeasons = useCachedQuery(api.series.seasons, id ? { seriesId: id } : "skip");
+  const allLabels = useCachedQuery(api.labels.list, {}) ?? [];
 
   const update = useMutation(api.series.update);
   const setChapter = useMutation(api.series.setChapter);
@@ -345,7 +349,8 @@ export default function SeriesDetailScreen() {
     <>
       <Stack.Screen
         options={{
-          title: series.title,
+          // The page opens with the title as its heading; repeating it in the bar reads twice.
+          title: "",
           headerBackTitle: "Library",
         }}
       />
@@ -668,7 +673,12 @@ export default function SeriesDetailScreen() {
             ]}
           >
             <Text style={[styles.pickerBoxLabel, { color: colors.muted }]}>STATUS</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipScrollContent}
+            >
               {STATUS_ORDER.map((s) => {
                 const isSelected = series.status === s;
                 return (
@@ -715,7 +725,12 @@ export default function SeriesDetailScreen() {
             ]}
           >
             <Text style={[styles.pickerBoxLabel, { color: colors.muted }]}>TYPE</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipScrollContent}
+            >
               {KIND_OPTIONS.map((item) => {
                 const isSelected = series.kind === item.value;
                 return (
@@ -1789,7 +1804,7 @@ const styles = StyleSheet.create({
   },
   pickerBox: {
     borderWidth: 1,
-    padding: 12,
+    padding: 16,
   },
   pickerBoxLabel: {
     fontSize: 11,
@@ -1797,8 +1812,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 8,
   },
+  // The chip rows scroll to the card's border; their first chip still starts on the text line.
   chipScroll: {
     flexDirection: "row",
+    marginHorizontal: -16,
+  },
+  chipScrollContent: {
+    paddingHorizontal: 16,
   },
   choiceChip: {
     paddingHorizontal: 12,

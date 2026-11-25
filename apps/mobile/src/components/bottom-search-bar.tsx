@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentRef, type ReactNode, type Ref } from "react";
 import {
+  Dimensions,
   Keyboard,
   Platform,
   Pressable,
@@ -16,16 +17,18 @@ export const SEARCH_BAR_HEIGHT = 48;
 const GAP = 8;
 
 /**
- * The keyboard's height while it's up, 0 when down. Android resizes the window for the keyboard,
- * so there it only reports whether it's up (1) and nothing needs to move by its height.
+ * How much of the screen the keyboard covers from the bottom edge, 0 while it's down. Android
+ * draws edge to edge, so the window doesn't shrink for the keyboard there either: anything pinned
+ * to the bottom has to move up by this much on both platforms.
  */
 export function useKeyboardHeight() {
   const [height, setHeight] = useState(0);
   useEffect(() => {
     const ios = Platform.OS === "ios";
-    const show = Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", (e) =>
-      setHeight(ios ? e.endCoordinates.height : 1),
-    );
+    const show = Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", (e) => {
+      const fromBottom = Dimensions.get("screen").height - e.endCoordinates.screenY;
+      setHeight(Math.max(e.endCoordinates.height, fromBottom, 1));
+    });
     const hide = Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", () =>
       setHeight(0),
     );
@@ -42,7 +45,7 @@ function useBarBottom() {
   const tabBarInset = useTabBarInset();
   const keyboard = useKeyboardHeight();
   if (!keyboard) return tabBarInset + GAP;
-  return (Platform.OS === "ios" ? keyboard : 0) + GAP;
+  return keyboard + GAP;
 }
 
 /**

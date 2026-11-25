@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { KeyboardAvoider } from "../src/components/keyboard-avoider";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Conversation } from "../src/ask/conversation";
 import { useTheme } from "../src/theme";
@@ -11,12 +12,9 @@ export default function AskAiSheet() {
   const [threadId, setThreadId] = useState<string | undefined>();
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: colors.paper }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <KeyboardAvoider style={[styles.flex, { backgroundColor: colors.paper }]}>
       <Conversation threadId={threadId} onThread={setThreadId} bottomInset={insets.bottom + 8} />
-    </KeyboardAvoidingView>
+    </KeyboardAvoider>
   );
 }
 

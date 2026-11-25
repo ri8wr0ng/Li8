@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -12,11 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoider } from "../../../src/components/keyboard-avoider";
 import { dialog } from "../../../src/components/dialog";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useCachedQuery, useOnline, useReadOnly, useSavedListItem } from "../../../src/offline";
 import { ConvexError } from "convex/values";
 import { api } from "@inkmark/backend/convex/_generated/api";
 import type { Doc, Id } from "@inkmark/backend/convex/_generated/dataModel";
@@ -99,11 +100,27 @@ export default function NoteDetailScreen() {
   const { colors } = useTheme();
 
   // If noteId is missing or empty, handle gracefully
-  const note = useQuery(
+  const opened = useCachedQuery(
     api.notes.get,
     // oxlint-disable-next-line typescript/no-unsafe-type-assertion
     noteId ? { id: noteId as Id<"notes"> } : "skip",
   );
+  // Offline, a note that was listed but never opened still opens from the saved list.
+  const listed = useSavedListItem(api.notes.listPage, noteId);
+  const note = opened === undefined ? listed : opened;
+  const online = useOnline();
+
+  if (note === undefined && !online) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.paper, paddingTop: insets.top }]}>
+        <EmptyState
+          icon={<Feather name="wifi-off" size={28} color={colors.muted} />}
+          title="Not saved on this device"
+          description="Open this note once while you're online to read it offline."
+        />
+      </View>
+    );
+  }
 
   if (note === undefined) {
     return (
@@ -177,11 +194,13 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
   const tabBarInset = useTabBarInset();
   const { colors, typography, radii } = useTheme();
 
-  const access = useQuery(api.notes.access, { id: note._id });
-  const me = useQuery(api.users.me);
+  const access = useCachedQuery(api.notes.access, { id: note._id });
+  const me = useCachedQuery(api.users.me, {});
   const role = access?.role ?? "owner";
   const isOwner = role === "owner";
-  const readOnly = role === "view";
+  // Opened offline, edits wait until Convex confirms the session.
+  const offline = useReadOnly();
+  const readOnly = role === "view" || offline;
 
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
@@ -235,9 +254,9 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
       hide.remove();
     };
   }, []);
-  // The floating tab bar covers the bottom of the screen. On Android it also rides above the
-  // keyboard; on iOS the keyboard covers it. Keep the format toolbar just above whichever is on top.
-  const toolbarOffset = Platform.OS === "android" || !keyboardVisible ? tabBarInset : 0;
+  // The floating tab bar covers the bottom of the screen until the keyboard opens (it hides on
+  // Android and sits under the keyboard on iOS). Keep the format toolbar just above whichever is on top.
+  const toolbarOffset = keyboardVisible ? 0 : tabBarInset;
 
   // Sync external changes when server copy updates, unless local edits are in flight
   /* oxlint-disable react/exhaustive-effect-dependencies, react-hooks/exhaustive-deps, react/set-state-in-effect */
@@ -519,10 +538,7 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
         </View>
       )}
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoider style={styles.flex}>
         <ScrollView
           ref={scrollRef}
           style={styles.flex}
@@ -627,7 +643,7 @@ function Editor({ note, initialFind }: { note: Doc<"notes">; initialFind?: strin
             <FormatToolbar state={toolbarState} onCommand={runCommand} />
           </View>
         )}
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
 
       <Modal
         transparent

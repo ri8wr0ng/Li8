@@ -21,6 +21,7 @@ import {
 } from "./series";
 import { relativeTime } from "./time";
 import { SwipeRow, type SwipeAction } from "../components/swipe-row";
+import { actionMenu, type MenuItem } from "../components/action-menu";
 import { dialog } from "../components/dialog";
 
 interface SeriesCardProps {
@@ -196,8 +197,54 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
           .filter((name): name is string => Boolean(name))
       : [];
 
+  // Long-press or right-click: everything the swipes offer, plus going back one and typing a
+  // chapter.
+  const openMenu = () => {
+    const unit = episodic ? "episode" : "chapter";
+    const progressItems: MenuItem[] = isMovie
+      ? []
+      : [
+          {
+            key: "bump",
+            label: `+1 ${unit}`,
+            icon: "plus",
+            onPress: () => handleBump(1)({}),
+          },
+          ...(series.chapter > 0
+            ? [
+                {
+                  key: "unbump",
+                  label: `−1 ${unit}`,
+                  icon: "minus" as const,
+                  onPress: () => handleBump(-1)({}),
+                },
+              ]
+            : []),
+          {
+            key: "set",
+            label: `Set ${unit}…`,
+            icon: "edit-3",
+            onPress: () => {
+              setDraft(formatChapter(series.chapter));
+              setEditing(true);
+            },
+          },
+        ];
+    actionMenu.show(series.title, [
+      ...progressItems,
+      ...trailingActions.map(({ key, label, icon, onPress, destructive }) => ({
+        key,
+        label: key === "done" ? (isMovie ? "Mark watched" : "Mark done") : label,
+        icon,
+        onPress,
+        destructive,
+      })),
+    ]);
+  };
+
   return (
     <SwipeRow
+      onMenu={openMenu}
       leading={swipeActions}
       trailing={trailingActions}
       borderRadius={radii.card}
@@ -213,6 +260,8 @@ export function SeriesCard({ series, labelsMap }: SeriesCardProps) {
     >
       <PressableScale
         onPress={handlePressCard}
+        onLongPress={openMenu}
+        delayLongPress={350}
         scale={0.98}
         style={[
           styles.card,
